@@ -1,4 +1,3 @@
-
 export interface HearingAid {
   id: string;
   brand: string;
@@ -23,6 +22,7 @@ export interface Patient {
   referDoctor: string;
   audiologist: string;
   gstin?: string; // Patient's GSTIN (for B2B)
+  addedDate?: string; // Date patient was added to system
 }
 
 export interface PaymentRecord {

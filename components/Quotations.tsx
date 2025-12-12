@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { generateInvoiceNote } from '../services/geminiService';
@@ -11,11 +10,9 @@ interface QuotationsProps {
   onCreateQuotation: (quotation: Quotation) => void;
   onUpdateQuotation: (quotation: Quotation) => void;
   onConvertToInvoice: (quotation: Quotation) => void;
-  // FIX: Added onDelete prop to fix Error in file App.tsx on line 306
   onDelete: (quotationId: string) => void;
   logo: string;
   signature: string | null;
-  // FIX: Added userRole prop to handle permission checks
   userRole: UserRole;
 }
 
@@ -66,7 +63,9 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     const detailedItems: InvoiceItem[] = inventory.filter(i => selectedItemIds.includes(i.id)).map(item => ({
         hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, price: item.price, hsnCode: item.hsnCode, gstRate: item.gstRate || 0, taxableValue: item.price, cgstAmount: 0, sgstAmount: 0, igstAmount: 0, totalAmount: item.price
     }));
-    const quotationData: Quotation = { id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: detailedItems, subtotal: detailedItems.reduce((s,i)=>s+i.price,0), discountType, discountValue, totalTaxableValue: detailedItems.reduce((s,i)=>s+i.price,0), totalTax: 0, finalTotal: detailedItems.reduce((s,i)=>s+i.price,0) - (discountType === 'flat' ? discountValue : (detailedItems.reduce((s,i)=>s+i.price,0)*discountValue/100)), date: new Date().toISOString().split('T')[0], notes: aiNote, warranty, patientDetails: patient, status: 'Draft' };
+    const subtotalCalc = detailedItems.reduce((s,i)=>s+i.price,0);
+    const discAmt = discountType === 'flat' ? discountValue : (subtotalCalc * discountValue / 100);
+    const quotationData: Quotation = { id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: detailedItems, subtotal: subtotalCalc, discountType, discountValue, totalTaxableValue: subtotalCalc - discAmt, totalTax: 0, finalTotal: subtotalCalc - discAmt, date: new Date().toISOString().split('T')[0], notes: aiNote, warranty, patientDetails: patient, status: 'Draft' };
     if (editingId) onUpdateQuotation(quotationData); else onCreateQuotation(quotationData);
     resetForm(); setViewMode('list');
   };
@@ -138,6 +137,26 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         ))}</tbody>
                     </table>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                        <h4 className="font-medium mb-3 flex items-center gap-2"><Sparkles size={16}/> Special Consideration</h4>
+                        <div className="flex gap-2">
+                            <select 
+                                className="border rounded p-2 bg-white text-sm"
+                                value={discountType}
+                                onChange={(e) => setDiscountType(e.target.value as any)}
+                            >
+                                <option value="flat">Flat (₹)</option>
+                                <option value="percent">Percent (%)</option>
+                            </select>
+                            <input type="number" value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))} className="border rounded p-2 w-full" />
+                        </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                        <h4 className="font-medium mb-3 flex items-center gap-2"><ShieldCheck size={16}/> Proposed Warranty</h4>
+                        <input type="text" value={warranty} onChange={(e) => setWarranty(e.target.value)} className="border rounded p-2 w-full" placeholder="e.g. 2 Years Standard Warranty" />
+                    </div>
+                </div>
                 <div className="mt-8 flex justify-end"><button onClick={() => setStep('review')} className="bg-primary text-white px-8 py-2 rounded-lg font-bold shadow hover:bg-teal-800">Review &rarr;</button></div>
             </div>
         )}
@@ -146,7 +165,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
                     <div className="flex gap-4">
                         <div className="h-20 w-20 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div><h1 className="text-xl font-bold text-gray-800 uppercase">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1><p className="text-xs text-gray-500 font-bold mt-1 italic">Bengal's Largest Hospital Based Hearing chain</p></div>
+                        <div><h1 className="text-xl font-bold text-gray-800 uppercase">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1><p className="text-xs text-gray-500 font-bold mt-1 italic">Bengal's Largest Hospital Based Hearing and Speech Chain</p></div>
                     </div>
                     <div className="text-right"><h2 className="text-xl font-black uppercase">Quotation</h2><p className="text-sm font-bold text-gray-600 mt-1"># {editingId || generateNextId()}</p><p className="text-xs text-gray-500">Date: {new Date().toLocaleDateString()}</p></div>
                 </div>
@@ -157,7 +176,19 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                     <thead className="bg-gray-100 uppercase text-[10px]"><tr><th className="border border-gray-300 p-2 text-left">Description</th><th className="border border-gray-300 p-2 text-right">Amount</th></tr></thead>
                     <tbody>{inventory.filter(i=>selectedItemIds.includes(i.id)).map(item => (<tr key={item.id}><td className="border border-gray-300 p-3"><p className="font-bold">{item.brand} {item.model}</p></td><td className="border border-gray-300 p-3 text-right font-bold">₹{item.price.toLocaleString()}</td></tr>))}</tbody>
                 </table>
-                <div className="flex justify-between items-end mt-20"><div className="text-center font-bold uppercase text-xs">{signature ? <img src={signature} className="h-16 mb-2 mx-auto" /> : <div className="h-16 w-40 border-b border-gray-300 mb-2"></div>}<p>Authorized Signatory</p></div></div>
+                <div className="flex justify-between items-end mt-20">
+                    <div className="w-3/4 pr-4">
+                        <p className="font-bold mb-1 text-[11px]">Terms & Conditions:</p>
+                        <div className="text-[9px] text-gray-600 space-y-0.5 leading-tight">
+                            <p>1. Please keep this Invoice safe for future correspondence</p>
+                            <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                            <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. These exemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June 2017.</p>
+                            <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT (Rate) dated 28-06-2017.</p>
+                            <p>5. Subject to Kolkata Jurisdiction. All equipment sales are final.</p>
+                        </div>
+                    </div>
+                    <div className="text-center font-bold uppercase text-xs">{signature ? <img src={signature} className="h-16 mb-2 mx-auto" /> : <div className="h-16 w-40 border-b border-gray-300 mb-2"></div>}<p>Authorized Signatory</p></div>
+                </div>
                 <div className="mt-12 flex gap-4 print:hidden"><button onClick={handleSaveQuotation} className="flex-1 bg-primary text-white py-3 rounded font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-2"><Save size={20}/> Save Quotation</button></div>
             </div>
         )}

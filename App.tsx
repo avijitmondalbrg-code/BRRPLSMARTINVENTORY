@@ -37,13 +37,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      // Create a timeout to prevent hanging on Firestore connection issues
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Connection Timeout")), 8000)
-      );
-
       try {
-        const dataPromise = Promise.all([
+        const [inv, invs, pats, quotes, notes, lds, trfs] = await Promise.all([
             fetchCollection('inventory'),
             fetchCollection('invoices'),
             fetchCollection('patients'),
@@ -53,16 +48,14 @@ const App: React.FC = () => {
             fetchCollection('stockTransfers')
         ]);
 
-        const [inv, invs, pats, quotes, notes, lds, trfs] = await Promise.race([dataPromise, timeoutPromise]) as any[];
-
-        if (!inv || (inv.length === 0 && invs.length === 0)) {
+        if (inv.length === 0 && invs.length === 0) {
            setInventory(INITIAL_INVENTORY);
            setInvoices(INITIAL_INVOICES);
            setQuotations(INITIAL_QUOTATIONS);
            setFinancialNotes(INITIAL_FINANCIAL_NOTES);
            setLeads(INITIAL_LEADS);
            const initialPatients: Patient[] = [];
-           INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push(inv.patientDetails); });
+           INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
            setPatients(initialPatients);
         } else {
            setInventory(inv as HearingAid[]);
@@ -74,14 +67,14 @@ const App: React.FC = () => {
            setStockTransfers(trfs as StockTransferType[]);
         }
       } catch (error) {
-        console.warn("Database connection issue. Using local session data.", error);
+        console.warn("Firebase unreachable. Loading local fallback data.", error);
         setInventory(INITIAL_INVENTORY);
         setInvoices(INITIAL_INVOICES);
         setQuotations(INITIAL_QUOTATIONS);
         setFinancialNotes(INITIAL_FINANCIAL_NOTES);
         setLeads(INITIAL_LEADS);
         const initialPatients: Patient[] = [];
-        INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push(inv.patientDetails); });
+        INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
         setPatients(initialPatients);
       } finally {
         setLoading(false);
@@ -109,9 +102,10 @@ const App: React.FC = () => {
     else localStorage.removeItem('brg_app_signature');
   };
 
+  // FIX: Implemented missing handlers to resolve compilation errors and ensure database sync.
   const handleDeleteInventoryItem = async (itemId: string) => {
     setInventory(prev => prev.filter(i => i.id !== itemId));
-    try { await deleteDocument('inventory', itemId); } catch(e) {}
+    try { await deleteDocument('inventory', itemId); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleDeleteInvoice = async (invoiceId: string) => {
@@ -124,7 +118,7 @@ const App: React.FC = () => {
         try {
             for (const id of itemIds) { await updateDocument('inventory', id, { status: 'Available' }); }
             await deleteDocument('invoices', invoiceId);
-        } catch(e) {}
+        } catch(e) { console.error("Firebase Sync Error", e); }
     }
   };
 
@@ -136,28 +130,28 @@ const App: React.FC = () => {
     const balanceDue = Math.max(0, inv.finalTotal - totalPaid);
     const updatedInvoice = { ...inv, payments: updatedPayments, balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') } as Invoice;
     setInvoices(prev => prev.map(i => i.id === invoiceId ? updatedInvoice : i));
-    try { await updateDocument('invoices', invoiceId, updatedInvoice); } catch(e) {}
+    try { await updateDocument('invoices', invoiceId, updatedInvoice); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleDeleteQuotation = async (id: string) => {
       setQuotations(prev => prev.filter(q => q.id !== id));
-      try { await deleteDocument('quotations', id); } catch(e) {}
+      try { await deleteDocument('quotations', id); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleDeleteFinancialNote = async (id: string) => {
       setFinancialNotes(prev => prev.filter(n => n.id !== id));
-      try { await deleteDocument('financialNotes', id); } catch(e) {}
+      try { await deleteDocument('financialNotes', id); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleDeletePatient = async (id: string) => {
       if (invoices.some(i => i.patientId === id)) return alert("Cannot delete patient with invoices.");
       setPatients(prev => prev.filter(p => p.id !== id));
-      try { await deleteDocument('patients', id); } catch(e) {}
+      try { await deleteDocument('patients', id); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleDeleteLead = async (id: string) => {
       setLeads(prev => prev.filter(l => l.id !== id));
-      try { await deleteDocument('leads', id); } catch(e) {}
+      try { await deleteDocument('leads', id); } catch(e) { console.error("Firebase Sync Error", e); }
   };
 
   const handleAddInventory = async (items: HearingAid | HearingAid[]) => {
@@ -218,7 +212,7 @@ const App: React.FC = () => {
   const handleTransferStock = async (itemId: string, to: string, sender: string, transporter: string, receiver: string, note: string) => {
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    const trf: StockTransferType = { id: `TRF-${Date.now()}`, hearingAidId: itemId, brand: item.brand, model: item.model, serialNumber: item.serialNumber, fromLocation: item.location, toLocation: to, date: new Date().toLocaleString('en-IN'), sender, transporter, receiver, note };
+    const trf: StockTransferType = { id: `TRF-${Date.now()}`, hearingAidId: itemId, brand: item.brand, model: item.model, serialNumber: item.serialNumber, fromLocation: item.location, toLocation: to, date: new Date().toISOString().split('T')[0], sender, transporter, receiver, note };
     setStockTransfers([trf, ...stockTransfers]);
     setInventory(inventory.map(i => i.id === itemId ? { ...item, location: to } : i));
     try {
@@ -228,8 +222,9 @@ const App: React.FC = () => {
   };
 
   const handleAddPatient = async (p: Patient) => {
-    setPatients([...patients, p]);
-    try { await setDocument('patients', p.id, p); } catch(e) {}
+    const patientWithDate = { ...p, addedDate: p.addedDate || new Date().toISOString().split('T')[0] };
+    setPatients([...patients, patientWithDate]);
+    try { await setDocument('patients', p.id, patientWithDate); } catch(e) {}
   };
 
   const handleUpdatePatient = async (p: Patient) => {
@@ -253,12 +248,12 @@ const App: React.FC = () => {
         setActiveView('patients');
         return;
     }
-    const newPatient: Patient = { id: `P-${Date.now()}`, name: lead.name, phone: lead.phone, address: '', referDoctor: '', audiologist: '', state: 'West Bengal', country: 'India' };
+    const newPatient: Patient = { id: `P-${Date.now()}`, name: lead.name, phone: lead.phone, address: '', referDoctor: '', audiologist: '', state: 'West Bengal', country: 'India', addedDate: new Date().toISOString().split('T')[0] };
     await handleAddPatient(newPatient);
     setActiveView('patients');
   };
 
-  if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-white"><div className="h-12 w-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-gray-500 font-medium">Starting Management System...</p></div>;
+  if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-white"><div className="h-12 w-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-gray-500 font-medium">Initializing System...</p></div>;
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
   if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} />;
 
@@ -267,7 +262,7 @@ const App: React.FC = () => {
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
-          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.5.2 Stable</p>
+          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.5.1 Stable</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[

@@ -1,16 +1,14 @@
-
-
 export interface HearingAid {
   id: string;
   brand: string;
   model: string;
   serialNumber: string;
   price: number; // Base Price (Taxable Value)
-  location: string; // e.g., 'Batanagar Mall', 'Fortis', 'AM'
+  location: string;
   status: 'Available' | 'Sold' | 'In-Transit';
   addedDate: string;
   hsnCode?: string;
-  gstRate?: number; // Percentage (e.g., 12, 18)
+  gstRate?: number;
 }
 
 export interface Patient {
@@ -23,7 +21,8 @@ export interface Patient {
   email?: string;
   referDoctor: string;
   audiologist: string;
-  gstin?: string; // Patient's GSTIN (for B2B)
+  gstin?: string;
+  addedDate?: string; // Standardized added date for patients
 }
 
 export interface PaymentRecord {
@@ -32,8 +31,7 @@ export interface PaymentRecord {
   amount: number;
   method: 'Cash' | 'Account Transfer' | 'Cheque' | 'UPI' | 'EMI' | 'Credit Card' | 'Debit Card' | 'Credit Note';
   note?: string;
-  // FIX: Added optional bankDetails property to store which company bank account received the payment.
-  bankDetails?: string; 
+  bankDetails?: string;
 }
 
 export interface InvoiceItem {
@@ -41,7 +39,7 @@ export interface InvoiceItem {
   brand: string;
   model: string;
   serialNumber: string;
-  price: number; // Unit Price
+  price: number;
   hsnCode?: string;
   gstRate: number;
   taxableValue: number;
@@ -54,31 +52,23 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   patientId: string;
-  patientName: string; // Denormalized for display ease
+  patientName: string;
   items: InvoiceItem[];
-  
-  // Financials
-  subtotal: number; // Sum of Unit Prices
+  subtotal: number;
   discountType: 'flat' | 'percent';
   discountValue: number;
   totalDiscount: number;
-  
-  // Tax
-  placeOfSupply: 'Intra-State' | 'Inter-State'; // Within State vs Outside
-  totalTaxableValue: number; // (Subtotal - Discount)
+  placeOfSupply: 'Intra-State' | 'Inter-State';
+  totalTaxableValue: number;
   totalCGST: number;
   totalSGST: number;
   totalIGST: number;
   totalTax: number;
-  
-  finalTotal: number; // Taxable + Tax
-  
+  finalTotal: number;
   date: string;
   notes?: string;
   warranty?: string;
-  patientDetails?: Patient; // Snapshot of patient details
-  
-  // Payment Tracking
+  patientDetails?: Patient;
   payments: PaymentRecord[];
   paymentStatus: 'Paid' | 'Partial' | 'Unpaid';
   balanceDue: number;
@@ -89,14 +79,11 @@ export interface Quotation {
   patientId: string;
   patientName: string;
   items: InvoiceItem[];
-  
   subtotal: number;
   discountType: 'flat' | 'percent';
   discountValue: number;
-  
   totalTaxableValue: number;
   totalTax: number;
-  
   finalTotal: number;
   date: string;
   notes?: string;
@@ -129,16 +116,13 @@ export interface StockTransfer {
   sender?: string;
   transporter?: string;
   receiver?: string;
-  // FIX: Added note property to fix Error in file App.tsx on line 221
   note?: string;
 }
 
-// CRM Types
 export type LeadStatus = 'New' | 'Contacted' | 'Appointment' | 'Trial' | 'Won' | 'Lost';
 
 export interface Activity {
   id: string;
-  // FIX: Added SMS type
   type: 'Call' | 'Visit' | 'WhatsApp' | 'Email' | 'Note' | 'SMS';
   date: string;
   content: string;
@@ -150,37 +134,18 @@ export interface Lead {
   name: string;
   phone: string;
   email?: string;
-  source: string; // e.g. 'Walk-in', 'Facebook', 'Referral'
+  source: string;
   status: LeadStatus;
   assignedTo?: string;
   createdAt: string;
   nextFollowUp?: string;
   notes?: string;
   activities: Activity[];
-  value?: number; // Potential value
+  value?: number;
 }
 
 export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts';
 export type UserRole = 'admin' | 'user';
 
-export const LOCATIONS = [
-  'Batanagar Mall',
-  'Fortis',
-  'AM',
-  'RNT',
-  'NH SUPER',
-  'NH MULTI',
-  'NH BARASAT',
-  'MANIPAL DHAKURIA',
-  'MANIPAL SALTLAKE',
-  'NIDAN',
-  'OTHERS'
-];
-
-export const BRANDS = [
-  'Phonak',
-  'Resound',
-  'Signia',
-  'Unitron',
-  'Alps'
-];
+export const LOCATIONS = ['Batanagar Mall', 'Fortis', 'AM', 'RNT', 'NH SUPER', 'NH MULTI', 'NH BARASAT', 'MANIPAL DHAKURIA', 'MANIPAL SALTLAKE', 'NIDAN', 'OTHERS'];
+export const BRANDS = ['Phonak', 'Resound', 'Signia', 'Unitron', 'Alps'];

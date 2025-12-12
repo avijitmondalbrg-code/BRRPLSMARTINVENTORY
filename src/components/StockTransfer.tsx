@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { HearingAid, LOCATIONS, StockTransfer as StockTransferType } from '../types';
-import { ArrowRightLeft, MapPin, Truck, History, ArrowRight, Search, User, UserCheck, Box, StickyNote } from 'lucide-react';
+import { ArrowRightLeft, MapPin, Truck, History, ArrowRight, Search, User, UserCheck, Box, StickyNote, Calendar, X, Filter } from 'lucide-react';
 
 interface StockTransferProps {
   inventory: HearingAid[];
@@ -13,6 +12,11 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
   const [selectedItemId, setSelectedItemId] = useState('');
   const [targetLocation, setTargetLocation] = useState(LOCATIONS[1]);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // History Filter State
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
   
   // Logistics Fields
   const [sender, setSender] = useState('');
@@ -28,6 +32,19 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
     item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const filteredHistory = transferHistory.filter(log => {
+    const matchesSearch = 
+        log.brand.toLowerCase().includes(historySearch.toLowerCase()) ||
+        log.model.toLowerCase().includes(historySearch.toLowerCase()) ||
+        log.serialNumber.toLowerCase().includes(historySearch.toLowerCase());
+    
+    // date is YYYY-MM-DD
+    const matchesStartDate = !startDate || log.date >= startDate;
+    const matchesEndDate = !endDate || log.date <= endDate;
+    
+    return matchesSearch && matchesStartDate && matchesEndDate;
+  });
 
   const selectedItem = inventory.find(i => i.id === selectedItemId);
 
@@ -64,15 +81,12 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
             <h3 className="font-semibold text-gray-700">New Transfer Request</h3>
         </div>
         <div className="p-6 space-y-6">
-            {/* Source & Dest Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                {/* Source */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 text-gray-500 font-medium uppercase text-xs tracking-wider">
                     <MapPin size={14} /> From / Item
                     </div>
                     
-                    {/* Search Box */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input 
@@ -82,7 +96,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
-                                setSelectedItemId(''); // Reset selection on search change
+                                setSelectedItemId(''); 
                             }}
                         />
                     </div>
@@ -108,14 +122,12 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                     )}
                 </div>
 
-                {/* Arrow */}
                 <div className="flex justify-center">
                     <div className="bg-teal-50 p-3 rounded-full text-teal-600">
                     <ArrowRightLeft size={32} />
                     </div>
                 </div>
 
-                {/* Destination */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 text-gray-500 font-medium uppercase text-xs tracking-wider">
                     <MapPin size={14} /> To Location
@@ -134,7 +146,6 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                 </div>
             </div>
             
-            {/* Logistics Details */}
             <div className="pt-6 border-t grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
@@ -174,7 +185,6 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                 </div>
             </div>
 
-            {/* Optional Note */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                     <StickyNote size={14}/> Notes (Optional)
@@ -202,16 +212,52 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
         </div>
       </div>
       
-      {/* Info Card */}
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-blue-800 text-sm">
-          <p><strong>Note:</strong> Stock transfers are logged immediately. Ensure physical inventory movement matches this digital record.</p>
-      </div>
-
-      {/* Transfer Log */}
       <div className="space-y-4">
-          <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <History size={20} /> Recent Transfer History
-          </h3>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                <History size={20} /> Recent Transfer History
+            </h3>
+            
+            {/* History Filter Section */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center bg-white p-2 rounded-lg border shadow-sm w-full md:w-auto">
+                <div className="relative w-full sm:w-48">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                    <input 
+                        type="text" 
+                        placeholder="Item search..." 
+                        className="w-full pl-7 pr-2 py-1.5 border rounded-md text-xs focus:ring-2 focus:ring-teal-500 outline-none"
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2 px-2 border-l border-gray-200">
+                    <Calendar size={14} className="text-gray-400" />
+                    <input 
+                      type="date" 
+                      className="bg-transparent text-xs outline-none focus:text-teal-600"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <span className="text-gray-400 text-xs">to</span>
+                    <input 
+                      type="date" 
+                      className="bg-transparent text-xs outline-none focus:text-teal-600"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                    {(startDate || endDate) && (
+                        <button 
+                          onClick={() => { setStartDate(''); setEndDate(''); }}
+                          className="p-1 text-gray-400 hover:text-red-500 transition"
+                          title="Reset Dates"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table className="w-full text-left">
                 <thead className="bg-gray-50 text-xs text-gray-500 uppercase font-semibold">
@@ -224,10 +270,10 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                    {transferHistory.length === 0 ? (
-                        <tr><td colSpan={5} className="p-8 text-center text-gray-400">No transfers recorded yet.</td></tr>
+                    {filteredHistory.length === 0 ? (
+                        <tr><td colSpan={5} className="p-8 text-center text-gray-400">No transfers recorded for the selected criteria.</td></tr>
                     ) : (
-                        transferHistory.map(log => (
+                        filteredHistory.map(log => (
                             <tr key={log.id} className="hover:bg-gray-50">
                                 <td className="p-4 text-sm text-gray-600">
                                     {log.date}

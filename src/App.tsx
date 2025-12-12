@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
@@ -55,7 +54,7 @@ const App: React.FC = () => {
            setFinancialNotes(INITIAL_FINANCIAL_NOTES);
            setLeads(INITIAL_LEADS);
            const initialPatients: Patient[] = [];
-           INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push(inv.patientDetails); });
+           INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
            setPatients(initialPatients);
         } else {
            setInventory(inv as HearingAid[]);
@@ -68,14 +67,13 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.warn("Firebase unreachable. Loading local fallback data.", error);
-        // Fallback to local data if Firebase fails so the user can still use the app
         setInventory(INITIAL_INVENTORY);
         setInvoices(INITIAL_INVOICES);
         setQuotations(INITIAL_QUOTATIONS);
         setFinancialNotes(INITIAL_FINANCIAL_NOTES);
         setLeads(INITIAL_LEADS);
         const initialPatients: Patient[] = [];
-        INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push(inv.patientDetails); });
+        INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
         setPatients(initialPatients);
       } finally {
         setLoading(false);
@@ -212,7 +210,7 @@ const App: React.FC = () => {
   const handleTransferStock = async (itemId: string, to: string, sender: string, transporter: string, receiver: string, note: string) => {
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
-    const trf: StockTransferType = { id: `TRF-${Date.now()}`, hearingAidId: itemId, brand: item.brand, model: item.model, serialNumber: item.serialNumber, fromLocation: item.location, toLocation: to, date: new Date().toLocaleString('en-IN'), sender, transporter, receiver, note };
+    const trf: StockTransferType = { id: `TRF-${Date.now()}`, hearingAidId: itemId, brand: item.brand, model: item.model, serialNumber: item.serialNumber, fromLocation: item.location, toLocation: to, date: new Date().toISOString().split('T')[0], sender, transporter, receiver, note };
     setStockTransfers([trf, ...stockTransfers]);
     setInventory(inventory.map(i => i.id === itemId ? { ...item, location: to } : i));
     try {
@@ -222,8 +220,9 @@ const App: React.FC = () => {
   };
 
   const handleAddPatient = async (p: Patient) => {
-    setPatients([...patients, p]);
-    try { await setDocument('patients', p.id, p); } catch(e) {}
+    const patientWithDate = { ...p, addedDate: p.addedDate || new Date().toISOString().split('T')[0] };
+    setPatients([...patients, patientWithDate]);
+    try { await setDocument('patients', p.id, patientWithDate); } catch(e) {}
   };
 
   const handleUpdatePatient = async (p: Patient) => {
@@ -247,7 +246,7 @@ const App: React.FC = () => {
         setActiveView('patients');
         return;
     }
-    const newPatient: Patient = { id: `P-${Date.now()}`, name: lead.name, phone: lead.phone, address: '', referDoctor: '', audiologist: '', state: 'West Bengal', country: 'India' };
+    const newPatient: Patient = { id: `P-${Date.now()}`, name: lead.name, phone: lead.phone, address: '', referDoctor: '', audiologist: '', state: 'West Bengal', country: 'India', addedDate: new Date().toISOString().split('T')[0] };
     await handleAddPatient(newPatient);
     setActiveView('patients');
   };

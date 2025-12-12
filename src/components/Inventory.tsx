@@ -1,25 +1,27 @@
-
-
 import React, { useState } from 'react';
 import { HearingAid, LOCATIONS, BRANDS, UserRole } from '../types';
-// FIX: Import Trash2 icon for delete button
-import { Plus, Search, Package, AlertTriangle, Layers, FilePlus, MapPin, CheckCircle, XCircle, Truck, IndianRupee, Edit, Lock, Trash2 } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, Layers, FilePlus, MapPin, CheckCircle, XCircle, Truck, IndianRupee, Edit, Lock, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Calendar, X, Filter } from 'lucide-react';
 
 interface InventoryProps {
   inventory: HearingAid[];
   onAdd: (item: HearingAid | HearingAid[]) => void;
   onUpdate: (item: HearingAid) => void;
-  // FIX: Add onDelete to props to handle item deletion
   onDelete: (itemId: string) => void;
   userRole: UserRole;
 }
 
-// FIX: Add onDelete to component props
 export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate, onDelete, userRole }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [groupByModel, setGroupByModel] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  
+  // Date Filter State
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+  // Sorting State
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   
   // New Filters
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Available' | 'Sold' | 'In-Transit'>('Available');
@@ -44,7 +46,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
 
   const openAddModal = () => {
     setNewItem({
-        brand: BRANDS[0], // Default to first brand
+        brand: BRANDS[0],
         model: '',
         serialNumber: '',
         price: 0,
@@ -88,13 +90,12 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
             ...baseItem,
             id: newItem.id,
             serialNumber: newItem.serialNumber,
-            status: newItem.status as any // Keep existing status or update if editable
+            status: newItem.status as any
         };
         onUpdate(updatedItem);
     } else if (isBulkMode) {
-        // Bulk Add Logic
         const serials = bulkSerials
-            .split(/[\n,]+/) // Split by newline or comma
+            .split(/[\n,]+/)
             .map(s => s.trim())
             .filter(s => s.length > 0);
 
@@ -111,9 +112,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         }));
 
         onAdd(newItems);
-        alert(`Successfully added ${newItems.length} items.`);
     } else {
-        // Single Add Logic
         if (!newItem.serialNumber) {
             alert("Please enter a serial number");
             return;
@@ -128,7 +127,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         onAdd(item);
     }
 
-    // Reset and Close
     setShowAddModal(false);
     setNewItem({ brand: '', model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '902140', gstRate: 0 });
     setBulkSerials('');
@@ -136,7 +134,11 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     setIsEditMode(false);
   };
 
-  // 1. Apply Filters
+  const toggleSort = () => {
+    setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc');
+  };
+
+  // 1. Apply Filters and Sorting
   let filteredInventory = inventory.filter(item => {
     const matchesSearch = 
         item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -145,15 +147,20 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
     const matchesLocation = locationFilter === 'ALL' || item.location === locationFilter;
+    
+    const matchesStartDate = !startDate || item.addedDate >= startDate;
+    const matchesEndDate = !endDate || item.addedDate <= endDate;
 
-    return matchesSearch && matchesStatus && matchesLocation;
+    return matchesSearch && matchesStatus && matchesLocation && matchesStartDate && matchesEndDate;
+  }).sort((a, b) => {
+    const dateA = new Date(a.addedDate || 0).getTime();
+    const dateB = new Date(b.addedDate || 0).getTime();
+    return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
   });
 
-  // Calculate Summary Stats for Current View
   const totalValue = filteredInventory.reduce((sum, item) => sum + item.price, 0);
   const totalCount = filteredInventory.length;
 
-  // Grouping Logic (Calculated based on filtered inventory)
   const groupedInventory = React.useMemo(() => {
     const groups: Record<string, { brand: string, model: string, count: number, stock: number, ids: string[], isLowStock: boolean, avgPrice: number, totalValue: number }> = {};
     
@@ -180,14 +187,12 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       groups[key].ids.push(item.id);
     });
 
-    // Apply Low Stock Logic
     Object.values(groups).forEach(group => {
         group.isLowStock = group.stock < LOW_STOCK_THRESHOLD;
     });
 
     let result = Object.values(groups);
 
-    // Apply Low Stock Filter to Groups
     if (showLowStockOnly) {
         result = result.filter(g => g.isLowStock);
     }
@@ -195,8 +200,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     return result;
   }, [filteredInventory, showLowStockOnly]);
 
-
-  // Apply Low Stock Filter to List View if not grouped
   if (showLowStockOnly && !groupByModel) {
       const lowStockKeys = new Set(groupedInventory.filter(g => g.isLowStock).map(g => `${g.brand}-${g.model}`));
       filteredInventory = filteredInventory.filter(item => lowStockKeys.has(`${item.brand}-${item.model}`));
@@ -218,7 +221,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <Package className="h-6 w-6 text-primary" />
@@ -240,10 +242,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         )}
       </div>
 
-      {/* Main Content Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        
-        {/* Status Tabs */}
         <div className="flex border-b border-gray-200 px-4 pt-2 bg-gray-50/50 overflow-x-auto">
           <TabButton label="Available Stock" value="Available" icon={CheckCircle} />
           <TabButton label="Sold Items" value="Sold" icon={XCircle} />
@@ -251,56 +250,85 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
           <TabButton label="All Inventory" value="ALL" icon={Layers} />
         </div>
 
-        {/* Filter Bar */}
-        <div className="p-4 flex flex-col lg:flex-row gap-4 items-center border-b border-gray-100">
-            {/* Search */}
-            <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                    type="text"
-                    placeholder="Search Brand, Model, Serial..."
-                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
+        <div className="p-4 space-y-4 border-b border-gray-100">
+            <div className="flex flex-col lg:flex-row gap-4 items-center">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                        type="text"
+                        placeholder="Search Brand, Model, Serial..."
+                        className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
 
-            {/* Location Filter */}
-            <div className="w-full lg:w-auto">
-                <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <select 
-                        className="w-full lg:w-48 pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none appearance-none bg-white cursor-pointer"
-                        value={locationFilter}
-                        onChange={(e) => setLocationFilter(e.target.value)}
+                <div className="w-full lg:w-auto">
+                    <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <select 
+                            className="w-full lg:w-48 pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none appearance-none bg-white cursor-pointer"
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                        >
+                            <option value="ALL">All Locations</option>
+                            {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full lg:w-auto">
+                    <button
+                        onClick={() => setGroupByModel(!groupByModel)}
+                        className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 transition whitespace-nowrap flex-1 lg:flex-none justify-center ${groupByModel ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                     >
-                        <option value="ALL">All Locations</option>
-                        {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                    </select>
+                        <Layers size={16} />
+                        {groupByModel ? 'Ungroup' : 'Group by Model'}
+                    </button>
+                    
+                    <button
+                        onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+                        className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 transition whitespace-nowrap flex-1 lg:flex-none justify-center ${showLowStockOnly ? 'bg-red-50 border-red-200 text-red-700 ring-1 ring-red-200' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        <AlertTriangle size={16} className={showLowStockOnly ? 'text-red-600' : 'text-gray-400'} />
+                        Low Stock
+                    </button>
                 </div>
             </div>
 
-            {/* Toggles */}
-            <div className="flex items-center gap-2 w-full lg:w-auto">
-                <button
-                    onClick={() => setGroupByModel(!groupByModel)}
-                    className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 transition whitespace-nowrap flex-1 lg:flex-none justify-center ${groupByModel ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                >
-                    <Layers size={16} />
-                    {groupByModel ? 'Ungroup' : 'Group by Model'}
-                </button>
-                
-                <button
-                    onClick={() => setShowLowStockOnly(!showLowStockOnly)}
-                    className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 transition whitespace-nowrap flex-1 lg:flex-none justify-center ${showLowStockOnly ? 'bg-red-50 border-red-200 text-red-700 ring-1 ring-red-200' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                >
-                    <AlertTriangle size={16} className={showLowStockOnly ? 'text-red-600' : 'text-gray-400'} />
-                    Low Stock
-                </button>
+            {/* Date Range Filter UI */}
+            <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200 max-w-2xl">
+                <div className="flex items-center gap-2 px-2 text-gray-500 border-r border-gray-200">
+                    <Calendar size={16} />
+                    <span className="text-xs font-bold uppercase tracking-wider">Stock Added Date</span>
+                </div>
+                <div className="flex items-center gap-3 px-2">
+                    <input 
+                      type="date" 
+                      className="bg-transparent text-sm outline-none focus:text-teal-600"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <span className="text-gray-400 font-bold">to</span>
+                    <input 
+                      type="date" 
+                      className="bg-transparent text-sm outline-none focus:text-teal-600"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                    {(startDate || endDate) && (
+                        <button 
+                          onClick={() => { setStartDate(''); setEndDate(''); }}
+                          className="p-1 text-gray-400 hover:text-red-500 transition"
+                          title="Reset Dates"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
 
-        {/* Summary Metric Strip */}
         <div className="bg-teal-50/50 px-6 py-3 border-b border-teal-100 flex justify-between items-center text-sm">
             <span className="text-gray-500">Showing <span className="font-bold text-gray-800">{totalCount}</span> items</span>
             <span className="flex items-center gap-1 text-teal-800 font-medium">
@@ -309,7 +337,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
             </span>
         </div>
 
-        {/* Data Area */}
         <div className="bg-white">
             {!groupByModel ? (
             <div className="overflow-x-auto">
@@ -318,6 +345,16 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     <tr>
                     <th className="p-4">Device Details</th>
                     <th className="p-4">Serial No</th>
+                    <th className="p-4">
+                      <button 
+                        onClick={toggleSort} 
+                        className="flex items-center gap-1 hover:text-teal-700 transition uppercase font-semibold focus:outline-none"
+                        title={`Sort by Date ${sortDirection === 'desc' ? 'Ascending' : 'Descending'}`}
+                      >
+                        Added Date
+                        {sortDirection === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+                      </button>
+                    </th>
                     <th className="p-4">Tax Info</th>
                     <th className="p-4">Location</th>
                     <th className="p-4">Base Price</th>
@@ -333,6 +370,12 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                             <div className="text-sm text-gray-500">{item.model}</div>
                         </td>
                         <td className="p-4 text-gray-600 font-mono text-sm">{item.serialNumber}</td>
+                        <td className="p-4 text-gray-600 text-sm">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={12} className="text-gray-400" />
+                            {item.addedDate ? new Date(item.addedDate).toLocaleDateString('en-IN') : '-'}
+                          </div>
+                        </td>
                         <td className="p-4 text-sm text-gray-600">
                              <div>HSN: {item.hsnCode || '-'}</div>
                              <div className="text-xs">GST: {item.gstRate}%</div>
@@ -354,7 +397,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                         </td>
                         {userRole === 'admin' && (
                             <td className="p-4">
-                                {/* FIX: Add delete button for admins */}
                                 <div className="flex items-center gap-2">
                                     <button 
                                         onClick={() => openEditModal(item)}
@@ -381,7 +423,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     ))}
                     {filteredInventory.length === 0 && (
                     <tr>
-                        <td colSpan={userRole === 'admin' ? 7 : 6} className="p-12 text-center text-gray-400">
+                        <td colSpan={userRole === 'admin' ? 8 : 7} className="p-12 text-center text-gray-400">
                              <Package className="mx-auto h-12 w-12 mb-2 opacity-20" />
                              <p>No inventory items found matching current filters.</p>
                         </td>
@@ -442,7 +484,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
@@ -451,8 +492,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <button onClick={() => setShowAddModal(false)} className="text-teal-100 hover:text-white">&times;</button>
             </div>
             <div className="p-6 space-y-4 h-[70vh] overflow-y-auto">
-              
-              {/* Bulk Toggle (Only for Add Mode) */}
               {!isEditMode && (
                 <div className="flex justify-end">
                     <button 
@@ -538,7 +577,16 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                 </div>
               </div>
               
-              {/* Status Select - Only in Edit Mode */}
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
+                  <input 
+                    type="date"
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-teal-500 outline-none"
+                    value={newItem.addedDate || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setNewItem({...newItem, addedDate: e.target.value})}
+                  />
+              </div>
+
               {isEditMode && (
                   <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
