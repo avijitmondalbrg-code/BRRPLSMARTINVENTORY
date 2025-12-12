@@ -29,7 +29,6 @@
           visibility: hidden;
         }
         
-        /* Target specific printable IDs for Invoices, Receipts, etc. */
         #invoice-printable-area, 
         #receipt-printable-area {
           visibility: visible !important;
@@ -43,13 +42,11 @@
           z-index: 9999;
         }
 
-        /* Ensure all children of the printable area are visible */
         #invoice-printable-area *, 
         #receipt-printable-area * {
           visibility: visible !important;
         }
 
-        /* Hide specific UI elements during print if marked with 'no-print' */
         .no-print, .print\:hidden {
             display: none !important;
         }
@@ -58,6 +55,22 @@
           margin: 0.5cm; 
           size: auto;
         }
+      }
+
+      /* Custom scrollbar for better look */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #0f766e;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #0d9488;
       }
     </style>
   <script type="importmap">
@@ -78,6 +91,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
