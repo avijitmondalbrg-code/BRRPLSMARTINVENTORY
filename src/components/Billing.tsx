@@ -41,7 +41,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Date Filter State
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -58,10 +57,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [showPatientResults, setShowPatientResults] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
-  const [phoneError, setPhoneError] = useState('');
   const [placeOfSupply, setPlaceOfSupply] = useState<'Intra-State' | 'Inter-State'>('Intra-State');
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [originalInvoiceItemIds, setOriginalInvoiceItemIds] = useState<string[]>([]); 
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
   const [discountValue, setDiscountValue] = useState<number>(0);
@@ -70,11 +67,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
   const [paymentBank, setPaymentBank] = useState<string>('');
   const [aiNote, setAiNote] = useState<string>('');
-  const [generatingNote, setGeneratingNote] = useState(false);
 
   useEffect(() => { if (patient.state) { setPlaceOfSupply(patient.state.toLowerCase() === 'west bengal' ? 'Intra-State' : 'Inter-State'); } }, [patient.state]);
 
-  const resetForm = () => { setStep('patient'); setPatient({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); setPhoneError(''); setPlaceOfSupply('Intra-State'); setSelectedItemIds([]); setOriginalInvoiceItemIds([]); setGstOverrides({}); setDiscountValue(0); setWarranty('2 Years Standard Warranty'); setAiNote(''); setEditingInvoiceId(null); setPatientSearchTerm(''); setProductSearchTerm(''); setInitialPayment(0); setPaymentMethod('Cash'); setPaymentBank(''); };
+  const resetForm = () => { setStep('patient'); setPatient({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); setPlaceOfSupply('Intra-State'); setSelectedItemIds([]); setGstOverrides({}); setDiscountValue(0); setWarranty('2 Years Standard Warranty'); setAiNote(''); setEditingInvoiceId(null); setPatientSearchTerm(''); setInitialPayment(0); setPaymentMethod('Cash'); setPaymentBank(''); };
 
   const generateNextId = () => {
     const currentYear = new Date().getFullYear();
@@ -88,11 +84,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
 
   const handleSelectPatient = (p: Patient) => {
-    setPatient({
-        ...p,
-        state: p.state || 'West Bengal',
-        country: p.country || 'India'
-    });
+    setPatient({ ...p, state: p.state || 'West Bengal', country: p.country || 'India' });
     setPatientSearchTerm('');
     setShowPatientResults(false);
   };
@@ -101,9 +93,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setEditingInvoiceId(invoice.id);
     setPatient(invoice.patientDetails || { id: invoice.patientId, name: invoice.patientName, address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '' });
     setPlaceOfSupply(invoice.placeOfSupply || 'Intra-State');
-    const currentItemIds = invoice.items.map(i => i.hearingAidId);
-    setSelectedItemIds(currentItemIds);
-    setOriginalInvoiceItemIds(currentItemIds);
+    setSelectedItemIds(invoice.items.map(i => i.hearingAidId));
     const overrides: Record<string, number> = {};
     invoice.items.forEach(i => { overrides[i.hearingAidId] = i.gstRate; });
     setGstOverrides(overrides);
@@ -111,7 +101,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setDiscountValue(invoice.discountValue);
     setWarranty(invoice.warranty || '2 Years Standard Warranty');
     setAiNote(invoice.notes || '');
-    setInitialPayment(0); 
     setViewMode('edit');
     setStep('review');
   };
@@ -153,12 +142,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       setShowPaymentModal(false);
   };
 
+  // FIX: Added missing handlePrint function to resolve "Cannot find name 'handlePrint'" error.
   const handlePrint = () => window.print();
 
-  // Filtered Invoices
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          inv.patientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || inv.patientName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStartDate = !startDate || inv.date >= startDate;
     const matchesEndDate = !endDate || inv.date <= endDate;
     return matchesSearch && matchesStartDate && matchesEndDate;
@@ -171,63 +159,28 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileText className="text-primary" /> Invoice Management</h2>
                   <button onClick={handleStartNew} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow hover:bg-teal-800 transition"><Plus size={20} /> New Invoice</button>
               </div>
-
-              {/* Filters Section */}
               <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4 md:space-y-0 md:flex md:items-center md:gap-4">
-                  {/* Search */}
                   <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                      <input 
-                          type="text" 
-                          placeholder="Search Invoice ID or Patient..." 
-                          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                      />
+                      <input type="text" placeholder="Search Invoice ID or Patient..." className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-
-                  {/* Date Range */}
                   <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-2 px-2 text-gray-500 border-r border-gray-200">
-                          <Calendar size={16} />
-                          <span className="text-xs font-bold uppercase tracking-wider">Date Range</span>
-                      </div>
+                      <div className="flex items-center gap-2 px-2 text-gray-500 border-r border-gray-200"><Calendar size={16} /><span className="text-xs font-bold uppercase tracking-wider">Date Range</span></div>
                       <div className="flex items-center gap-2 px-2">
-                          <input 
-                            type="date" 
-                            className="bg-transparent text-sm outline-none focus:text-teal-600"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                          />
+                          <input type="date" className="bg-transparent text-sm outline-none focus:text-teal-600" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                           <span className="text-gray-400">to</span>
-                          <input 
-                            type="date" 
-                            className="bg-transparent text-sm outline-none focus:text-teal-600"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                          />
-                          {(startDate || endDate) && (
-                              <button 
-                                onClick={() => { setStartDate(''); setEndDate(''); }}
-                                className="ml-2 text-gray-400 hover:text-red-500 transition"
-                                title="Clear Dates"
-                              >
-                                  <X size={16} />
-                              </button>
-                          )}
+                          <input type="date" className="bg-transparent text-sm outline-none focus:text-teal-600" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                          {(startDate || endDate) && <button onClick={() => { setStartDate(''); setEndDate(''); }} className="ml-2 text-gray-400 hover:text-red-500 transition"><X size={16} /></button>}
                       </div>
                   </div>
               </div>
-
               <div className="bg-white rounded-lg shadow overflow-hidden border">
                   <table className="w-full text-left">
                       <thead className="bg-gray-50 text-gray-600 font-medium border-b">
                           <tr><th className="p-4">Invoice ID</th><th className="p-4">Date</th><th className="p-4">Patient</th><th className="p-4 text-right">Amount</th><th className="p-4 text-right">Paid</th><th className="p-4 text-right">Balance</th><th className="p-4 text-center">Status</th><th className="p-4 text-center">Actions</th></tr>
                       </thead>
                       <tbody className="divide-y">
-                          {filteredInvoices.length === 0 ? (
-                              <tr><td colSpan={8} className="p-12 text-center text-gray-400 italic">No invoices found matching the filters.</td></tr>
-                          ) : filteredInvoices.map(inv => {
+                          {filteredInvoices.length === 0 ? (<tr><td colSpan={8} className="p-12 text-center text-gray-400 italic">No invoices found.</td></tr>) : filteredInvoices.map(inv => {
                               const totalPaid = inv.payments.reduce((sum, p) => sum + p.amount, 0);
                               return (
                               <tr key={inv.id} className="hover:bg-gray-50 transition">
@@ -237,19 +190,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                   <td className="p-4 text-right font-bold text-gray-800">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
                                   <td className="p-4 text-right text-green-700">₹{totalPaid.toLocaleString('en-IN')}</td>
                                   <td className="p-4 text-right text-red-600">₹{inv.balanceDue.toLocaleString('en-IN')}</td>
-                                  <td className="p-4 text-center">
-                                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-800 border-orange-200'}`}>{inv.paymentStatus}</span>
-                                  </td>
-                                  <td className="p-4">
-                                      <div className="flex justify-center items-center gap-1">
-                                        <button onClick={() => handleViewEdit(inv)} className="p-1.5 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded" title="View"><Eye size={18}/></button>
-                                        <button onClick={() => { setPaymentModalInvoice(inv); setNewPaymentAmount(inv.balanceDue); setShowPaymentModal(true); }} disabled={inv.balanceDue <= 0} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-20" title="Add Payment"><CreditCard size={18}/></button>
-                                        <button onClick={() => { setHistoryModalInvoice(inv); setShowHistoryModal(true); }} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="History"><History size={18}/></button>
-                                        {userRole === 'admin' && onDelete && (
-                                            <button onClick={() => { if(window.confirm(`Permanently delete invoice ${inv.id}?`)) onDelete(inv.id); }} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition" title="Delete Permanent"><Trash2 size={18}/></button>
-                                        )}
-                                      </div>
-                                  </td>
+                                  <td className="p-4 text-center"><span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-800 border-orange-200'}`}>{inv.paymentStatus}</span></td>
+                                  <td className="p-4"><div className="flex justify-center items-center gap-1"><button onClick={() => handleViewEdit(inv)} className="p-1.5 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded"><Eye size={18}/></button><button onClick={() => { setPaymentModalInvoice(inv); setNewPaymentAmount(inv.balanceDue); setShowPaymentModal(true); }} disabled={inv.balanceDue <= 0} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-20"><CreditCard size={18}/></button><button onClick={() => { setHistoryModalInvoice(inv); setShowHistoryModal(true); }} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"><History size={18}/></button>{userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Permanently delete invoice ${inv.id}?`)) onDelete(inv.id); }} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition"><Trash2 size={18}/></button>)}</div></td>
                               </tr>
                           )})}
                       </tbody>
@@ -261,7 +203,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                           <div className="bg-primary p-4 text-white flex justify-between items-center rounded-t-xl"><h3 className="font-bold">Record Payment: {paymentModalInvoice.id}</h3><button onClick={() => setShowPaymentModal(false)}><X/></button></div>
                           <div className="p-6 space-y-4">
                               <div><label className="text-xs font-bold text-gray-500 uppercase">Amount Due: ₹{paymentModalInvoice.balanceDue}</label><input type="number" value={newPaymentAmount} onChange={e => setNewPaymentAmount(Number(e.target.value))} className="w-full border p-2 rounded mt-1 font-bold text-xl" /></div>
-                              <div><label className="text-xs font-bold text-gray-500 uppercase">Bank Account (Optional)</label><select className="w-full border p-2 rounded mt-1" value={newPaymentBank} onChange={e => setNewPaymentBank(e.target.value)}><option value="">None</option>{COMPANY_BANK_ACCOUNTS.map(b => <option key={b.accountNumber} value={b.name}>{b.name}</option>)}</select></div>
+                              <div><label className="text-xs font-bold text-gray-500 uppercase">Bank Account</label><select className="w-full border p-2 rounded mt-1" value={newPaymentBank} onChange={e => setNewPaymentBank(e.target.value)}><option value="">None</option>{COMPANY_BANK_ACCOUNTS.map(b => <option key={b.accountNumber} value={b.name}>{b.name}</option>)}</select></div>
                               <button onClick={handleAddPayment} className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition">Confirm Payment</button>
                           </div>
                       </div>
@@ -271,14 +213,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
                           <div className="bg-gray-100 p-4 border-b flex justify-between items-center rounded-t-xl"><h3 className="font-bold">Payment History: {historyModalInvoice.id}</h3><button onClick={() => setShowHistoryModal(false)}><X/></button></div>
-                          <div className="max-h-80 overflow-y-auto p-4 space-y-2">
-                              {historyModalInvoice.payments.map(p => (
-                                  <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded border">
-                                      <div><p className="font-bold text-gray-800">₹{p.amount.toLocaleString()}</p><p className="text-xs text-gray-500">{p.date} via {p.method}</p></div>
-                                      <button onClick={() => setReceiptData({ payment: p, invoice: historyModalInvoice })} className="text-teal-600 hover:underline text-sm font-bold flex items-center gap-1"><Printer size={14}/> Receipt</button>
-                                  </div>
-                              ))}
-                          </div>
+                          <div className="max-h-80 overflow-y-auto p-4 space-y-2">{historyModalInvoice.payments.map(p => (<div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded border"><div><p className="font-bold text-gray-800">₹{p.amount.toLocaleString()}</p><p className="text-xs text-gray-500">{p.date} via {p.method}</p></div><button onClick={() => setReceiptData({ payment: p, invoice: historyModalInvoice })} className="text-teal-600 hover:underline text-sm font-bold flex items-center gap-1"><Printer size={14}/> Receipt</button></div>))}</div>
                       </div>
                   </div>
               )}
@@ -291,57 +226,16 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     <div className="max-w-5xl mx-auto">
         <div className="mb-6 flex items-center justify-between print:hidden">
             <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-200 rounded-full transition text-gray-600"><ArrowLeft size={24} /></button><h2 className="text-2xl font-bold text-gray-800">{editingInvoiceId ? 'View/Edit' : 'New'} Invoice</h2></div>
-            <div className="flex gap-2">
-                {['patient', 'product', 'review'].map((s, idx) => (
-                    <button key={s} onClick={() => setStep(s as any)} className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${step === s ? 'bg-primary text-white shadow-md' : 'bg-gray-200 text-gray-600'}`}>{idx+1}. {s.charAt(0).toUpperCase() + s.slice(1)}</button>
-                ))}
-            </div>
+            <div className="flex gap-2">{['patient', 'product', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${step === s ? 'bg-primary text-white shadow-md' : 'bg-gray-200 text-gray-600'}`}>{idx+1}. {s.charAt(0).toUpperCase() + s.slice(1)}</button>))}</div>
         </div>
         {step === 'patient' && (
             <div className="bg-white rounded-xl shadow border p-6 animate-fade-in print:hidden">
                 <h3 className="text-lg font-bold mb-4 border-b pb-2 text-gray-700">1. Patient Details</h3>
-                
-                {/* Patient Search Section */}
                 <div className="mb-8 relative">
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Search Existing Patient</label>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                        <input
-                            type="text"
-                            placeholder="Type patient name or phone number..."
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition shadow-sm"
-                            value={patientSearchTerm}
-                            onChange={(e) => {
-                                setPatientSearchTerm(e.target.value);
-                                setShowPatientResults(true);
-                            }}
-                        />
-                    </div>
-                    {showPatientResults && patientSearchTerm && (
-                        <div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-100 max-h-60 overflow-y-auto">
-                            {patients
-                                .filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm))
-                                .map(p => (
-                                    <button
-                                        key={p.id}
-                                        onClick={() => handleSelectPatient(p)}
-                                        className="w-full text-left px-4 py-3 hover:bg-teal-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition"
-                                    >
-                                        <div>
-                                            <p className="font-bold text-gray-800">{p.name}</p>
-                                            <p className="text-xs text-gray-500">{p.phone}</p>
-                                        </div>
-                                        <span className="text-teal-600 text-xs bg-teal-50 px-3 py-1 rounded-full font-bold border border-teal-100">Select</span>
-                                    </button>
-                                ))
-                            }
-                            {patients.filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).length === 0 && (
-                                <div className="p-4 text-center text-gray-400 text-sm">No patients found. Fill details manually below.</div>
-                            )}
-                        </div>
-                    )}
+                    <div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" /><input type="text" placeholder="Type patient name or phone number..." className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition shadow-sm" value={patientSearchTerm} onChange={(e) => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }} /></div>
+                    {showPatientResults && patientSearchTerm && (<div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-100 max-h-60 overflow-y-auto">{patients.filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).map(p => (<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-4 py-3 hover:bg-teal-50 border-b border-gray-50 last:border-0 flex justify-between items-center transition"><div><p className="font-bold text-gray-800">{p.name}</p><p className="text-xs text-gray-500">{p.phone}</p></div><span className="text-teal-600 text-xs bg-teal-50 px-3 py-1 rounded-full font-bold border border-teal-100">Select</span></button>))}{patients.filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).length === 0 && (<div className="p-4 text-center text-gray-400 text-sm">No patients found. Fill details manually below.</div>)}</div>)}
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Name *</label><input required className="w-full border rounded p-2" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
                     <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone *</label><input required className="w-full border rounded p-2" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
@@ -360,21 +254,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <td className="p-3 text-center"><input type="checkbox" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
                                 <td className="p-3 font-medium">{item.brand} {item.model}</td>
                                 <td className="p-3 font-mono text-xs">{item.serialNumber}</td>
-                                <td className="p-3">
-                                    {selectedItemIds.includes(item.id) && (
-                                        <select 
-                                            className="border rounded p-1 text-xs"
-                                            value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)}
-                                            onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}
-                                        >
-                                            <option value="0">0% (Exempt)</option>
-                                            <option value="5">5%</option>
-                                            <option value="12">12%</option>
-                                            <option value="18">18%</option>
-                                            <option value="28">28%</option>
-                                        </select>
-                                    )}
-                                </td>
+                                <td className="p-3">{selectedItemIds.includes(item.id) && (<select className="border rounded p-1 text-xs" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}>
+                                    <option value="0">0% (Exempt)</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select>)}</td>
                                 <td className="p-3 text-right font-bold">₹{item.price.toLocaleString()}</td>
                             </tr>
                         ))}</tbody>
@@ -401,11 +282,24 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="text-right"><h4 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b ml-auto w-16 text-right">Details:</h4><p className="text-gray-700">Ref Doctor: <b>{patient.referDoctor || '-'}</b></p><p className="text-gray-700">Audiologist: <b>{patient.audiologist || '-'}</b></p></div>
                 </div>
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-10">
-                    <thead className="bg-gray-100 uppercase text-[10px]"><tr><th className="border border-gray-300 p-2 text-left">Description</th><th className="border border-gray-300 p-2 text-center">HSN</th><th className="border border-gray-300 p-2 text-center">GST%</th><th className="border border-gray-300 p-2 text-right">Amount</th></tr></thead>
-                    <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId}><td className="border border-gray-300 p-3"><p className="font-bold">{item.brand} {item.model}</p><p className="text-xs text-gray-500 font-mono">SN: {item.serialNumber}</p></td><td className="border border-gray-300 p-3 text-center">{item.hsnCode || '902140'}</td><td className="border border-gray-300 p-3 text-center">{item.gstRate}%</td><td className="border border-gray-300 p-3 text-right font-bold">₹{item.price.toLocaleString()}</td></tr>))}</tbody>
+                    <thead className="bg-gray-100 uppercase text-[10px]"><tr><th className="border border-gray-300 p-2 text-left">Description</th><th className="border border-gray-300 p-2 text-center">HSN</th><th className="border border-gray-300 p-2 text-right">Taxable Value</th><th className="border border-gray-300 p-2 text-center">GST%</th><th className="border border-gray-300 p-2 text-right">Total Amount</th></tr></thead>
+                    <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId}><td className="border border-gray-300 p-3"><p className="font-bold">{item.brand} {item.model}</p><p className="text-xs text-gray-500 font-mono">SN: {item.serialNumber}</p></td><td className="border border-gray-300 p-3 text-center">{item.hsnCode || '902140'}</td><td className="border border-gray-300 p-3 text-right">₹{item.taxableValue.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td><td className="border border-gray-300 p-3 text-center">{item.gstRate}%</td><td className="border border-gray-300 p-3 text-right font-bold">₹{item.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td></tr>))}</tbody>
                 </table>
                 <div className="flex justify-end mb-10">
-                    <div className="w-1/2 space-y-2 text-sm"><div className="flex justify-between text-gray-500"><span>Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-red-600"><span>Special Consideration</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="flex justify-between text-gray-500"><span>Total Tax</span><span>₹{(runningCGST + runningSGST + runningIGST).toLocaleString()}</span></div><div className="flex justify-between font-black text-xl border-t-2 border-gray-800 pt-2"><span>GRAND TOTAL</span><span>₹{runningFinalTotal.toLocaleString()}</span></div></div>
+                    <div className="w-1/2 space-y-2 text-sm">
+                        <div className="flex justify-between text-gray-500"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-red-600"><span>Discount / Special Consideration</span><span>-₹{discountAmount.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-bold text-gray-700 pt-1 border-t"><span>Total Taxable Value</span><span>₹{runningTaxableTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                        {placeOfSupply === 'Intra-State' ? (
+                            <>
+                                <div className="flex justify-between text-gray-500 text-xs italic"><span>CGST Amount</span><span>₹{runningCGST.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                                <div className="flex justify-between text-gray-500 text-xs italic"><span>SGST Amount</span><span>₹{runningSGST.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                            </>
+                        ) : (
+                            <div className="flex justify-between text-gray-500 text-xs italic"><span>IGST Amount</span><span>₹{runningIGST.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                        )}
+                        <div className="flex justify-between font-black text-xl border-t-2 border-gray-800 pt-2"><span>GRAND TOTAL</span><span>₹{Math.round(runningFinalTotal).toLocaleString()}</span></div>
+                    </div>
                 </div>
                 <div className="text-xs font-bold text-gray-600 mb-10 p-4 bg-gray-50 border rounded uppercase tracking-wider"><span className="text-gray-400 mr-2">Amount in Words:</span> {numberToWords(runningFinalTotal)}</div>
                 <div className="flex justify-between items-end mt-20">

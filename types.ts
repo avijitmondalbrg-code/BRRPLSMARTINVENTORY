@@ -3,7 +3,7 @@ export interface HearingAid {
   brand: string;
   model: string;
   serialNumber: string;
-  price: number; // Base Price (Taxable Value)
+  price: number;
   location: string;
   status: 'Available' | 'Sold' | 'In-Transit';
   addedDate: string;
@@ -22,7 +22,7 @@ export interface Patient {
   referDoctor: string;
   audiologist: string;
   gstin?: string;
-  addedDate?: string; // Standardized added date for patients
+  addedDate?: string;
 }
 
 export interface PaymentRecord {
@@ -72,6 +72,21 @@ export interface Invoice {
   payments: PaymentRecord[];
   paymentStatus: 'Paid' | 'Partial' | 'Unpaid';
   balanceDue: number;
+}
+
+export interface AdvanceBooking {
+  id: string;
+  patientId: string;
+  patientName: string;
+  phone: string;
+  address?: string;
+  amount: number;
+  date: string;
+  modelInterest: string;
+  paymentMethod: PaymentRecord['method'];
+  status: 'Active' | 'Consumed' | 'Refunded';
+  notes?: string;
+  bankDetails?: string;
 }
 
 export interface Quotation {
@@ -144,7 +159,7 @@ export interface Lead {
   value?: number;
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = ['Batanagar Mall', 'Fortis', 'AM', 'RNT', 'NH SUPER', 'NH MULTI', 'NH BARASAT', 'MANIPAL DHAKURIA', 'MANIPAL SALTLAKE', 'NIDAN', 'OTHERS'];

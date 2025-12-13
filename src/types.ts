@@ -82,6 +82,20 @@ export interface Invoice {
   balanceDue: number;
 }
 
+export interface AdvanceBooking {
+  id: string;
+  patientId: string;
+  patientName: string;
+  phone: string;
+  amount: number;
+  date: string;
+  modelInterest: string;
+  paymentMethod: PaymentRecord['method'];
+  status: 'Active' | 'Consumed' | 'Refunded';
+  notes?: string;
+  bankDetails?: string;
+}
+
 export interface Quotation {
   id: string;
   patientId: string;
@@ -156,7 +170,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [

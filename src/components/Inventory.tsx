@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HearingAid, LOCATIONS, BRANDS, UserRole } from '../types';
-import { Plus, Search, Package, AlertTriangle, Layers, FilePlus, MapPin, CheckCircle, XCircle, Truck, IndianRupee, Edit, Lock, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Calendar, X, Filter } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, Layers, FilePlus, MapPin, CheckCircle, XCircle, Truck, IndianRupee, Edit, Lock, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Calendar, X, Filter, Smartphone } from 'lucide-react';
 
 interface InventoryProps {
   inventory: HearingAid[];
@@ -26,8 +26,14 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
   // New Filters
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Available' | 'Sold' | 'In-Transit'>('Available');
   const [locationFilter, setLocationFilter] = useState<string>('ALL');
+  const [modelFilter, setModelFilter] = useState<string>('ALL');
 
   const LOW_STOCK_THRESHOLD = 3;
+
+  // Dynamic unique models list for filtering
+  const uniqueModels = React.useMemo(() => {
+    return Array.from(new Set(inventory.map(item => item.model))).sort();
+  }, [inventory]);
 
   // Form State
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -147,11 +153,12 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
     const matchesLocation = locationFilter === 'ALL' || item.location === locationFilter;
+    const matchesModel = modelFilter === 'ALL' || item.model === modelFilter;
     
     const matchesStartDate = !startDate || item.addedDate >= startDate;
     const matchesEndDate = !endDate || item.addedDate <= endDate;
 
-    return matchesSearch && matchesStatus && matchesLocation && matchesStartDate && matchesEndDate;
+    return matchesSearch && matchesStatus && matchesLocation && matchesModel && matchesStartDate && matchesEndDate;
   }).sort((a, b) => {
     const dateA = new Date(a.addedDate || 0).getTime();
     const dateB = new Date(b.addedDate || 0).getTime();
@@ -263,11 +270,23 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     />
                 </div>
 
-                <div className="w-full lg:w-auto">
-                    <div className="relative">
+                <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1 sm:min-w-[160px]">
+                        <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <select 
+                            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none appearance-none bg-white cursor-pointer"
+                            value={modelFilter}
+                            onChange={(e) => setModelFilter(e.target.value)}
+                        >
+                            <option value="ALL">All Models</option>
+                            {uniqueModels.map(model => <option key={model} value={model}>{model}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="relative flex-1 sm:min-w-[160px]">
                         <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <select 
-                            className="w-full lg:w-48 pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none appearance-none bg-white cursor-pointer"
+                            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none appearance-none bg-white cursor-pointer"
                             value={locationFilter}
                             onChange={(e) => setLocationFilter(e.target.value)}
                         >
@@ -491,7 +510,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <h3 className="text-white font-semibold text-lg">{isEditMode ? 'Edit Stock Item' : 'Add Hearing Aid Stock'}</h3>
               <button onClick={() => setShowAddModal(false)} className="text-teal-100 hover:text-white">&times;</button>
             </div>
-            <div className="p-6 space-y-4 h-[70vh] overflow-y-auto">
+            <div className="p-6 space-y-4 h-[70vh] overflow-y-auto custom-scrollbar">
               {!isEditMode && (
                 <div className="flex justify-end">
                     <button 

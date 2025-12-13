@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { HearingAid, Invoice } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, AlertCircle, IndianRupee, Package, Sparkles, AlertTriangle, ArrowRight, Clock } from 'lucide-react';
+import { TrendingUp, AlertCircle, IndianRupee, Package, Sparkles, AlertTriangle, ArrowRight, Clock, Building2 } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
 
 interface DashboardProps {
@@ -16,6 +15,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
 
   // Configuration
   const LOW_STOCK_THRESHOLD = 3;
+  const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
   // Stats Calculation
   const availableItems = inventory.filter(i => i.status === 'Available');
@@ -58,13 +58,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
 
   const handleGetInsights = async () => {
     setLoadingInsights(true);
-    // Provide detailed string for AI: Brand, Model, Price, Location
     const summary = inventory
         .filter(i => i.status === 'Available')
         .map(i => `- ${i.brand} ${i.model} @ ${i.location} (Price: ₹${i.price})`)
         .join('\n');
     
-    // Add summary stats to the prompt context
     const context = `Total Items: ${availableCount}, Total Value: ₹${totalStockValue}\n\nList:\n${summary}`;
     
     const result = await analyzeStockTrends(context);
@@ -74,7 +72,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
+      {/* Dashboard Branding Header */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 transition hover:shadow-md">
+          <div className="h-20 w-48 flex items-center justify-center bg-white rounded-xl">
+              <img 
+                src={LOGO_URL} 
+                alt="Bengal Rehabilitation Group" 
+                className="h-full object-contain"
+                onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                }}
+              />
+          </div>
+          <div className="hidden md:block w-px h-12 bg-gray-100"></div>
+          <div className="text-center md:text-left">
+              <h2 className="text-2xl font-black text-gray-800 tracking-tight">Performance Analytics</h2>
+              <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Dashboard Overview</p>
+          </div>
+          <div className="md:ml-auto flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-full border border-teal-100 text-xs font-black uppercase tracking-widest">
+              <Clock size={14} /> Live Status: {new Date().toLocaleDateString('en-IN')}
+          </div>
+      </div>
       
       {/* Top Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
