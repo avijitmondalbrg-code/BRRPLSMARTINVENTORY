@@ -82,11 +82,13 @@ export interface Invoice {
   balanceDue: number;
 }
 
+// FIX: Added missing 'address' property to AdvanceBooking interface
 export interface AdvanceBooking {
   id: string;
   patientId: string;
   patientName: string;
   phone: string;
+  address?: string;
   amount: number;
   date: string;
   modelInterest: string;
