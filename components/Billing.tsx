@@ -69,6 +69,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const handlePrint = () => window.print();
 
+  // FIX: Use dashes instead of slashes for Firebase compatibility
   const generateNextId = () => {
     const fy = getFinancialYear();
     const prefix = `BRRPL-SR-${fy}-`;
