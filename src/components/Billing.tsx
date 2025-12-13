@@ -1,21 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole } from '../types';
 import { generateInvoiceNote } from '../services/geminiService';
-import { CLINIC_GSTIN, COUNTRIES, INDIAN_STATES, COMPANY_BANK_ACCOUNTS } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, INDIAN_STATES, COMPANY_BANK_ACCOUNTS, CLINIC_UDYAM } from '../constants';
 import { User, FileText, Printer, Save, Loader2, Sparkles, Ear, Eye, Download, Plus, ArrowLeft, Edit, Search, ShieldCheck, Users, Check, CreditCard, Banknote, X, Receipt as ReceiptIcon, MapPin, PenBox, History, Globe, Landmark, Trash2, Calendar, Filter } from 'lucide-react';
 import { Receipt } from './Receipt';
-
-interface BillingProps {
-  inventory: HearingAid[];
-  invoices?: Invoice[];
-  patients: Patient[];
-  onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
-  onUpdateInvoice?: (invoice: Invoice) => void;
-  onDelete?: (invoiceId: string) => void;
-  logo: string;
-  signature: string | null;
-  userRole: UserRole;
-}
 
 const numberToWords = (num: number): string => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
@@ -142,7 +130,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       setShowPaymentModal(false);
   };
 
-  // FIX: Added missing handlePrint function to resolve "Cannot find name 'handlePrint'" error.
   const handlePrint = () => window.print();
 
   const filteredInvoices = invoices.filter(inv => {
@@ -273,7 +260,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
                     <div className="flex gap-4">
                         <div className="h-20 w-20 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div><h1 className="text-xl font-bold text-gray-800 uppercase">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1><p className="text-xs text-gray-500 font-bold mt-1 tracking-tight italic">Bengal's Largest Hospital Based Hearing and Speech Chain</p><p className="text-[10px] text-gray-500 font-bold mt-2">GSTIN: 19AALCB1534C1ZY</p><p className="text-[10px] text-gray-400 mt-1">Kalipur, Purba Nischintapur, Kolkata - 700138, WB</p></div>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-800 uppercase">{COMPANY_NAME}</h1>
+                            <p className="text-xs text-gray-500 font-bold mt-1 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">{COMPANY_ADDRESS}</p>
+                            <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase">GSTIN: {CLINIC_GSTIN} | UDYAM: {CLINIC_UDYAM}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                        </div>
                     </div>
                     <div className="text-right"><h2 className="text-xl font-black uppercase tracking-tighter">Tax Invoice</h2><p className="text-sm font-bold text-gray-600 mt-1"># {editingInvoiceId || generateNextId()}</p><p className="text-xs text-gray-500">Date: {new Date().toLocaleDateString()}</p></div>
                 </div>
@@ -321,3 +314,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     </div>
   );
 };
+interface BillingProps {
+  inventory: HearingAid[];
+  invoices?: Invoice[];
+  patients: Patient[];
+  onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
+  onUpdateInvoice?: (invoice: Invoice) => void;
+  onDelete?: (invoiceId: string) => void;
+  logo: string;
+  signature: string | null;
+  userRole: UserRole;
+}

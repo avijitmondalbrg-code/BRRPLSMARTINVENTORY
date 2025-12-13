@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet } from 'lucide-react';
 import { ViewState } from '../types';
+import { COMPANY_TAGLINE } from '../constants';
 
 interface FrontCoverProps {
   logo: string;
@@ -8,7 +9,6 @@ interface FrontCoverProps {
 }
 
 export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
-  // Using the provided specific logo URL for the cover page
   const COVER_LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
   return (
@@ -40,7 +40,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
           </h1>
           <div className="h-1 w-32 bg-gradient-to-r from-teal-400 to-blue-500 mx-auto rounded-full mb-6"></div>
           <p className="text-xl text-teal-100 font-light tracking-wide uppercase">
-            Bengal Rehabilitation & Research Pvt. Ltd.
+            {COMPANY_TAGLINE}
           </p>
           <p className="text-sm text-slate-400 mt-2">
             Comprehensive Hearing Aid Inventory & Patient Management System

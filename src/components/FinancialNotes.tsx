@@ -1,8 +1,6 @@
-
-
 import React, { useState } from 'react';
 import { FinancialNote, Patient, Invoice, UserRole } from '../types';
-// FIX: Add Trash2 icon
+import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN } from '../constants';
 import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2 } from 'lucide-react';
 
 interface FinancialNotesProps {
@@ -11,14 +9,12 @@ interface FinancialNotesProps {
   patients: Patient[];
   invoices: Invoice[];
   onSave: (note: FinancialNote) => void;
-  // FIX: Add onDelete prop
   onDelete: (noteId: string) => void;
   logo: string;
   signature: string | null;
   userRole: UserRole;
 }
 
-// FIX: Add onDelete to component props
 export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, invoices, onSave, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,7 +39,6 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
     p.phone.includes(patientSearchTerm)
   );
 
-  // Helper to generate ID
   const generateNextId = () => {
     const prefix = type === 'CREDIT' ? 'CN' : 'DN';
     const currentYear = new Date().getFullYear();
@@ -117,9 +112,12 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                     />
                 </div>
                 <div className="pt-1">
-                    <h1 className="text-xl font-bold text-gray-700 uppercase leading-tight">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1>
+                    <h1 className="text-xl font-bold text-gray-700 uppercase leading-tight">{COMPANY_NAME}</h1>
                     <div className="w-full h-px bg-blue-400 my-1.5"></div>
-                    <p className="text-gray-500 text-xs font-semibold italic">Bengal's Largest Hospital Based Hearing and Speech Chain</p>
+                    <p className="text-gray-500 text-xs font-semibold italic">{COMPANY_TAGLINE}</p>
+                    <p className="text-[9px] text-gray-500 mt-2 leading-tight">{COMPANY_ADDRESS}</p>
+                    <p className="text-[9px] text-gray-500 font-bold mt-1">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                    <p className="text-[9px] text-gray-400 mt-0.5 uppercase">GSTIN: {CLINIC_GSTIN}</p>
                 </div>
             </div>
             <div className="text-right">
@@ -184,7 +182,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                     <div className="h-16 w-40 border-b border-gray-300 mb-2"></div>
                 )}
                 <p className="font-bold uppercase">Authorized Signatory</p>
-                <p className="mt-2">Bengal Rehabilitation & Research Pvt. Ltd.</p>
+                <p className="mt-2">{COMPANY_NAME}</p>
             </div>
             <div className="text-right">
                 <p>This is a computer generated document.</p>
@@ -220,7 +218,6 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                {/* Patient Selection */}
                 <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Patient *</label>
                     {selectedPatient ? (
@@ -388,7 +385,6 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                 >
                                     <FileText size={16} /> View
                                 </button>
-                                {/* FIX: Add delete button for admins */}
                                 {userRole === 'admin' && (
                                     <button 
                                         onClick={() => onDelete(note.id)}

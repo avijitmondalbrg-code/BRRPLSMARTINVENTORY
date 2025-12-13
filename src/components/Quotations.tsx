@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { generateInvoiceNote } from '../services/geminiService';
-import { CLINIC_GSTIN } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL } from '../constants';
 import { FileText, Printer, Save, Loader2, Sparkles, Download, Plus, ArrowLeft, Edit, Search, ShieldCheck, CheckCircle, FileQuestion, Trash2 } from 'lucide-react';
 
 interface QuotationsProps {
@@ -166,12 +166,18 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
                     <div className="flex gap-4">
                         <div className="h-20 w-20 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div><h1 className="text-xl font-bold text-gray-800 uppercase">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1><p className="text-xs text-gray-500 font-bold mt-1 italic">Bengal's Largest Hospital Based Hearing and Speech Chain</p><p className="text-[10px] text-gray-500 font-bold mt-2">GSTIN: 19AALCB1534C1ZY</p></div>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-800 uppercase">{COMPANY_NAME}</h1>
+                            <p className="text-xs text-gray-500 font-bold mt-1 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                            <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">{COMPANY_ADDRESS}</p>
+                            <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase">GSTIN: {CLINIC_GSTIN}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                        </div>
                     </div>
-                    <div className="text-right"><h2 className="text-xl font-black uppercase">Quotation</h2><p className="text-sm font-bold text-gray-600 mt-1"># {editingId || generateNextId()}</p><p className="text-xs text-gray-500">Date: {new Date().toLocaleDateString()}</p></div>
+                    <div className="text-right"><h2 className="text-xl font-black uppercase tracking-tighter">Quotation</h2><p className="text-sm font-bold text-gray-600 mt-1"># {editingId || generateNextId()}</p><p className="text-xs text-gray-500">Date: {new Date().toLocaleDateString()}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-10 mb-10 text-sm">
-                    <div><h4 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b w-16">For:</h4><p className="font-bold text-lg">{patient.name}</p><p className="text-gray-600">{patient.phone}</p></div>
+                    <div><h4 className="text-xs font-bold uppercase text-gray-500 mb-2 border-b w-16">Bill To:</h4><p className="font-bold text-lg">{patient.name}</p><p className="text-gray-600">{patient.phone}</p><p className="text-gray-600">{patient.address}</p></div>
                 </div>
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-10">
                     <thead className="bg-gray-100 uppercase text-[10px]"><tr><th className="border border-gray-300 p-2 text-left">Description</th><th className="border border-gray-300 p-2 text-right">Amount</th></tr></thead>

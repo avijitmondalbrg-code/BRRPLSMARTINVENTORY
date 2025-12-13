@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Invoice, PaymentRecord, Patient } from '../types';
+import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN } from '../constants';
 import { Printer, X, Download } from 'lucide-react';
 
 interface ReceiptProps {
@@ -56,11 +57,12 @@ export const Receipt: React.FC<ReceiptProps> = ({ payment, invoice, patient, onC
                         <img src={logo} alt="Logo" className="h-full w-full object-contain" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold text-gray-800 uppercase leading-tight">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1>
-                        <p className="text-xs font-semibold text-gray-500 italic mt-1">Bengal's Largest Hospital Based Hearing and Speech Chain</p>
+                        <h1 className="text-xl font-bold text-gray-800 uppercase leading-tight">{COMPANY_NAME}</h1>
+                        <p className="text-xs font-semibold text-gray-500 italic mt-1">{COMPANY_TAGLINE}</p>
                         <div className="text-xs text-gray-500 mt-2">
-                            <p>Kalipur, Purba Nischintapur, Pujali, Budge Budge, Kolkata - 700138, WB, India</p>
-                            <p>Phone: 9874925867, 6291236283</p>
+                            <p>{COMPANY_ADDRESS}</p>
+                            <p className="font-bold mt-1">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                            <p className="mt-0.5 uppercase">GSTIN: {CLINIC_GSTIN}</p>
                         </div>
                     </div>
                 </div>

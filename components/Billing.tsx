@@ -507,10 +507,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 {/* Official Invoice Header */}
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
                     <div className="flex gap-6">
-                        <div className="h-24 w-24 flex items-center justify-center bg-white"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
+                        <div className="h-24 w-24 flex items-center justify-center bg-white"><img src="https://bengalrehabilitationgroup.com/images/brg_logo.png" alt="Logo" className="h-full object-contain" /></div>
                         <div>
                           <h1 className="text-2xl font-black text-gray-800 uppercase leading-tight tracking-tighter">Bengal Rehabilitation<br />& Research Pvt. Ltd.</h1>
-                          <p className="text-xs text-gray-500 font-black mt-2 tracking-tight uppercase opacity-70">West Bengal's Premier Hearing & Speech Network</p>
+                          <p className="text-xs text-gray-500 font-black mt-2 opacity-70">Kalipur, Purba Nischintapur, Pujali, Budge Budge, Kolkata-700138, WB, India</p>
+                          <p className="text-xs text-gray-500 font-black mt-2 opacity-70">Phone No: 6291236283/9874925867</p>
+                          <p className="text-xs text-gray-500 font-black mt-2 opacity-70">Email: infobrg18@gmail.com</p>
                           <div className="mt-4 flex flex-col gap-1">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">GSTIN: <span className="text-gray-700">19AALCB1534C1ZY</span></p>
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">UDYAM: <span className="text-gray-700">WB-18-0032916</span></p>
