@@ -1,41 +1,79 @@
+import { initializeApp } from "firebase/app";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  orderBy 
+} from "firebase/firestore";
 
-import firebase from "firebase/compat/app";
-import "firebase/compat/firestore";
-
-// TODO: Replace this object with your actual Firebase config from Firebase Console
+// আপনার নতুন Firebase কনফিগারেশন
 const firebaseConfig = {
-  apiKey: "YOUR_ACTUAL_API_KEY",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyB-Pf2iKqsTO7kIrpofuRC0yVko8VGZOjI",
+  authDomain: "brg-smart-inventory.firebaseapp.com",
+  projectId: "brg-smart-inventory",
+  storageBucket: "brg-smart-inventory.firebasestorage.app",
+  messagingSenderId: "1027406256024",
+  appId: "1:1027406256024:web:02e5fc367916da4d65bded",
+  measurementId: "G-FPGD0KV7NN"
 };
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+// Firebase Initialize করা
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
 
-export const db = firebase.firestore();
+/**
+ * ডাটাবেস হেল্পার ফাংশনসমূহ (Modular Style)
+ */
 
-// Performance and connection fix for live servers
-db.settings({ 
-  experimentalForceLongPolling: true
-});
-
+// ১. পুরো কালেকশন ফেচ করা
 export const fetchCollection = async (collectionName: string) => {
-  const querySnapshot = await db.collection(collectionName).get();
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  try {
+    const colRef = collection(db, collectionName);
+    const querySnapshot = await getDocs(colRef);
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    }));
+  } catch (error) {
+    console.error(`Error fetching ${collectionName}:`, error);
+    throw error;
+  }
 };
 
+// ২. নতুন ডকুমেন্ট তৈরি করা বা আপডেট করা (ID সহ)
 export const setDocument = async (collectionName: string, docId: string, data: any) => {
-  return await db.collection(collectionName).doc(docId).set(data, { merge: true });
+  try {
+    const docRef = doc(db, collectionName, docId);
+    return await setDoc(docRef, data, { merge: true });
+  } catch (error) {
+    console.error(`Error setting document ${docId}:`, error);
+    throw error;
+  }
 };
 
+// ৩. বিদ্যমান ডকুমেন্ট আপডেট করা
 export const updateDocument = async (collectionName: string, docId: string, data: any) => {
-  return await db.collection(collectionName).doc(docId).update(data);
+  try {
+    const docRef = doc(db, collectionName, docId);
+    return await updateDoc(docRef, data);
+  } catch (error) {
+    console.error(`Error updating document ${docId}:`, error);
+    throw error;
+  }
 };
 
+// ৪. ডকুমেন্ট ডিলিট করা
 export const deleteDocument = async (collectionName: string, docId: string) => {
-  return await db.collection(collectionName).doc(docId).delete();
+  try {
+    const docRef = doc(db, collectionName, docId);
+    return await deleteDoc(docRef);
+  } catch (error) {
+    console.error(`Error deleting document ${docId}:`, error);
+    throw error;
+  }
 };
