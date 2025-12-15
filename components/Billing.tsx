@@ -160,7 +160,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       const cgst = (itemTaxable * (gstRate / 100)) / 2;
       const sgst = (itemTaxable * (gstRate / 100)) / 2;
       runningTaxableTotal += itemTaxable; runningCGST += cgst; runningSGST += sgst; runningFinalTotal += (itemTaxable + cgst + sgst);
-      return { hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, price: item.price, gstRate, taxableValue: itemTaxable, cgstAmount: cgst, sgstAmount: sgst, igstAmount: 0, totalAmount: itemTaxable + cgst + sgst };
+      return { hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, price: item.price, gstRate, taxableValue: itemTaxable, cgstAmount: cgst, sgstAmount: sgst, igstAmount: 0, totalAmount: itemTaxable + cgst + sgst, hsnCode: item.hsnCode || '90214090' };
   });
 
   const handleSaveInvoice = () => {
@@ -429,7 +429,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 </div>
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
                     <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Device Description</th><th className="p-4 text-center">HSN</th><th className="p-4 text-right">Base Price</th><th className="p-4 text-center">GST%</th><th className="p-4 text-right">Total</th></tr></thead>
-                    <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800">{item.brand} {item.model}</p><p className="text-[10px] text-gray-400 font-bold uppercase">S/N: {item.serialNumber}</p></td><td className="p-4 text-center font-mono">902140</td><td className="p-4 text-right font-medium">₹{item.taxableValue.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td><td className="p-4 text-center font-bold">{item.gstRate}%</td><td className="p-4 text-right font-black text-gray-900">₹{item.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td></tr>))}</tbody>
+                    <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800">{item.brand} {item.model}</p><p className="text-[10px] text-gray-400 font-bold uppercase">S/N: {item.serialNumber}</p></td><td className="p-4 text-center font-mono">{item.hsnCode}</td><td className="p-4 text-right font-medium">₹{item.taxableValue.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td><td className="p-4 text-center font-bold">{item.gstRate}%</td><td className="p-4 text-right font-black text-gray-900">₹{item.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td></tr>))}</tbody>
                 </table>
                 <div className="flex justify-end mb-10">
                     <div className="w-1/2 space-y-2 bg-gray-50 p-6 rounded-2xl border border-gray-100">

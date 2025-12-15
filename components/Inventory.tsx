@@ -21,7 +21,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkSerials, setBulkSerials] = useState('');
   const [newItem, setNewItem] = useState<Partial<HearingAid>>({
-    brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '902140', gstRate: 0
+    brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0
   });
 
   const filteredInventory = useMemo(() => {
@@ -171,7 +171,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-gray-500 uppercase font-black text-[10px] tracking-widest border-b">
                 <tr>
-                  <th className="p-4">Device Identity</th>
+                  <th className="p-4">Model Name</th>
                   <th className="p-4">Serial Number</th>
                   <th className="p-4">Current Location</th>
                   <th className="p-4">Value (Base)</th>
@@ -270,6 +270,17 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                   <select className="w-full border rounded-lg p-2.5 text-sm bg-gray-50 focus:bg-white" value={newItem.location} onChange={e => setNewItem({...newItem, location: e.target.value})}>
                     {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">HSN Code</label>
+                  <input className="w-full border rounded-lg p-2.5 text-sm" value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} placeholder="e.g. 90214090" />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1">GST Rate (%)</label>
+                  <input type="number" className="w-full border rounded-lg p-2.5 text-sm" value={newItem.gstRate} onChange={e => setNewItem({...newItem, gstRate: Number(e.target.value)})} placeholder="0" />
                 </div>
               </div>
 

@@ -46,7 +46,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     price: 0,
     location: LOCATIONS[0],
     status: 'Available',
-    hsnCode: '902140', // Default HSN for Hearing Aids
+    hsnCode: '90214090', // Updated default HSN
     gstRate: 0 // Default GST 0%
   });
 
@@ -58,7 +58,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         price: 0,
         location: LOCATIONS[0],
         status: 'Available',
-        hsnCode: '902140',
+        hsnCode: '90214090',
         gstRate: 0
     });
     setIsEditMode(false);
@@ -86,7 +86,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         location: newItem.location || LOCATIONS[0],
         status: newItem.status || 'Available',
         addedDate: newItem.addedDate || new Date().toISOString().split('T')[0],
-        hsnCode: newItem.hsnCode || '',
+        hsnCode: newItem.hsnCode || '90214090',
         gstRate: newItem.gstRate !== undefined ? Number(newItem.gstRate) : 0
     };
 
@@ -134,7 +134,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     }
 
     setShowAddModal(false);
-    setNewItem({ brand: '', model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '902140', gstRate: 0 });
+    setNewItem({ brand: '', model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0 });
     setBulkSerials('');
     setIsBulkMode(false);
     setIsEditMode(false);
@@ -628,7 +628,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-teal-500 outline-none"
                     value={newItem.hsnCode}
                     onChange={(e) => setNewItem({...newItem, hsnCode: e.target.value})}
-                    placeholder="e.g. 902140"
+                    placeholder="e.g. 90214090"
                   />
                 </div>
                 <div>
