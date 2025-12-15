@@ -47,9 +47,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [payMethod, setPayMethod] = useState<PaymentRecord['method']>('Cash');
   const [payBank, setPayBank] = useState<string>('');
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [historyModalInvoice, setHistoryModalInvoice] = useState<Invoice | null>(null);
-  const [receiptData, setReceiptData] = useState<{ payment: PaymentRecord, invoice: Invoice } | null>(null);
   
   // Form State
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
@@ -85,14 +82,35 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const discountAmount = discountValue;
   
   let runningTaxableTotal = 0, runningCGST = 0, runningSGST = 0, runningFinalTotal = 0;
+  
+  // Calculation Logic: Preserve original MRP and calculate taxable value
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemRatio = subtotal > 0 ? item.price / subtotal : 0;
+      // taxableValue is MRP minus its portion of the flat discount
       const itemTaxable = item.price - (discountAmount * itemRatio);
       const gstRate = gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0);
       const cgst = (itemTaxable * (gstRate / 100)) / 2;
       const sgst = (itemTaxable * (gstRate / 100)) / 2;
-      runningTaxableTotal += itemTaxable; runningCGST += cgst; runningSGST += sgst; runningFinalTotal += (itemTaxable + cgst + sgst);
-      return { hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, price: item.price, gstRate, taxableValue: itemTaxable, cgstAmount: cgst, sgstAmount: sgst, igstAmount: 0, totalAmount: itemTaxable + cgst + sgst, hsnCode: item.hsnCode || '90214090' };
+      
+      runningTaxableTotal += itemTaxable; 
+      runningCGST += cgst; 
+      runningSGST += sgst; 
+      runningFinalTotal += (itemTaxable + cgst + sgst);
+      
+      return { 
+          hearingAidId: item.id, 
+          brand: item.brand, 
+          model: item.model, 
+          serialNumber: item.serialNumber, 
+          price: item.price, // This is the Original Inventory MRP
+          gstRate, 
+          taxableValue: itemTaxable, // This is the Discounted Value
+          cgstAmount: cgst, 
+          sgstAmount: sgst, 
+          igstAmount: 0, 
+          totalAmount: itemTaxable + cgst + sgst, 
+          hsnCode: item.hsnCode || '90214090' 
+      };
   });
 
   const gstSummary = React.useMemo(() => {
@@ -227,8 +245,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div className="p-6 bg-slate-50 rounded-2xl border shadow-inner"><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Collected Now (INR)</label><div className="relative"><IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-600" size={20} /><input type="number" className="w-full pl-10 pr-4 py-4 border-2 border-gray-100 rounded-xl outline-none focus:border-primary text-2xl font-black text-gray-800" value={initialPayment || ''} onChange={e => setInitialPayment(Number(e.target.value))} placeholder="0.00" /></div></div>
                     <div className="p-6 bg-white rounded-2xl border space-y-4">
-                        <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Payment Mode</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-gray-700 bg-gray-50" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Account Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
-                        <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Received In Bank</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-teal-700 bg-gray-50" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                        <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Payment Mode</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-gray-700 bg-gray-50" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Account Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
+                        <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Received In Bank</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-teal-700 bg-gray-50" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                     </div>
                     <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col justify-center items-center text-center"><div className="bg-white p-3 rounded-full shadow-sm mb-3"><CheckCircle2 className="text-teal-600" size={32} /></div><p className="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Remaining Balance</p><p className="text-3xl font-black text-teal-900">₹{(runningFinalTotal - initialPayment).toLocaleString()}</p></div>
                 </div>
@@ -244,7 +262,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 </div>
                 <div className="grid grid-cols-2 gap-12 mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Billed To:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-600">{patient.phone}</p><p className="text-xs text-gray-500 mt-1 uppercase">{patient.address}</p></div><div className="text-right flex flex-col justify-center gap-2"><div><h4 className="text-[10px] font-black uppercase text-gray-400 mb-0.5">Refer Doctor</h4><p className="font-black text-gray-700">{patient.referDoctor || '-'}</p></div><div><h4 className="text-[10px] font-black uppercase text-gray-400 mb-0.5">Audiologist</h4><p className="font-black text-teal-700">{patient.audiologist || '-'}</p></div></div></div>
                 
-                {/* Updated Table: Showing consistent Unit Price and Taxable Value separately */}
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-6 shadow-sm">
                   <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest">
                     <tr>
@@ -264,7 +281,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                           <p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p>
                         </td>
                         <td className="p-4 text-center font-mono">902140</td>
-                        <td className="p-4 text-right">₹{item.price.toLocaleString()}</td>
+                        {/* CRITICAL FIX: Displaying ORIGINAL MRP here */}
+                        <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
+                        {/* CRITICAL FIX: Displaying DISCOUNTED taxable value here */}
                         <td className="p-4 text-right font-medium">₹{item.taxableValue.toFixed(2)}</td>
                         <td className="p-4 text-center">{item.gstRate}%</td>
                         <td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td>
@@ -280,7 +299,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-10">
                     <div className="flex-1 w-full sm:w-auto"><div className="p-6 bg-slate-50 border-2 border-teal-100 rounded-3xl relative overflow-hidden"><h4 className="text-[10px] font-black uppercase text-teal-600 mb-4 border-b border-teal-200 pb-2 tracking-widest flex items-center gap-2">Payment Summary / প্রাপ্ত পেমেন্ট</h4><div className="space-y-3 text-xs"><div className="flex justify-between font-black text-teal-800 text-base"><span>Amount Received:</span><span>₹{initialPayment.toLocaleString()} /-</span></div><div className="flex justify-between text-gray-600 font-bold"><span>Payment Mode:</span><span className="uppercase">{paymentMethod}</span></div>{paymentBank && (<div className="flex justify-between text-gray-600 font-bold"><span>Received In Bank:</span><span>{paymentBank}</span></div>)}<div className="h-px bg-teal-200 my-2"></div><div className="flex justify-between font-black text-red-600 text-sm"><span>Balance Due:</span><span>₹{(runningFinalTotal - initialPayment).toLocaleString()} /-</span></div></div></div></div>
-                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Discount / Adjustment</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>GST Amount</span><span>₹{(runningCGST+runningSGST).toFixed(2)}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
+                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross MRP)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Discount / Adjustment</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>GST Amount</span><span>₹{(runningCGST+runningSGST).toFixed(2)}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
                 </div>
 
                 <div className="bg-gray-50 p-4 border rounded-xl text-[10px] font-black uppercase mb-12 tracking-widest text-gray-600"><span className="opacity-40 mr-2">Words:</span> {numberToWords(runningFinalTotal)}</div>
