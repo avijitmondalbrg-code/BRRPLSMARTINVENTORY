@@ -161,7 +161,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                   onClick={() => { setSearchTerm(group.model); setViewType('list'); }}
                   className="w-full py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 transition flex items-center justify-center gap-2"
                 >
-                  View Serials <ChevronRight size={14}/>
+                  View Details <ChevronRight size={14}/>
                 </button>
               </div>
             ))}
