@@ -31,14 +31,18 @@ export const INITIAL_QUOTATIONS: Quotation[] = [];
 export const INITIAL_FINANCIAL_NOTES: FinancialNote[] = [];
 export const INITIAL_LEADS: Lead[] = [];
 
-export const COMPANY_LOGO_BASE64 = `data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='%230f766e'/%3E%3Ctext x='100' y='115' font-family='Arial' font-size='40' fill='white' text-anchor='middle' font-weight='bold'%3EBRG%3C/text%3E%3C/svg%3E`;
+// Forcefully set the logo URL
+export const COMPANY_LOGO_BASE64 = `https://bengalrehabilitationgroup.com/images/brg_logo.png`;
 
-// Helper function for Financial Year (e.g., 24-25)
 export const getFinancialYear = () => {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  return month >= 4 
-    ? `${year.toString().slice(-2)}-${(year + 1).toString().slice(-2)}` 
-    : `${(year - 1).toString().slice(-2)}-${year.toString().slice(-2)}`;
+  if (month >= 4) {
+    const nextYear = (year + 1).toString().slice(-2);
+    return `${year.toString().slice(-2)}-${nextYear}`;
+  } else {
+    const prevYear = (year - 1).toString().slice(-2);
+    return `${prevYear}-${year.toString().slice(-2)}`;
+  }
 };

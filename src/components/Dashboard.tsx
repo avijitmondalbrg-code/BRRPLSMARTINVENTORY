@@ -79,10 +79,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
                 src={LOGO_URL} 
                 alt="Bengal Rehabilitation Group" 
                 className="h-full object-contain"
-                onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                }}
               />
           </div>
           <div className="hidden md:block w-px h-12 bg-gray-100"></div>

@@ -30,7 +30,6 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
     bankDetails: ''
   });
 
-  // FIX: Use dashes instead of slashes to keep Firestore happy
   const generateNextId = () => {
     const fy = getFinancialYear();
     const prefix = `BRRPL-AD-${fy}-`;
@@ -257,8 +256,14 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
 
               <div className="mt-20 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-10 sm:gap-0">
                 <div className="border-4 border-gray-800 p-5 sm:p-6 rounded-3xl bg-gray-50 text-center flex flex-col gap-1 w-full sm:w-auto shadow-sm">
-                  <p className="text-[10px] uppercase font-black opacity-40 tracking-widest">Net Cash Received</p>
-                  <p className="text-3xl sm:text-4xl font-black text-gray-900">₹ {selectedBooking.amount.toLocaleString()}</p>
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase font-black opacity-40 tracking-widest">Net Cash Received</p>
+                    <p className="text-3xl sm:text-4xl font-black text-gray-900">₹ {selectedBooking.amount.toLocaleString()}</p>
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-gray-200">
+                    <p className="text-[8px] font-black text-gray-400 uppercase">Payment Info</p>
+                    <p className="text-[10px] font-bold text-teal-800">{selectedBooking.paymentMethod} {selectedBooking.bankDetails ? `(${selectedBooking.bankDetails})` : ''}</p>
+                  </div>
                 </div>
                 <div className="text-center w-full sm:w-auto">
                   {signature ? <img src={signature} className="h-16 sm:h-20 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-20 w-48 sm:w-56 border-b-2 border-dashed border-gray-300 mb-2"></div>}
