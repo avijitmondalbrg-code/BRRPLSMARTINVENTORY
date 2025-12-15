@@ -127,7 +127,7 @@ const App: React.FC = () => {
           <div className="h-16 w-full bg-white rounded-xl flex items-center justify-center p-2 mb-2">
             <img src={companyLogo} alt="Logo" className="h-full object-contain" />
           </div>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">BRG Manager V2.6</p>
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">BRG Inventory Manager V1.0</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {[
