@@ -143,10 +143,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const gstSummary = React.useMemo(() => {
     const summary: Record<number, { taxable: number, cgst: number, sgst: number }> = {};
     invoiceItems.forEach(item => {
-      if (!summary[item.gstRate]) summary[item.gstRate] = { taxable: 0, cgst: 0, sgst: 0 };
-      summary[item.gstRate].taxable += item.taxableValue;
-      summary[item.gstRate].cgst += item.cgstAmount;
-      summary[item.gstRate].sgst += item.sgstAmount;
+      const rate = item.gstRate;
+      if (!summary[rate]) summary[rate] = { taxable: 0, cgst: 0, sgst: 0 };
+      summary[rate].taxable += item.taxableValue;
+      summary[rate].cgst += item.cgstAmount;
+      summary[rate].sgst += item.sgstAmount;
     });
     return summary;
   }, [invoiceItems]);
@@ -248,7 +249,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                   <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Amount (INR)</label><div className="relative"><IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-600" size={20} /><input type="number" className="w-full pl-10 pr-4 py-3 border-2 border-slate-100 rounded-xl focus:border-teal-500 outline-none text-xl font-black text-slate-800" value={newPaymentAmount} onChange={e => setNewPaymentAmount(Math.min(Number(e.target.value), collectingInvoice.balanceDue))} /></div></div>
                                   <div className="grid grid-cols-2 gap-4">
                                       <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Method</label><select className="w-full border-2 border-slate-100 rounded-xl p-3 outline-none font-bold text-slate-700 bg-slate-50" value={payMethod} onChange={e => setPayMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
-                                      <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Bank</label><select className="w-full border-2 border-slate-100 rounded-xl p-3 outline-none font-bold text-teal-700 bg-slate-50" value={payBank} onChange={e => setPayBank(e.target.value)}><option value="">No Bank (Cash)</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                                      <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Bank</label><select className="w-full border-2 border-slate-100 rounded-xl p-3 outline-none font-bold text-teal-700 bg-slate-50" value={payBank} onChange={e => setPayBank(e.target.value)}> <option value="">No Bank (Cash)</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                                   </div>
                               </div>
                               <button onClick={handleConfirmCollection} className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-teal-900/20 hover:bg-teal-700 transition active:scale-95">Confirm Receipt</button>
@@ -282,7 +283,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         {step === 'product' && (
             <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
                 <h3 className="text-lg font-bold mb-6 border-b pb-2">2. Select Device & Pricing</h3>
-                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner"><table className="w-full text-left text-xs"><thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400"><tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4 text-right">Price</th></tr></thead><tbody className="divide-y">{inventory.filter(i => i.status === 'Available' || selectedItemIds.includes(i.id)).map(item => (<tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}><td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td><td className="p-4 font-bold">{item.brand} {item.model}</td><td className="p-4 font-mono">{item.serialNumber}</td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>))}</tbody></table></div>
+                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner"><table className="w-full text-left text-xs"><thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400"><tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4">GST %</th><th className="p-4 text-right">Price</th></tr></thead><tbody className="divide-y">{inventory.filter(i => i.status === 'Available' || selectedItemIds.includes(i.id)).map(item => (<tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}><td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td><td className="p-4 font-bold">{item.brand} {item.model}</td><td className="p-4 font-mono">{item.serialNumber}</td><td className="p-4">{selectedItemIds.includes(item.id) && (<select className="border rounded p-1" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option></select>)}</td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>))}</tbody></table></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Discount (INR)</label><input type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-bold text-lg outline-none focus:border-teal-500" /></div><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" /></div></div>
                 <div className="mt-8 flex justify-between items-center"><div className="text-teal-900"><p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Gross Amount</p><p className="text-3xl font-black">₹{runningFinalTotal.toLocaleString('en-IN')}</p></div><button onClick={() => setStep('payment')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Next: Payment Details &rarr;</button></div>
             </div>
@@ -315,6 +316,25 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Device Description</th><th className="p-4 text-right">Unit MRP</th><th className="p-4 text-center">GST%</th><th className="p-4 text-right">Total</th></tr></thead>
                   <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p><p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p></td><td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td><td className="p-4 text-center">{item.gstRate}%</td><td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td></tr>))}</tbody>
                 </table>
+
+                {/* GST Tax Breakdown Section */}
+                <div className="mb-8 max-w-lg">
+                    <h4 className="text-[9px] font-black uppercase text-teal-700 mb-1.5 tracking-widest">GST Tax Breakdown (ট্যাক্স বিবরণ)</h4>
+                    <table className="w-full border-collapse border border-gray-200 text-[10px] text-center">
+                        <thead className="bg-teal-50 font-bold uppercase text-teal-700"><tr className="border-b"><th className="p-2 text-left">Rate (%)</th><th className="p-2 text-right">Taxable Val</th><th className="p-2 text-right">CGST</th><th className="p-2 text-right">SGST</th><th className="p-2 text-right">Total Tax</th></tr></thead>
+                        <tbody>
+                            {Object.entries(gstSummary).map(([rate, vals]: any) => (
+                                <tr key={rate} className="border-b border-gray-50">
+                                    <td className="p-2 text-left font-bold">{rate}%</td>
+                                    <td className="p-2 text-right">₹{vals.taxable.toFixed(2)}</td>
+                                    <td className="p-2 text-right">₹{vals.cgst.toFixed(2)}</td>
+                                    <td className="p-2 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                    <td className="p-2 text-right font-bold text-gray-800">₹{(vals.cgst + vals.sgst).toFixed(2)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
                 {/* Detailed Payment History Section */}
                 <div className="mt-10 mb-8">
@@ -360,7 +380,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-10">
                     <div className="flex-1 w-full sm:w-auto"><div className="p-6 bg-slate-50 border-2 border-teal-100 rounded-3xl"><div className="space-y-3 text-xs"><div className="flex justify-between font-black text-red-600 text-sm"><span>Outstanding Balance (বাকি):</span><span>₹{(runningFinalTotal - (existingPayments.reduce((s,p)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</span></div></div></div></div>
-                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross MRP)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Adjustment</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
+                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross MRP)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Adjustment</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>Total GST</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
                 </div>
 
                 <div className="bg-gray-50 p-4 border rounded-xl text-[10px] font-black uppercase mb-12 tracking-widest text-gray-600">Words: {numberToWords(runningFinalTotal)}</div>
