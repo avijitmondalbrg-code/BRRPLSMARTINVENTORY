@@ -83,7 +83,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   
   let runningTaxableTotal = 0, runningCGST = 0, runningSGST = 0, runningFinalTotal = 0;
   
-  // Calculation Logic: Preserve original MRP and calculate taxable value
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemRatio = subtotal > 0 ? item.price / subtotal : 0;
       const itemTaxable = item.price - (discountAmount * itemRatio);
@@ -127,7 +126,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     const finalId = editingInvoiceId || generateNextId();
     const invData: Invoice = { 
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: invoiceItems, subtotal, discountType: 'flat', discountValue, totalDiscount: discountAmount, placeOfSupply: 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: 0, totalTax: runningCGST + runningSGST, finalTotal: runningFinalTotal, date: new Date().toISOString().split('T')[0], warranty, patientDetails: patient, 
-      payments: initialPayment > 0 ? [{ id: `PAY-${Date.now()}`, date: new Date().toISOString().split('T')[0], amount: initialPayment, method: paymentMethod, bankDetails: paymentBank }] : [], 
+      payments: initialPayment > 0 ? [{ id: `PAY-${Date.now()}`, date: new Date().toISOString().split('T')[0], amount: initialPayment, method: paymentMethod, bankDetails: paymentBank || "" }] : [], 
       balanceDue: Math.max(0, runningFinalTotal - initialPayment), paymentStatus: initialPayment >= runningFinalTotal - 1 ? 'Paid' : (initialPayment > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); setViewMode('list');
@@ -141,7 +140,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           date: payDate,
           amount: newPaymentAmount,
           method: payMethod,
-          bankDetails: payBank || undefined
+          bankDetails: payBank || ""
       };
 
       const updatedPayments = [...(collectingInvoice.payments || []), newPayment];
@@ -459,9 +458,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                           <p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p>
                         </td>
                         <td className="p-4 text-center font-mono">902140</td>
-                        {/* CRITICAL FIX: Displaying ORIGINAL MRP here */}
                         <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
-                        {/* CRITICAL FIX: Displaying DISCOUNTED taxable value here */}
                         <td className="p-4 text-right font-medium">₹{item.taxableValue.toFixed(2)}</td>
                         <td className="p-4 text-center">{item.gstRate}%</td>
                         <td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td>

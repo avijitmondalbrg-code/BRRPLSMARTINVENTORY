@@ -87,7 +87,7 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
         // Modification Logic
         updatedPayments = targetInvoice.payments.map(p => 
           p.id === editingReceipt.id 
-            ? { ...p, amount, date, method, note: note || 'Payment Updated', bankDetails: bankDetails || undefined } 
+            ? { ...p, amount, date, method, note: note || "", bankDetails: bankDetails || "" } 
             : p
         );
       } else {
@@ -97,8 +97,8 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
           date, 
           amount, 
           method, 
-          note: note || 'Payment Received', 
-          bankDetails: bankDetails || undefined 
+          note: note || "", 
+          bankDetails: bankDetails || "" 
         };
         updatedPayments = [...targetInvoice.payments, newPayment];
       }
