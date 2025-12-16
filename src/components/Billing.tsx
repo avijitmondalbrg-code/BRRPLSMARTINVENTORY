@@ -313,8 +313,29 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 <div className="grid grid-cols-2 gap-12 mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Billed To:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-600">{patient.phone}</p><p className="text-xs text-gray-500 mt-1 uppercase">{patient.address}</p></div></div>
                 
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-6">
-                  <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Device Description</th><th className="p-4 text-right">Unit MRP</th><th className="p-4 text-center">GST%</th><th className="p-4 text-right">Total</th></tr></thead>
-                  <tbody>{invoiceItems.map(item => (<tr key={item.hearingAidId} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p><p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p></td><td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td><td className="p-4 text-center">{item.gstRate}%</td><td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td></tr>))}</tbody>
+                  <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest">
+                    <tr>
+                        <th className="p-4 text-left">Device Description</th>
+                        <th className="p-4 text-center">HSN/SAC</th>
+                        <th className="p-4 text-right">Unit MRP</th>
+                        <th className="p-4 text-center">GST%</th>
+                        <th className="p-4 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceItems.map(item => (
+                        <tr key={item.hearingAidId} className="border-b border-gray-200">
+                            <td className="p-4">
+                                <p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p>
+                                <p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p>
+                            </td>
+                            <td className="p-4 text-center font-mono text-xs">{item.hsnCode || '90214090'}</td>
+                            <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
+                            <td className="p-4 text-center">{item.gstRate}%</td>
+                            <td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td>
+                        </tr>
+                    ))}
+                  </tbody>
                 </table>
 
                 {/* GST Tax Breakdown Section */}

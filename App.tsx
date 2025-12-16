@@ -176,15 +176,23 @@ const App: React.FC = () => {
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
     
+    // Logic: If invoice is created, mark corresponding lead as "Won"
+    const patientPhone = invoice.patientDetails?.phone;
+    if (patientPhone) {
+        const lead = leads.find(l => l.phone === patientPhone);
+        if (lead && lead.status !== 'Won') {
+            const updatedLead = { ...lead, status: 'Won' as const };
+            setLeads(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+            updateDocument('leads', lead.id, { status: 'Won' }).catch(e => {});
+        }
+    }
+
     if (exists) {
-      // Upsert: Handle editing existing invoice
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
       try {
         await setDocument('invoices', invoice.id, invoice);
-        // Note: For simplicity, we don't handle stock swap here unless item IDs changed
       } catch (e) {}
     } else {
-      // Create new
       setInvoices([...invoices, invoice]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
       try {
@@ -239,6 +247,29 @@ const App: React.FC = () => {
 
   const handleAddPatient = async (p: Patient) => {
     const patientWithDate = { ...p, addedDate: p.addedDate || new Date().toISOString().split('T')[0] };
+    
+    // Logic: Automatic CRM entry when patient is added
+    const leadExists = leads.some(l => l.phone === p.phone);
+    if (!leadExists) {
+        const newLead: Lead = {
+            id: `L-${Date.now()}`,
+            name: p.name,
+            phone: p.phone,
+            source: 'Manual Patient Entry',
+            status: 'New',
+            createdAt: patientWithDate.addedDate,
+            activities: [{
+                id: `ACT-${Date.now()}`,
+                type: 'Note',
+                date: patientWithDate.addedDate,
+                content: 'Automatically created from Patient Registry'
+            }],
+            notes: 'Patient added via Registry'
+        };
+        setLeads(prev => [newLead, ...prev]);
+        setDocument('leads', newLead.id, newLead).catch(e => {});
+    }
+
     setPatients([...patients, patientWithDate]);
     try { await setDocument('patients', p.id, patientWithDate); } catch(e) {}
   };
@@ -293,7 +324,7 @@ const App: React.FC = () => {
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
-          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.0 Stable</p>
+          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.1 Stable</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
