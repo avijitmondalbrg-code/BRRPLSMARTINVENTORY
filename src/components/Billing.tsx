@@ -56,7 +56,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
-  const [discountValue, setDiscountValue] = useState<number>(0);
+  
+  // CHANGED: Instead of a single discountValue, we use a map of itemID -> discount
+  const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
+  
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   
   // Existing Payments for when editing OR during creation (advances)
@@ -82,7 +85,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setPatient({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); 
     setSelectedItemIds([]); 
     setGstOverrides({}); 
-    setDiscountValue(0); 
+    setItemDiscounts({}); 
     setWarranty('2 Years Standard Warranty'); 
     setEditingInvoiceId(null); 
     setPatientSearchTerm(''); 
@@ -99,7 +102,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
     setSelectedItemIds(inv.items.map(i => i.hearingAidId));
-    setDiscountValue(inv.totalDiscount);
+    
+    // Load item discounts
+    const discounts: Record<string, number> = {};
+    inv.items.forEach(i => {
+        discounts[i.hearingAidId] = i.discount || 0;
+    });
+    setItemDiscounts(discounts);
+
     setWarranty(inv.warranty || '2 Years Standard Warranty');
     setExistingPayments(inv.payments || []);
     setInitialPayment(0);
@@ -112,13 +122,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
   const subtotal = selectedInventoryItems.reduce((sum, item) => sum + item.price, 0);
-  const discountAmount = discountValue;
   
   let runningTaxableTotal = 0, runningCGST = 0, runningSGST = 0, runningFinalTotal = 0;
   
+  // Logic to calculate totals based on item-wise discount
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
-      const itemRatio = subtotal > 0 ? item.price / subtotal : 0;
-      const itemTaxable = item.price - (discountAmount * itemRatio);
+      const discount = itemDiscounts[item.id] || 0;
+      const itemTaxable = Math.max(0, item.price - discount); // Ensure non-negative
+      
       const gstRate = gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0);
       const cgst = (itemTaxable * (gstRate / 100)) / 2;
       const sgst = (itemTaxable * (gstRate / 100)) / 2;
@@ -134,6 +145,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           model: item.model, 
           serialNumber: item.serialNumber, 
           price: item.price, 
+          discount: discount, // Save discount per item
           gstRate, 
           taxableValue: itemTaxable, 
           cgstAmount: cgst, 
@@ -143,6 +155,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           hsnCode: item.hsnCode || '90214090' 
       };
   });
+
+  const totalDiscount = Object.values(itemDiscounts).reduce((a, b) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
     const summary: Record<number, { taxable: number, cgst: number, sgst: number }> = {};
@@ -171,7 +185,27 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
     const balanceDue = Math.max(0, runningFinalTotal - totalPaid);
     const invData: Invoice = { 
-      id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: invoiceItems, subtotal, discountType: 'flat', discountValue, totalDiscount: discountAmount, placeOfSupply: 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: 0, totalTax: runningCGST + runningSGST, finalTotal: runningFinalTotal, date: new Date().toISOString().split('T')[0], warranty, patientDetails: patient, payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
+      id: finalId, 
+      patientId: patient.id || `P-${Date.now()}`, 
+      patientName: patient.name, 
+      items: invoiceItems, 
+      subtotal, 
+      discountType: 'flat', 
+      discountValue: totalDiscount, 
+      totalDiscount: totalDiscount, 
+      placeOfSupply: 'Intra-State', 
+      totalTaxableValue: runningTaxableTotal, 
+      totalCGST: runningCGST, 
+      totalSGST: runningSGST, 
+      totalIGST: 0, 
+      totalTax: runningCGST + runningSGST, 
+      finalTotal: runningFinalTotal, 
+      date: new Date().toISOString().split('T')[0], 
+      warranty, 
+      patientDetails: patient, 
+      payments: currentPayments, 
+      balanceDue: balanceDue, 
+      paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); 
     setViewMode('list');
@@ -319,14 +353,72 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     />
                 </div>
 
-                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner"><table className="w-full text-left text-xs"><thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400"><tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4">GST %</th><th className="p-4 text-right">Price</th></tr></thead><tbody className="divide-y">{inventory.filter(i => {
-                    const match = i.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
-                                  i.model.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
-                                  i.serialNumber.toLowerCase().includes(productSearchTerm.toLowerCase());
-                    return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match;
-                }).map(item => (<tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}><td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td><td className="p-4 font-bold">{item.brand} {item.model}</td><td className="p-4 font-mono">{item.serialNumber}</td><td className="p-4">{selectedItemIds.includes(item.id) && (<select className="border rounded p-1" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option></select>)}</td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>))}</tbody></table></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Discount (INR)</label><input type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-bold text-lg outline-none focus:border-teal-500" /></div><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" /></div></div>
-                <div className="mt-8 flex justify-between items-center"><div className="text-teal-900"><p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Gross Amount</p><p className="text-3xl font-black">₹{runningFinalTotal.toLocaleString('en-IN')}</p></div><button onClick={() => setStep('payment')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Next: Payment Details &rarr;</button></div>
+                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400">
+                            <tr>
+                                <th className="p-4 w-10"></th>
+                                <th className="p-4">Brand/Model</th>
+                                <th className="p-4">Serial No</th>
+                                <th className="p-4">GST %</th>
+                                <th className="p-4">Discount (₹)</th>
+                                <th className="p-4 text-right">Unit Price</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {inventory.filter(i => {
+                                const match = i.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
+                                              i.model.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
+                                              i.serialNumber.toLowerCase().includes(productSearchTerm.toLowerCase());
+                                return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match;
+                            }).map(item => (
+                                <tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}>
+                                    <td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) { setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); const newDiscounts = {...itemDiscounts}; delete newDiscounts[item.id]; setItemDiscounts(newDiscounts); } else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
+                                    <td className="p-4 font-bold">{item.brand} {item.model}</td>
+                                    <td className="p-4 font-mono">{item.serialNumber}</td>
+                                    <td className="p-4">
+                                        {selectedItemIds.includes(item.id) && (
+                                            <select className="border rounded p-1" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> 
+                                                <option value="0">0%</option>
+                                                <option value="5">5%</option>
+                                                <option value="12">12%</option>
+                                                <option value="18">18%</option>
+                                            </select>
+                                        )}
+                                    </td>
+                                    <td className="p-4">
+                                        {selectedItemIds.includes(item.id) && (
+                                            <input 
+                                                type="number" 
+                                                className="border rounded p-1 w-20 text-right outline-none focus:ring-1 ring-teal-500" 
+                                                placeholder="0"
+                                                value={itemDiscounts[item.id] || ''}
+                                                onChange={(e) => setItemDiscounts({...itemDiscounts, [item.id]: Number(e.target.value)})}
+                                            />
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6 mb-8">
+                    <div className="p-4 bg-gray-50 rounded-xl border">
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label>
+                        <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" />
+                    </div>
+                </div>
+                
+                <div className="mt-8 flex justify-between items-center">
+                    <div className="text-teal-900">
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Gross Amount (After Disc.)</p>
+                        <p className="text-3xl font-black">₹{runningFinalTotal.toLocaleString('en-IN')}</p>
+                        {totalDiscount > 0 && <p className="text-xs text-red-600 font-bold mt-1">Total Discount Applied: ₹{totalDiscount.toLocaleString()}</p>}
+                    </div>
+                    <button onClick={() => setStep('payment')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Next: Payment Details &rarr;</button>
+                </div>
             </div>
         )}
 
@@ -411,7 +503,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <th className="p-4 text-center">HSN/SAC</th>
                         <th className="p-4 text-right">Unit MRP</th>
                         <th className="p-4 text-center">GST%</th>
-                        <th className="p-4 text-right">Total</th>
+                        <th className="p-4 text-right">Discount</th>
+                        <th className="p-4 text-right">Taxable</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -424,6 +517,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <td className="p-4 text-center font-mono text-xs">{item.hsnCode || '90214090'}</td>
                             <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
                             <td className="p-4 text-center">{item.gstRate}%</td>
+                            <td className="p-4 text-right text-red-600">{item.discount > 0 ? `- ₹${item.discount.toLocaleString()}` : '-'}</td>
                             <td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td>
                         </tr>
                     ))}
@@ -493,7 +587,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-10">
                     <div className="flex-1 w-full sm:w-auto"><div className="p-6 bg-slate-50 border-2 border-teal-100 rounded-3xl"><div className="space-y-3 text-xs"><div className="flex justify-between font-black text-red-600 text-sm"><span>Outstanding Balance (বাকি):</span><span>₹{(runningFinalTotal - (existingPayments.reduce((s,p)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</span></div></div></div></div>
-                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross MRP)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Adjustment</span><span>-₹{discountAmount.toLocaleString()}</span></div><div className="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>Total GST</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
+                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100"><div className="flex justify-between text-xs font-bold text-gray-400 uppercase"><span>Subtotal (Gross MRP)</span><span>₹{subtotal.toLocaleString()}</span></div><div className="flex justify-between text-xs font-bold text-red-600 uppercase"><span>Total Discount</span><span>-₹{totalDiscount.toLocaleString()}</span></div><div className="flex justify-between text-[10px] text-gray-400 uppercase font-bold"><span>Total GST</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div><div className="h-px bg-gray-300 my-2"></div><div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(runningFinalTotal).toLocaleString()}</span></div></div>
                 </div>
 
                 <div className="bg-gray-50 p-4 border rounded-xl text-[10px] font-black uppercase mb-12 tracking-widest text-gray-600">Words: {numberToWords(runningFinalTotal)}</div>

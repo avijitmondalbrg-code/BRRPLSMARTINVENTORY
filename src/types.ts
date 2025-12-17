@@ -43,6 +43,7 @@ export interface InvoiceItem {
   price: number; // Unit Price
   hsnCode?: string;
   gstRate: number;
+  discount: number; // Item-specific discount
   taxableValue: number;
   cgstAmount: number;
   sgstAmount: number;
@@ -59,7 +60,7 @@ export interface Invoice {
   // Financials
   subtotal: number; // Sum of Unit Prices
   discountType: 'flat' | 'percent';
-  discountValue: number;
+  discountValue: number; // Sum of all item discounts
   totalDiscount: number;
   
   // Tax

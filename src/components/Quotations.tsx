@@ -46,7 +46,38 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
     const subtotal = inventory.filter(i => selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price, 0);
-    const quotationData: Quotation = { id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return { hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, price: item.price, gstRate: 0, taxableValue: item.price, cgstAmount: 0, sgstAmount: 0, igstAmount: 0, totalAmount: item.price }; }), subtotal, discountType: 'flat', discountValue, totalTaxableValue: subtotal - discountValue, totalTax: 0, finalTotal: subtotal - discountValue, date: new Date().toISOString().split('T')[0], warranty, patientDetails: patient, status: 'Draft' };
+    const quotationData: Quotation = { 
+      id: finalId, 
+      patientId: patient.id || `P-${Date.now()}`, 
+      patientName: patient.name, 
+      items: selectedItemIds.map(id => { 
+        const item = inventory.find(i=>i.id===id)!; 
+        return { 
+          hearingAidId: item.id, 
+          brand: item.brand, 
+          model: item.model, 
+          serialNumber: item.serialNumber, 
+          price: item.price, 
+          discount: 0, // Default discount for items in quotation (global discount is used instead)
+          gstRate: 0, 
+          taxableValue: item.price, 
+          cgstAmount: 0, 
+          sgstAmount: 0, 
+          igstAmount: 0, 
+          totalAmount: item.price 
+        }; 
+      }), 
+      subtotal, 
+      discountType: 'flat', 
+      discountValue, 
+      totalTaxableValue: subtotal - discountValue, 
+      totalTax: 0, 
+      finalTotal: subtotal - discountValue, 
+      date: new Date().toISOString().split('T')[0], 
+      warranty, 
+      patientDetails: patient, 
+      status: 'Draft' 
+    };
     if (editingId) onUpdateQuotation(quotationData); else onCreateQuotation(quotationData);
     setViewMode('list');
   };
@@ -82,6 +113,26 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
             <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-200 rounded-full text-gray-600"><ArrowLeft size={24} /></button><h2 className="text-2xl font-bold">Quotation</h2></div>
             <div className="flex gap-2">{['patient', 'product', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-4 py-1.5 rounded-full text-xs font-bold ${step === s ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>{idx+1}. {s.toUpperCase()}</button>))}</div>
         </div>
+        {step === 'patient' && (
+            <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
+                <h3 className="text-lg font-bold mb-6 border-b pb-2 flex items-center gap-2">1. Patient Selection</h3>
+                <div className="mb-8 relative"><label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-widest">Search Existing Patient</label><div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /><input type="text" placeholder="Type Name or Phone Number..." className="w-full pl-10 pr-4 py-3 border-2 border-gray-100 rounded-xl outline-none focus:border-primary transition-all shadow-sm" value={patientSearchTerm} onChange={(e) => setPatientSearchTerm(e.target.value)} /></div>{patientSearchTerm && (<div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-64 overflow-y-auto"><div className="p-2">{patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-5 py-3 hover:bg-teal-50 border-b last:border-0 flex justify-between items-center transition-colors group"><div><p className="font-bold">{p.name}</p><p className="text-xs text-gray-500">{p.phone}</p></div><span className="text-teal-600 text-[10px] font-black uppercase">Select</span></button>))}</div></div>)}</div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-200 space-y-6">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient Identity Information</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-gray-500 mb-1">PATIENT NAME *</label><input required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div><div><label className="block text-xs font-bold text-gray-500 mb-1">PHONE NUMBER *</label><input required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div><div className="md:col-span-2"><label className="block text-xs font-bold text-gray-500 mb-1">RESIDENTIAL ADDRESS</label><input className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div></div>
+                </div>
+                <div className="mt-8 flex justify-end"><button onClick={() => setStep('product')} disabled={!patient.name} className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800 transition-all">Next Step: Select Product &rarr;</button></div>
+            </div>
+        )}
+        {step === 'product' && (
+            <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
+                <h3 className="text-lg font-bold mb-6 border-b pb-2">2. Select Device Estimate</h3>
+                <div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" placeholder="Search Devices..." className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/></div>
+                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner"><table className="w-full text-left text-xs"><thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400"><tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4 text-right">Price</th></tr></thead><tbody className="divide-y">{inventory.filter(i => { const match = i.brand.toLowerCase().includes(searchTerm.toLowerCase()) || i.model.toLowerCase().includes(searchTerm.toLowerCase()); return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match; }).map(item => (<tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}><td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td><td className="p-4 font-bold">{item.brand} {item.model}</td><td className="p-4 font-mono">{item.serialNumber}</td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>))}</tbody></table></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Adjustment (INR)</label><input type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-bold text-lg outline-none focus:border-teal-500" /></div><div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" /></div></div>
+                <div className="mt-8 flex justify-between items-center"><div className="text-teal-900"><p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Estimated Total</p><p className="text-3xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</p></div><button onClick={() => setStep('review')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Preview Quotation &rarr;</button></div>
+            </div>
+        )}
         {step === 'review' && (
             <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in">
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
