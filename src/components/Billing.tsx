@@ -361,7 +361,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <th className="p-4">Brand/Model</th>
                                 <th className="p-4">Serial No</th>
                                 <th className="p-4">GST %</th>
-                                <th className="p-4">Discount (₹)</th>
+                                <th className="p-4">Special Consideration (₹)</th>
                                 <th className="p-4 text-right">Unit Price</th>
                             </tr>
                         </thead>
