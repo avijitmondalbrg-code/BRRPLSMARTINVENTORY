@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, CLINIC_UDYAM, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, CreditCard, History, Trash2, Calendar, X, User, Wallet, IndianRupee, Building2, CheckCircle2, Stethoscope, UserCheck, Receipt, ArrowRight } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, CreditCard, History, Trash2, Calendar, X, User, Wallet, IndianRupee, Building2, CheckCircle2, Stethoscope, UserCheck, Receipt, ArrowRight, Edit } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -95,7 +95,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
   
-  const handleEditInvoice = (inv: Invoice) => {
+  const handleEditInvoice = (inv: Invoice, startStep: 'patient' | 'review' = 'review') => {
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
     setSelectedItemIds(inv.items.map(i => i.hearingAidId));
@@ -104,7 +104,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setExistingPayments(inv.payments || []);
     setInitialPayment(0);
     setProductSearchTerm('');
-    setStep('review');
+    setStep(startStep);
     setViewMode('edit');
   };
 
@@ -243,7 +243,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <td className="p-4 text-center"><span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border shadow-sm ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-200' : inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{inv.paymentStatus}</span></td>
                                     <td className="p-4 text-center">
                                         <div className="flex justify-center items-center gap-1.5">
-                                            <button onClick={() => handleEditInvoice(inv)} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition" title="View/Edit"><Eye size={18}/></button>
+                                            <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition" title="View Details"><Eye size={18}/></button>
+                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition" title="Edit Invoice"><Edit size={18}/></button>
                                             <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Collect Payment" disabled={inv.balanceDue <= 0}><Wallet size={18} className={inv.balanceDue <= 0 ? 'opacity-20' : ''}/></button>
                                             {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Are you sure you want to delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete"><Trash2 size={18}/></button>)}
                                         </div>
