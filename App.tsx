@@ -14,7 +14,7 @@ import { ReceiptsManager } from './components/ReceiptsManager';
 import { AdvanceBookings } from './components/AdvanceBookings';
 import { FrontCover } from './components/FrontCover';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -36,56 +36,61 @@ const App: React.FC = () => {
   const [advanceBookings, setAdvanceBookings] = useState<AdvanceBooking[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [inv, invs, pats, quotes, notes, lds, trfs, advs] = await Promise.all([
-            fetchCollection('inventory'),
-            fetchCollection('invoices'),
-            fetchCollection('patients'),
-            fetchCollection('quotations'),
-            fetchCollection('financialNotes'),
-            fetchCollection('leads'),
-            fetchCollection('stockTransfers'),
-            fetchCollection('advanceBookings')
-        ]);
+  const refreshData = async () => {
+    setLoading(true);
+    try {
+      const [inv, invs, pats, quotes, notes, lds, trfs, advs] = await Promise.all([
+          fetchCollection('inventory'),
+          fetchCollection('invoices'),
+          fetchCollection('patients'),
+          fetchCollection('quotations'),
+          fetchCollection('financialNotes'),
+          fetchCollection('leads'),
+          fetchCollection('stockTransfers'),
+          fetchCollection('advanceBookings')
+      ]);
 
-        if (inv.length === 0 && invs.length === 0) {
-           setInventory(INITIAL_INVENTORY);
-           setInvoices(INITIAL_INVOICES);
-           setQuotations(INITIAL_QUOTATIONS);
-           setFinancialNotes(INITIAL_FINANCIAL_NOTES);
-           setLeads(INITIAL_LEADS);
-           const initialPatients: Patient[] = [];
-           INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
-           setPatients(initialPatients);
-           setAdvanceBookings([]);
-        } else {
-           setInventory(inv as HearingAid[]);
-           setInvoices(invs as Invoice[]);
-           setPatients(pats as Patient[]);
-           setQuotations(quotes as Quotation[]);
-           setFinancialNotes(notes as FinancialNote[]);
-           setLeads(lds as Lead[]);
-           setStockTransfers(trfs as StockTransferType[]);
-           setAdvanceBookings(advs as AdvanceBooking[]);
-        }
-      } catch (error) {
-        console.warn("Firebase unreachable. Loading local fallback data.", error);
-        setInventory(INITIAL_INVENTORY);
-        setInvoices(INITIAL_INVOICES);
-        setQuotations(INITIAL_QUOTATIONS);
-        setFinancialNotes(INITIAL_FINANCIAL_NOTES);
-        setLeads(INITIAL_LEADS);
-        const initialPatients: Patient[] = [];
-        INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
-        setPatients(initialPatients);
-        setAdvanceBookings([]);
-      } finally {
-        setLoading(false);
+      if (inv.length === 0 && invs.length === 0) {
+         setInventory(INITIAL_INVENTORY);
+         setInvoices(INITIAL_INVOICES);
+         setQuotations(INITIAL_QUOTATIONS);
+         setFinancialNotes(INITIAL_FINANCIAL_NOTES);
+         setLeads(INITIAL_LEADS);
+         const initialPatients: Patient[] = [];
+         INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
+         setPatients(initialPatients);
+         setAdvanceBookings([]);
+      } else {
+         setInventory(inv as HearingAid[]);
+         setInvoices(invs as Invoice[]);
+         setPatients(pats as Patient[]);
+         setQuotations(quotes as Quotation[]);
+         setFinancialNotes(notes as FinancialNote[]);
+         setLeads(lds as Lead[]);
+         setStockTransfers(trfs as StockTransferType[]);
+         setAdvanceBookings(advs as AdvanceBooking[]);
       }
-    };
-    loadData();
+    } catch (error) {
+      console.warn("Firebase unreachable. Loading local fallback data.", error);
+      // Keep existing data on error if possible, or fallback
+      if (inventory.length === 0) {
+          setInventory(INITIAL_INVENTORY);
+          setInvoices(INITIAL_INVOICES);
+          setQuotations(INITIAL_QUOTATIONS);
+          setFinancialNotes(INITIAL_FINANCIAL_NOTES);
+          setLeads(INITIAL_LEADS);
+          const initialPatients: Patient[] = [];
+          INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
+          setPatients(initialPatients);
+          setAdvanceBookings([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshData();
   }, []);
 
   const handleLogin = (role: UserRole) => {
@@ -315,7 +320,7 @@ const App: React.FC = () => {
     try { await deleteDocument('advanceBookings', id); } catch(e) {}
   };
 
-  if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-white"><div className="h-12 w-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-gray-500 font-medium">Initializing System...</p></div>;
+  if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-white"><div className="h-12 w-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-gray-500 font-medium">Syncing Data...</p></div>;
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
   if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} />;
 
@@ -324,7 +329,7 @@ const App: React.FC = () => {
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
-          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.1 Stable</p>
+          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.2 Stable</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
@@ -346,7 +351,15 @@ const App: React.FC = () => {
               <item.icon size={18} /> <span className="text-sm font-medium">{item.label}</span>
             </button>
           ))}
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-red-400 hover:bg-red-900/20 mt-4 transition"><LogOut size={18} /> <span className="text-sm font-medium">Logout</span></button>
+          
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <button onClick={refreshData} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-teal-300 hover:bg-slate-800 hover:text-white transition">
+                <RefreshCw size={18} /> <span className="text-sm font-medium">Sync Data</span>
+            </button>
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-red-400 hover:bg-red-900/20 mt-1 transition">
+                <LogOut size={18} /> <span className="text-sm font-medium">Logout</span>
+            </button>
+          </div>
         </nav>
       </aside>
       <main className="flex-1 overflow-y-auto">
