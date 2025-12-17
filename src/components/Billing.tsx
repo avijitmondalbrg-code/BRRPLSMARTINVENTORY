@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole } from '../types';
+import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, CLINIC_UDYAM, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, CreditCard, History, Trash2, Calendar, X, User, Wallet, IndianRupee, Building2, CheckCircle2, Stethoscope, UserCheck, Receipt } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, CreditCard, History, Trash2, Calendar, X, User, Wallet, IndianRupee, Building2, CheckCircle2, Stethoscope, UserCheck, Receipt, ArrowRight } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
   invoices?: Invoice[];
   patients: Patient[];
+  advanceBookings?: AdvanceBooking[];
   onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
   onUpdateInvoice?: (invoice: Invoice) => void;
   onDelete?: (invoiceId: string) => void;
@@ -33,7 +34,7 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
+export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
@@ -50,7 +51,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   
   // Form State for new invoice
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
-  const [productSearchTerm, setProductSearchTerm] = useState(''); // New state for product search
+  const [productSearchTerm, setProductSearchTerm] = useState(''); 
   const [showPatientResults, setShowPatientResults] = useState(false);
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -58,7 +59,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   
-  // Existing Payments for when editing
+  // Existing Payments for when editing OR during creation (advances)
   const [existingPayments, setExistingPayments] = useState<PaymentRecord[]>([]);
 
   // Payment Received (Initial)
@@ -176,6 +177,18 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setViewMode('list');
   };
 
+  const handleApplyAdvance = (adv: AdvanceBooking) => {
+      const newPayment: PaymentRecord = {
+          id: `PAY-ADV-${Date.now()}`,
+          date: new Date().toISOString().split('T')[0],
+          amount: adv.amount,
+          method: 'Advance',
+          note: `Ref: ${adv.id}`,
+          bankDetails: 'N/A'
+      };
+      setExistingPayments([...existingPayments, newPayment]);
+  };
+
   const handleConfirmCollection = () => {
       if (!collectingInvoice || !onUpdateInvoice || newPaymentAmount <= 0) return;
       const newPayment: PaymentRecord = { id: `PAY-${Date.now()}`, date: payDate, amount: newPaymentAmount, method: payMethod, bankDetails: payBank || "" };
@@ -264,6 +277,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       );
   }
 
+  // Calculate available advances for the current patient
+  const patientAdvances = advanceBookings.filter(b => 
+    b.patientId === patient.id && 
+    b.status === 'Active' && 
+    !existingPayments.some(p => p.note?.includes(b.id))
+  );
+
   return (
     <div className="max-w-5xl mx-auto">
         <div className="mb-6 flex items-center justify-between print:hidden">
@@ -313,12 +333,63 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
             <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
                 <h3 className="text-lg font-bold mb-6 border-b pb-2 flex items-center gap-2"><Wallet className="text-primary"/> 3. Payment Collection</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="p-6 bg-slate-50 rounded-2xl border shadow-inner"><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Collected Now (INR)</label><div className="relative"><IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-600" size={20} /><input type="number" className="w-full pl-10 pr-4 py-4 border-2 border-gray-100 rounded-xl outline-none focus:border-primary text-2xl font-black text-gray-800" value={initialPayment || ''} onChange={e => setInitialPayment(Number(e.target.value))} placeholder="0.00" /></div></div>
-                    <div className="p-6 bg-white rounded-2xl border space-y-4">
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Mode</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-gray-700 bg-gray-50" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Bank</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-teal-700 bg-gray-50" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                    <div className="md:col-span-2 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 bg-slate-50 rounded-2xl border shadow-inner"><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Amount Collected Now (INR)</label><div className="relative"><IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-600" size={20} /><input type="number" className="w-full pl-10 pr-4 py-4 border-2 border-gray-100 rounded-xl outline-none focus:border-primary text-2xl font-black text-gray-800" value={initialPayment || ''} onChange={e => setInitialPayment(Number(e.target.value))} placeholder="0.00" /></div></div>
+                            <div className="p-6 bg-white rounded-2xl border space-y-4">
+                                <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Mode</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-gray-700 bg-gray-50" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
+                                <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Bank</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-teal-700 bg-gray-50" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                            </div>
+                        </div>
+
+                        {/* Advance Adjustment Section */}
+                        {patientAdvances.length > 0 && (
+                            <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
+                                <h4 className="text-xs font-black text-amber-800 uppercase tracking-widest mb-3">Available Advances</h4>
+                                <div className="space-y-2">
+                                    {patientAdvances.map(adv => (
+                                        <div key={adv.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
+                                            <div>
+                                                <p className="font-bold text-gray-800 text-sm">₹{adv.amount.toLocaleString()}</p>
+                                                <p className="text-[10px] text-gray-500 uppercase tracking-wider">{adv.date} • {adv.modelInterest || 'General'}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleApplyAdvance(adv)} 
+                                                className="px-4 py-1.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg hover:bg-amber-200 transition"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Applied Payments List */}
+                        {existingPayments.length > 0 && (
+                            <div className="bg-green-50 rounded-2xl border border-green-200 p-5">
+                                <h4 className="text-xs font-black text-green-800 uppercase tracking-widest mb-3">Applied Payments</h4>
+                                <div className="space-y-2">
+                                    {existingPayments.map(p => (
+                                        <div key={p.id} className="flex justify-between items-center text-sm border-b border-green-100 last:border-0 pb-1 mb-1 last:pb-0 last:mb-0">
+                                            <span className="text-green-900 font-medium">{p.method} {p.note ? `(${p.note})` : ''}</span>
+                                            <span className="font-bold text-green-900">₹{p.amount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col justify-center items-center text-center"><p className="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Remaining Balance</p><p className="text-3xl font-black text-teal-900">₹{(runningFinalTotal - (existingPayments.reduce((s,p)=>s+p.amount,0) + initialPayment)).toLocaleString()}</p></div>
+
+                    <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col justify-center items-center text-center h-full">
+                        <p className="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Remaining Balance</p>
+                        <p className="text-3xl font-black text-teal-900">
+                            ₹{(runningFinalTotal - (existingPayments.reduce((s,p)=>s+p.amount,0) + initialPayment)).toLocaleString()}
+                        </p>
+                        {patientAdvances.length > 0 && existingPayments.length === 0 && (
+                            <p className="text-[10px] text-amber-600 font-bold mt-2 animate-pulse">Use advance to adjust!</p>
+                        )}
+                    </div>
                 </div>
                 <div className="mt-12 flex justify-end"><button onClick={() => setStep('review')} className="bg-primary text-white px-12 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800 transition-all">Preview Invoice &rarr;</button></div>
             </div>
@@ -393,8 +464,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             {existingPayments.map(p => (
                                 <tr key={p.id}>
                                     <td className="p-2 border">{new Date(p.date).toLocaleDateString('en-IN')}</td>
-                                    <td className="p-2 border font-bold uppercase">{p.method}</td>
-                                    <td className="p-2 border text-gray-500">{p.bankDetails || 'Direct/Cash'}</td>
+                                    <td className="p-2 border font-bold uppercase">{p.method} {p.method === 'Advance' ? '(Adjustment)' : ''}</td>
+                                    <td className="p-2 border text-gray-500">{p.bankDetails || p.note || 'Direct/Cash'}</td>
                                     <td className="p-2 border text-right font-black text-teal-800">₹{p.amount.toLocaleString()}</td>
                                 </tr>
                             ))}

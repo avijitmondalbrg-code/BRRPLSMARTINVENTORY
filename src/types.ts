@@ -1,3 +1,4 @@
+
 export interface HearingAid {
   id: string;
   brand: string;
@@ -29,7 +30,7 @@ export interface PaymentRecord {
   id: string;
   date: string;
   amount: number;
-  method: 'Cash' | 'Account Transfer' | 'Cheque' | 'UPI' | 'EMI' | 'Credit Card' | 'Debit Card' | 'Credit Note';
+  method: 'Cash' | 'Account Transfer' | 'Cheque' | 'UPI' | 'EMI' | 'Credit Card' | 'Debit Card' | 'Credit Note' | 'Advance';
   note?: string;
   bankDetails?: string; // Stores which company bank account received the money
 }

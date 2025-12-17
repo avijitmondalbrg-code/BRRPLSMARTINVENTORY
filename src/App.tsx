@@ -178,6 +178,11 @@ const App: React.FC = () => {
     try { await updateDocument('inventory', updatedItem.id, updatedItem); } catch(e) {}
   };
 
+  const handleUpdateAdvanceBooking = async (b: AdvanceBooking) => {
+    setAdvanceBookings(advanceBookings.map(item => item.id === b.id ? b : item));
+    try { await updateDocument('advanceBookings', b.id, b); } catch(e) {}
+  };
+
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
     
@@ -191,6 +196,23 @@ const App: React.FC = () => {
             updateDocument('leads', lead.id, { status: 'Won' }).catch(e => {});
         }
     }
+
+    // Logic: If invoice uses an Advance Payment, mark the Advance Booking as 'Consumed'
+    invoice.payments.forEach(p => {
+        if (p.method === 'Advance' && p.note?.includes('Ref:')) {
+             // Extract Advance Booking ID from note (Format: "Ref: BRRPL-AD-...")
+             const parts = p.note.split('Ref:');
+             if (parts.length > 1) {
+                 const bookingId = parts[1].trim();
+                 const booking = advanceBookings.find(b => b.id === bookingId);
+                 if (booking && booking.status === 'Active') {
+                     const updatedBooking = { ...booking, status: 'Consumed' as const };
+                     setAdvanceBookings(prev => prev.map(b => b.id === booking.id ? updatedBooking : b));
+                     updateDocument('advanceBookings', booking.id, { status: 'Consumed' }).catch(e => {});
+                 }
+             }
+        }
+    });
 
     if (exists) {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
@@ -310,11 +332,6 @@ const App: React.FC = () => {
     try { await setDocument('advanceBookings', b.id, b); } catch(e) {}
   };
 
-  const handleUpdateAdvanceBooking = async (b: AdvanceBooking) => {
-    setAdvanceBookings(advanceBookings.map(item => item.id === b.id ? b : item));
-    try { await updateDocument('advanceBookings', b.id, b); } catch(e) {}
-  };
-
   const handleDeleteAdvanceBooking = async (id: string) => {
     setAdvanceBookings(prev => prev.filter(b => b.id !== id));
     try { await deleteDocument('advanceBookings', id); } catch(e) {}
@@ -374,7 +391,7 @@ const App: React.FC = () => {
           {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} />}
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
-          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
+          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleCreateQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleConvertQuotation} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
