@@ -188,7 +188,7 @@ export const LOCATIONS = [
   'MANIPAL DHAKURIA',
   'MANIPAL SALTLAKE',
   'NIDAN',
-  'OTHERS'
+  'Home Visit'
 ];
 
 export const BRANDS = [
