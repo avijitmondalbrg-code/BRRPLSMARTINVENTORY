@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive } from 'lucide-react';
 import { ViewState } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -10,69 +11,86 @@ interface FrontCoverProps {
 
 export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#3159a6] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Decorative background elements for depth */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none">
+        <div className="absolute -top-48 -left-48 w-[800px] h-[800px] bg-white/10 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-48 -right-48 w-[800px] h-[800px] bg-blue-900/30 rounded-full blur-[120px]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] pointer-events-none select-none">
+           <div className="grid grid-cols-6 gap-20 transform -rotate-12">
+              {Array.from({length: 24}).map((_, i) => (
+                <Package key={i} size={120} />
+              ))}
+           </div>
+        </div>
+      </div>
+
       <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center">
         
         {/* Logo Container with Solid White Background */}
-        <div className="bg-white p-6 rounded-3xl inline-block mb-10 shadow-2xl border border-white/20">
+        <div className="bg-white p-10 rounded-[3rem] inline-block mb-12 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-8 border-white/20 ring-1 ring-black/5 animate-fade-in-up">
           <img 
             src={logo} 
             alt="BRG Logo" 
-            className="h-32 md:h-40 w-auto object-contain mx-auto" 
+            className="h-36 md:h-48 w-auto object-contain mx-auto" 
           />
         </div>
 
-        <div className="mb-16">
-          <h1 className="text-4xl md:text-4xl font-black text-white tracking-tighter mb-4 uppercase">
-            BRG Inventory Management System V2.0
+        <div className="mb-16 animate-fade-in">
+          <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 uppercase drop-shadow-lg">
+            BRG Smart Intentory Management System V2.0
           </h1>
-          <p className="text-xl text-teal-300 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-blue-100 font-bold uppercase tracking-[0.25em] max-w-3xl mx-auto leading-relaxed drop-shadow-md opacity-90">
             {COMPANY_TAGLINE}
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full max-w-6xl">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 w-full max-w-6xl px-4">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-teal-300' },
-            { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-300' },
-            { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-300' },
-            { id: 'billing', label: 'Billing', icon: FileText, color: 'text-blue-300' },
-            { id: 'patients', label: 'Patients', icon: Users, color: 'text-pink-300' },
-            { id: 'receipts', label: 'Receipts', icon: Receipt, color: 'text-emerald-300' }
-          ].map(item => (
+            { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, color: 'text-blue-200' },
+            { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-200' },
+            { id: 'assets', label: 'Equipment', icon: HardDrive, color: 'text-amber-200' },
+            { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-200' },
+            { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200' },
+            { id: 'receipts', label: 'Receipts', icon: Receipt, color: 'text-emerald-200' }
+          ].map((item, idx) => (
             <button 
               key={item.id}
               onClick={() => onNavigate(item.id as any)}
-              className="group bg-white/5 hover:bg-white/10 border border-white/10 p-5 rounded-2xl transition-all flex flex-col items-center text-center hover:-translate-y-1 shadow-lg backdrop-blur-sm"
+              style={{ animationDelay: `${idx * 50}ms` }}
+              className="group bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up"
             >
-              <div className={`p-3 rounded-full mb-3 bg-white/5 group-hover:bg-white/10 transition-colors ${item.color}`}>
-                <item.icon size={24} />
+              <div className={`p-4 rounded-2xl mb-4 bg-white/10 group-hover:bg-white/20 transition-all ${item.color} group-hover:scale-110`}>
+                <item.icon size={28} />
               </div>
-              <h3 className="text-sm font-semibold text-white mb-1 uppercase tracking-tighter">{item.label}</h3>
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{item.label}</h3>
             </button>
           ))}
         </div>
 
-        <div className="mt-16">
+        <div className="mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
             <button 
               onClick={() => onNavigate('dashboard')} 
-              className="flex items-center gap-3 bg-teal-600 hover:bg-teal-500 text-white text-lg font-black py-4 px-12 rounded-full shadow-2xl shadow-teal-900/50 transition-all hover:scale-105 active:scale-95 uppercase tracking-widest"
+              className="flex items-center gap-4 bg-white text-[#3159a6] text-xl font-black py-6 px-16 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all hover:scale-105 active:scale-95 hover:bg-blue-50 uppercase tracking-[0.2em]"
             >
-                Enter System <ArrowRight />
+                Launch Dashboard <ArrowRight strokeWidth={3} />
             </button>
         </div>
       </div>
-      
-      {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none opacity-20">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-500 rounded-full blur-[120px]"></div>
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500 rounded-full blur-[120px]"></div>
+
+      <div className="absolute bottom-8 text-center text-white/40 text-[10px] font-black uppercase tracking-[0.6em] select-none">
+          Bengal Rehabilitation & Research Pvt. Ltd.
       </div>
+      
+      <style>{`
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+        .animate-fade-in { animation: fade-in 0.8s ease-out forwards; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   );
 };
-
-// Icon placeholders
-const FileQuestion = ({ size }: { size: number }) => <FileText size={size} />;
-const SettingsIcon = ({ size }: { size: number }) => <SettingsIconOriginal size={size} />;
-import { Settings as SettingsIconOriginal } from 'lucide-react';

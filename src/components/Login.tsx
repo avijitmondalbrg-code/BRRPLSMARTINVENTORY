@@ -53,8 +53,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a8a] to-slate-900 p-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-[#3159a6] p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none">
+        <div className="absolute -top-48 -left-48 w-[600px] h-[600px] bg-white/10 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-48 -right-48 w-[600px] h-[600px] bg-blue-900/30 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden flex flex-col animate-fade-in relative z-10 border-4 border-white/10">
         
         {/* Header Section */}
         <div className="bg-white p-10 text-center border-b border-gray-100 relative">
@@ -129,7 +135,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
+                  className="w-full bg-[#3159a6] hover:bg-[#254687] text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
                 >
                   {loading ? 'Authorizing...' : 'Unlock System'}
                   {!loading && <ArrowRight size={18} />}
@@ -148,9 +154,20 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
       </div>
       
-      <div className="absolute bottom-8 text-center text-white/30 text-[10px] font-black uppercase tracking-[0.5em]">
+      <div className="absolute bottom-8 text-center text-white/30 text-[10px] font-black uppercase tracking-[0.5em] select-none z-10">
           Bengal Rehabilitation & Research Pvt. Ltd.
       </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out; }
+      `}</style>
     </div>
   );
 };
