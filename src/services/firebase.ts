@@ -24,19 +24,14 @@ const app = initializeApp(firebaseConfig);
 
 /**
  * Optimized Firestore configuration for high-latency or restricted networks.
- * 
- * experimentalForceLongPolling: true - Bypasses WebSockets entirely. 
- * WebSockets are often the cause of "Could not reach backend" errors due to 
- * proxy or firewall interference.
+ * experimentalForceLongPolling: true - Bypasses WebSockets entirely to avoid handshake timeouts.
  */
-// FIX: Removed invalid 'useFetchStreams' property and cast 'app' to any to resolve FirebaseApp modular/compat type mismatch
 export const db = initializeFirestore(app as any, {
   experimentalForceLongPolling: true,
 });
 
 /**
  * Utility to remove undefined values recursively from an object/array.
- * Firestore does not support 'undefined' values.
  */
 const sanitizeData = (data: any): any => {
   if (data === undefined) return null;
@@ -67,7 +62,8 @@ export const fetchCollection = async (collectionName: string) => {
       ...doc.data() 
     }));
   } catch (error: any) {
-    console.error(`Error fetching ${collectionName}:`, error);
+    console.error(`Error fetching ${collectionName}:`, error.message || error);
+    // Rethrow to allow App.tsx to catch permission-denied
     throw error;
   }
 };
