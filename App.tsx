@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole, AdvanceBooking } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
@@ -123,9 +122,6 @@ const App: React.FC = () => {
         });
     } catch (e) {
         console.error("Failed to sync settings to cloud:", e);
-        // Fallback to localStorage if cloud fails
-        localStorage.setItem('brg_app_logo', logo);
-        if (signature) localStorage.setItem('brg_app_signature', signature);
     }
   };
 
