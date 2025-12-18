@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Invoice } from "../types";
 
@@ -7,7 +6,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audiologist: string): Promise<string> => {
   try {
-    const model = 'gemini-2.5-flash';
+    // FIX: Use gemini-3-flash-preview for text tasks
+    const model = 'gemini-3-flash-preview';
     const itemsList = invoice.items.map(i => `${i.brand} ${i.model}`).join(', ');
     const warrantyInfo = invoice.warranty || "Standard 1 Year Warranty";
     
@@ -47,7 +47,8 @@ export const analyzeStockTrends = async (inventoryText: string): Promise<string>
       `;
       
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        // FIX: Use gemini-3-flash-preview for text tasks
+        model: 'gemini-3-flash-preview',
         contents: prompt,
       });
       

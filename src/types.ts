@@ -12,6 +12,16 @@ export interface HearingAid {
   gstRate?: number; // Percentage (e.g., 12, 18)
 }
 
+export interface CompanyAsset {
+  id: string;
+  name: string;
+  serialNumber: string;
+  location: string;
+  type: string;
+  addedDate: string;
+  notes?: string;
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -174,7 +184,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [

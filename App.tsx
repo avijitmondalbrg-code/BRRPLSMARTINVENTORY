@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole, AdvanceBooking } from './types';
+import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
@@ -13,8 +13,9 @@ import { Settings } from './components/Settings';
 import { ReceiptsManager } from './components/ReceiptsManager';
 import { AdvanceBookings } from './components/AdvanceBookings';
 import { FrontCover } from './components/FrontCover';
+import { CompanyAssets } from './components/CompanyAssets';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -34,12 +35,15 @@ const App: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [advanceBookings, setAdvanceBookings] = useState<AdvanceBooking[]>([]);
+  // FIX: Added companyAssets state
+  const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refreshData = async () => {
     setLoading(true);
     try {
-      const [inv, invs, pats, quotes, notes, lds, trfs, advs, settings] = await Promise.all([
+      // FIX: Added fetchCollection('companyAssets')
+      const [inv, invs, pats, quotes, notes, lds, trfs, advs, settings, assets] = await Promise.all([
           fetchCollection('inventory'),
           fetchCollection('invoices'),
           fetchCollection('patients'),
@@ -48,7 +52,8 @@ const App: React.FC = () => {
           fetchCollection('leads'),
           fetchCollection('stockTransfers'),
           fetchCollection('advanceBookings'),
-          fetchCollection('settings')
+          fetchCollection('settings'),
+          fetchCollection('companyAssets')
       ]);
 
       // Load Cloud Settings (Logo & Signature)
@@ -70,6 +75,7 @@ const App: React.FC = () => {
          INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
          setPatients(initialPatients);
          setAdvanceBookings([]);
+         setCompanyAssets([]);
       } else {
          setInventory(inv as HearingAid[]);
          setInvoices(invs as Invoice[]);
@@ -79,6 +85,8 @@ const App: React.FC = () => {
          setLeads(lds as Lead[]);
          setStockTransfers(trfs as StockTransferType[]);
          setAdvanceBookings(advs as AdvanceBooking[]);
+         // FIX: Sync companyAssets state
+         setCompanyAssets(assets as CompanyAsset[]);
       }
     } catch (error) {
       console.warn("Firebase unreachable. Loading local fallback data.", error);
@@ -88,6 +96,7 @@ const App: React.FC = () => {
           const initialPatients: Patient[] = [];
           setPatients(initialPatients);
           setAdvanceBookings([]);
+          setCompanyAssets([]);
       }
     } finally {
       setLoading(false);
@@ -194,6 +203,22 @@ const App: React.FC = () => {
   const handleUpdateAdvanceBooking = async (b: AdvanceBooking) => {
     setAdvanceBookings(advanceBookings.map(item => item.id === b.id ? b : item));
     try { await updateDocument('advanceBookings', b.id, b); } catch(e) {}
+  };
+
+  // FIX: Added CompanyAsset handlers
+  const handleAddCompanyAsset = async (asset: CompanyAsset) => {
+    setCompanyAssets([asset, ...companyAssets]);
+    try { await setDocument('companyAssets', asset.id, asset); } catch(e) {}
+  };
+
+  const handleUpdateCompanyAsset = async (asset: CompanyAsset) => {
+    setCompanyAssets(companyAssets.map(a => a.id === asset.id ? asset : a));
+    try { await updateDocument('companyAssets', asset.id, asset); } catch(e) {}
+  };
+
+  const handleDeleteCompanyAsset = async (id: string) => {
+    setCompanyAssets(companyAssets.filter(a => a.id !== id));
+    try { await deleteDocument('companyAssets', id); } catch(e) {}
   };
 
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
@@ -350,12 +375,14 @@ const App: React.FC = () => {
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
-          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.5 Cloud Assets</p>
+          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.7.0 Cloud Sync</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
             { id: 'front-cover', label: 'Home', icon: Home },
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            // FIX: Added assets to sidebar
+            { id: 'assets', label: 'Company Assets', icon: HardDrive },
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase },
             { id: 'inventory', label: 'Inventory', icon: Package },
@@ -394,6 +421,8 @@ const App: React.FC = () => {
         <div className="p-8 max-w-7xl mx-auto print:p-0">
           {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} />}
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
+          {/* FIX: Render CompanyAssets view */}
+          {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleCreateQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleConvertQuotation} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}

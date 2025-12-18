@@ -1,4 +1,5 @@
 
+
 export interface HearingAid {
   id: string;
   brand: string;
@@ -10,6 +11,17 @@ export interface HearingAid {
   addedDate: string;
   hsnCode?: string;
   gstRate?: number; // Percentage (e.g., 12, 18)
+}
+
+// FIX: Added CompanyAsset interface for machine and equipment tracking
+export interface CompanyAsset {
+  id: string;
+  name: string;
+  serialNumber: string;
+  location: string;
+  type: string;
+  addedDate: string;
+  notes?: string;
 }
 
 export interface Patient {
@@ -174,7 +186,8 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking';
+// FIX: Added 'assets' to ViewState
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [
