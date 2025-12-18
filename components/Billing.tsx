@@ -149,8 +149,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   });
 
   // Calculate final total including global adjustment
-  // For simplicity, total adjustment is applied AFTER individual item discounts but BEFORE final total
-  // Tax is already calculated per item taxable value.
   const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST) - totalAdjustment);
   // FIX: Explicitly type reduce accumulators to number.
   const totalItemDiscounts: number = Object.values(itemDiscounts).reduce((a: number, b: number) => a + b, 0);
@@ -280,7 +278,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                       <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Bank</label><select className="w-full border-2 border-slate-100 rounded-xl p-3 outline-none font-bold text-teal-700 bg-slate-50" value={payBank} onChange={e => setPayBank(e.target.value)}> <option value="">No Bank (Cash)</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                                   </div>
                               </div>
-                              <button onClick={handleConfirmCollection} className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-teal-900/20 hover:bg-teal-700 transition active:scale-95">Confirm Receipt</button>
+                              <button onClick={handleConfirmCollection} className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-teal-900/20 hover:bg-teal-900 transition active:scale-95">Confirm Receipt</button>
                           </div>
                       </div>
                   </div>
@@ -495,7 +493,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <td className="p-4 text-center font-mono text-xs">{item.hsnCode || '90214090'}</td>
                             <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
                             <td className="p-4 text-center">{item.gstRate}%</td>
-                            <td className="p-4 text-right text-red-600">{item.discount > 0 ? `- ₹{item.discount.toLocaleString()}` : '-'}</td>
+                            <td className="p-4 text-right text-red-600">{item.discount > 0 ? `- ₹${item.discount.toLocaleString()}` : '-'}</td>
                             <td className="p-4 text-right font-black">₹{item.totalAmount.toFixed(2)}</td>
                         </tr>
                     ))}
