@@ -197,4 +197,5 @@ export const BRANDS = [
   'Signia',
   'Unitron',
   'Alps'
+  'Widex'
 ];
