@@ -43,16 +43,16 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const [inv, invs, pats, quotes, notes, lds, trfs, advs, settings, assets] = await Promise.all([
-          fetchCollection('inventory'),
-          fetchCollection('invoices'),
-          fetchCollection('patients'),
-          fetchCollection('quotations'),
-          fetchCollection('financialNotes'),
-          fetchCollection('leads'),
-          fetchCollection('stockTransfers'),
-          fetchCollection('advanceBookings'),
-          fetchCollection('settings'),
-          fetchCollection('companyAssets')
+          fetchCollection('inventory').catch(() => []),
+          fetchCollection('invoices').catch(() => []),
+          fetchCollection('patients').catch(() => []),
+          fetchCollection('quotations').catch(() => []),
+          fetchCollection('financialNotes').catch(() => []),
+          fetchCollection('leads').catch(() => []),
+          fetchCollection('stockTransfers').catch(() => []),
+          fetchCollection('advanceBookings').catch(() => []),
+          fetchCollection('settings').catch(() => []),
+          fetchCollection('companyAssets').catch(() => [])
       ]);
 
       if (settings && settings.length > 0) {
@@ -63,18 +63,22 @@ const App: React.FC = () => {
           }
       }
 
-      setInventory(inv as HearingAid[]);
-      setInvoices(invs as Invoice[]);
-      setPatients(pats as Patient[]);
-      setQuotations(quotes as Quotation[]);
-      setFinancialNotes(notes as FinancialNote[]);
-      setLeads(lds as Lead[]);
-      setStockTransfers(trfs as StockTransferType[]);
-      setAdvanceBookings(advs as AdvanceBooking[]);
-      setCompanyAssets(assets as CompanyAsset[]);
+      setInventory((inv as HearingAid[]) || []);
+      setInvoices((invs as Invoice[]) || []);
+      setPatients((pats as Patient[]) || []);
+      setQuotations((quotes as Quotation[]) || []);
+      setFinancialNotes((notes as FinancialNote[]) || []);
+      setLeads((lds as Lead[]) || []);
+      setStockTransfers((trfs as StockTransferType[]) || []);
+      setAdvanceBookings((advs as AdvanceBooking[]) || []);
+      setCompanyAssets((assets as CompanyAsset[]) || []);
       
     } catch (error) {
-      console.warn("Firebase unreachable.", error);
+      console.error("Critical error fetching data:", error);
+      // Fallback to empty state to avoid blank screen
+      setInventory([]);
+      setInvoices([]);
+      setPatients([]);
     } finally {
       setLoading(false);
     }
@@ -154,14 +158,12 @@ const App: React.FC = () => {
     try { await updateDocument('invoices', invoiceId, updatedInvoice); } catch(e) {}
   };
 
-  // FIX: Added handleDeletePatient to resolve type mismatch when passing deleteDocument to Patients component.
   const handleDeletePatient = async (id: string) => {
     if (invoices.some(i => i.patientId === id)) return alert("Cannot delete patient with active invoices.");
     setPatients(prev => prev.filter(p => p.id !== id));
     try { await deleteDocument('patients', id); } catch(e) {}
   };
 
-  // FIX: Added handleDeleteLead to resolve type mismatch when passing deleteDocument to CRM component.
   const handleDeleteLead = async (id: string) => {
     setLeads(prev => prev.filter(l => l.id !== id));
     try { await deleteDocument('leads', id); } catch(e) {}
@@ -250,7 +252,13 @@ const App: React.FC = () => {
     try { await deleteDocument('advanceBookings', id); } catch(e) {}
   };
 
-  if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-white"><div className="h-12 w-12 border-4 border-[#3159a6] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-gray-500 font-medium">Syncing Data...</p></div>;
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-white">
+      <div className="h-16 w-16 border-4 border-[#3159a6] border-t-transparent rounded-full animate-spin mb-6"></div>
+      <p className="text-[#3159a6] font-black uppercase tracking-widest text-sm animate-pulse">Establishing Secure Connection...</p>
+    </div>
+  );
+
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
   if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} />;
 
@@ -270,7 +278,6 @@ const App: React.FC = () => {
             { id: 'crm', label: 'Sales CRM', icon: Briefcase },
             { id: 'inventory', label: 'Inventory', icon: Package },
             { id: 'billing', label: 'Billing', icon: FileText },
-            { id: 'quotation', label: 'Quotations', icon: FileQuestion },
             { id: 'patients', label: 'Patients', icon: Users },
             { id: 'receipts', label: 'Receipts', icon: Receipt },
             { id: 'settings', label: 'Settings', icon: SettingsIcon }
@@ -304,9 +311,7 @@ const App: React.FC = () => {
           {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
-          {/* FIX: Replaced deleteDocument with handleDeleteLead to satisfy (leadId: string) => void signature */}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
-          {/* FIX: Replaced deleteDocument with handleDeletePatient to satisfy (patientId: string) => void signature */}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
