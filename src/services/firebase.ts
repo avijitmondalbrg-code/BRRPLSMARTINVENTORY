@@ -1,14 +1,13 @@
+
 import { initializeApp } from "firebase/app";
 import { 
-  getFirestore, 
+  initializeFirestore, 
   collection, 
   getDocs, 
   doc, 
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  query, 
-  orderBy 
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -22,7 +21,18 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+/**
+ * Optimized Firestore configuration for high-latency or restricted networks.
+ * 
+ * experimentalForceLongPolling: true - Bypasses WebSockets entirely. 
+ * WebSockets are often the cause of "Could not reach backend" errors due to 
+ * proxy or firewall interference.
+ */
+// FIX: Removed invalid 'useFetchStreams' property and cast 'app' to any to resolve FirebaseApp modular/compat type mismatch
+export const db = initializeFirestore(app as any, {
+  experimentalForceLongPolling: true,
+});
 
 /**
  * Utility to remove undefined values recursively from an object/array.
@@ -56,7 +66,7 @@ export const fetchCollection = async (collectionName: string) => {
       id: doc.id, 
       ...doc.data() 
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error fetching ${collectionName}:`, error);
     throw error;
   }

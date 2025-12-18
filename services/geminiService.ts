@@ -1,12 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 import { Invoice } from "../types";
 
-// FIX: Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY}); as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audiologist: string): Promise<string> => {
   try {
-    // FIX: Use gemini-3-flash-preview for text tasks
+    // FIX: Initializing GoogleGenAI directly with process.env.API_KEY as per coding guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const model = 'gemini-3-flash-preview';
     const itemsList = invoice.items.map(i => `${i.brand} ${i.model}`).join(', ');
     const warrantyInfo = invoice.warranty || "Standard 1 Year Warranty";
@@ -41,13 +39,14 @@ export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audi
 
 export const analyzeStockTrends = async (inventoryText: string): Promise<string> => {
   try {
+      // FIX: Adhering to coding guidelines for direct API key initialization
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `
         Analyze this hearing aid inventory data and give 3 short, bulleted strategic insights about stock levels, brand distribution, or sales potential.
         Data: ${inventoryText}
       `;
       
       const response = await ai.models.generateContent({
-        // FIX: Use gemini-3-flash-preview for text tasks
         model: 'gemini-3-flash-preview',
         contents: prompt,
       });
@@ -55,6 +54,6 @@ export const analyzeStockTrends = async (inventoryText: string): Promise<string>
       return response.text || "No insights available.";
   } catch (e) {
       console.error(e);
-      return "Could not analyze stock.";
+      return "Could not analyze stock at this time.";
   }
 }
