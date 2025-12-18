@@ -27,7 +27,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const cleanUserId = uid.trim().toLowerCase();
       const cleanPassword = pass.trim();
       
-      // Updated Credentials: admin/admin or user/user1234
       if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
           (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
           onLogin('admin');
@@ -54,7 +53,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a8a] to-slate-900 p-4">
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-fade-in">
         
         {/* Header Section */}
@@ -76,7 +75,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                )}
            </div>
            <h1 className="text-3xl font-black text-gray-800 tracking-tight uppercase leading-none">BRG Manager</h1>
-           <p className="text-teal-600 text-[10px] font-black uppercase tracking-[0.3em] mt-3">Advanced Clinical ERP</p>
+           <p className="text-[#3159a6] text-[10px] font-black uppercase tracking-[0.3em] mt-3">Advanced Clinical ERP</p>
         </div>
 
         {/* Form Section */}
@@ -85,11 +84,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Access Identity</label>
               <div className="relative group">
-                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-teal-600 transition-colors" size={20} />
+                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
                 <input 
                   type="text" 
                   required
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 outline-none transition bg-white shadow-sm font-bold text-gray-700"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
                   placeholder="admin"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
@@ -100,11 +99,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Secure Password</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-teal-600 transition-colors" size={20} />
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
                 <input 
                   type={showPassword ? "text" : "password"}
                   required
-                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-teal-500 outline-none transition bg-white shadow-sm font-bold text-gray-700"
+                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -112,7 +111,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-teal-600"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#3159a6]"
                 >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -130,7 +129,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
+                  className="w-full bg-[#1e3a8a] hover:bg-black text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
                 >
                   {loading ? 'Authorizing...' : 'Unlock System'}
                   {!loading && <ArrowRight size={18} />}
@@ -140,7 +139,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   type="button"
                   onClick={handleQuickLogin}
                   disabled={loading}
-                  className="w-full bg-teal-50 text-teal-700 hover:bg-teal-100 font-black py-4 rounded-2xl transition-all border-2 border-teal-100 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
+                  className="w-full bg-blue-50 text-[#3159a6] hover:bg-blue-100 font-black py-4 rounded-2xl transition-all border-2 border-blue-100 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
                 >
                   <Sparkles size={16} /> Fast Demo Access
                 </button>
@@ -152,15 +151,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="absolute bottom-8 text-center text-white/30 text-[10px] font-black uppercase tracking-[0.5em]">
           Bengal Rehabilitation & Research Pvt. Ltd.
       </div>
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
-      `}</style>
     </div>
   );
 };

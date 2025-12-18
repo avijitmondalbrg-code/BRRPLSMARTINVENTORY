@@ -11,7 +11,7 @@ interface FrontCoverProps {
 
 export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-[#1e3a8a] to-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
       <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center">
         
         {/* Logo Container with Solid White Background */}
@@ -27,18 +27,18 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
           <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-4 uppercase">
             BRG Inventory Manager V2.7
           </h1>
-          <p className="text-xl text-teal-300 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed opacity-90">
+          <p className="text-xl text-blue-200 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed opacity-90">
             {COMPANY_TAGLINE}
           </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full max-w-6xl">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-teal-300' },
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-300' },
             { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-300' },
             { id: 'assets', label: 'Assets', icon: HardDrive, color: 'text-amber-300' },
             { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-300' },
-            { id: 'billing', label: 'Billing', icon: FileText, color: 'text-blue-300' },
+            { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-300' },
             { id: 'receipts', label: 'Receipts', icon: Receipt, color: 'text-emerald-300' }
           ].map(item => (
             <button 
@@ -57,7 +57,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         <div className="mt-16">
             <button 
               onClick={() => onNavigate('dashboard')} 
-              className="flex items-center gap-3 bg-teal-600 hover:bg-teal-500 text-white text-lg font-black py-5 px-14 rounded-full shadow-2xl shadow-teal-900/50 transition-all hover:scale-105 active:scale-95 uppercase tracking-widest"
+              className="flex items-center gap-3 bg-[#3159a6] hover:bg-[#254687] text-white text-lg font-black py-5 px-14 rounded-full shadow-2xl shadow-blue-900/50 transition-all hover:scale-105 active:scale-95 uppercase tracking-widest"
             >
                 Launch System <ArrowRight />
             </button>
@@ -66,8 +66,8 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
       
       {/* Decorative background elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none opacity-30">
-        <div className="absolute -top-48 -left-48 w-[600px] h-[600px] bg-teal-500/20 rounded-full blur-[150px]"></div>
-        <div className="absolute -bottom-48 -right-48 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[150px]"></div>
+        <div className="absolute -top-48 -left-48 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[150px]"></div>
+        <div className="absolute -bottom-48 -right-48 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[150px]"></div>
       </div>
     </div>
   );
