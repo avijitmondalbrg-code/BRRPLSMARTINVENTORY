@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, CLINIC_UDYAM, getFinancialYear } from '../constants';
@@ -35,7 +36,6 @@ const numberToWords = (num: number): string => {
 };
 
 export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
-  const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -58,8 +58,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
-  const [totalAdjustment, setTotalAdjustment] = useState<number>(0); // Global discount on total
-  const [invoiceNotes, setInvoiceNotes] = useState<string>(''); // Invoice specific notes
+  const [totalAdjustment, setTotalAdjustment] = useState<number>(0); 
+  const [invoiceNotes, setInvoiceNotes] = useState<string>(''); 
   
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   
@@ -107,7 +107,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     inv.items.forEach(i => { discounts[i.hearingAidId] = i.discount || 0; });
     setItemDiscounts(discounts);
     
-    setTotalAdjustment(inv.discountValue || 0); // Assuming discountValue was global adjust
+    setTotalAdjustment(inv.discountValue || 0);
     setInvoiceNotes(inv.notes || '');
     setWarranty(inv.warranty || '2 Years Standard Warranty');
     setExistingPayments(inv.payments || []);
@@ -122,12 +122,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
   const subtotal = selectedInventoryItems.reduce((sum, item) => sum + item.price, 0);
   
-  // FIX: Explicitly type accumulation variables to number to avoid 'unknown' inference errors.
   let runningTaxableTotal: number = 0;
   let runningCGST: number = 0;
   let runningSGST: number = 0;
   
-  // Calculate items with their own discounts
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemDisc = itemDiscounts[item.id] || 0;
       const itemTaxable = Math.max(0, item.price - itemDisc);
@@ -148,9 +146,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       };
   });
 
-  // Calculate final total including global adjustment
   const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST) - totalAdjustment);
-  // FIX: Explicitly type reduce accumulators to number.
   const totalItemDiscounts: number = Object.values(itemDiscounts).reduce((a: number, b: number) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
@@ -174,7 +170,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         amount: initialPayment, method: paymentMethod, bankDetails: paymentBank || ""
       });
     }
-    // FIX: Explicitly type reduce accumulator to number.
     const totalPaid = currentPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
     const balanceDue = Math.max(0, finalTotal - totalPaid);
     
@@ -201,7 +196,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       if (!collectingInvoice || !onUpdateInvoice || newPaymentAmount <= 0) return;
       const newPayment: PaymentRecord = { id: `PAY-${Date.now()}`, date: payDate, amount: newPaymentAmount, method: payMethod, bankDetails: payBank || "" };
       const updatedPayments = [...(collectingInvoice.payments || []), newPayment];
-      // FIX: Explicitly type reduce accumulator to number.
       const totalPaid = updatedPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
       const balanceDue = Math.max(0, collectingInvoice.finalTotal - totalPaid);
       const updatedInvoice: Invoice = { ...collectingInvoice, payments: updatedPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : 'Partial' };
@@ -278,7 +272,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                       <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Target Bank</label><select className="w-full border-2 border-slate-100 rounded-xl p-3 outline-none font-bold text-teal-700 bg-slate-50" value={payBank} onChange={e => setPayBank(e.target.value)}> <option value="">No Bank (Cash)</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                                   </div>
                               </div>
-                              <button onClick={handleConfirmCollection} className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-teal-900/20 hover:bg-teal-900 transition active:scale-95">Confirm Receipt</button>
+                              <button onClick={handleConfirmCollection} className="w-full py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-teal-900/20 hover:bg-teal-700 transition active:scale-95">Confirm Receipt</button>
                           </div>
                       </div>
                   </div>
@@ -287,8 +281,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       );
   }
 
-  // Calculate available advances for the current patient
-  // FIX: Ensure numeric operations on lengths or other properties are valid by confirming types.
   const patientAdvances = advanceBookings.filter(b => 
     b.patientId === patient.id && 
     b.status === 'Active' && 
@@ -317,35 +309,15 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         {step === 'product' && (
             <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
                 <h3 className="text-lg font-bold mb-6 border-b pb-2">2. Select Device & Pricing</h3>
-                
-                <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search Available Devices (Brand, Model, Serial)..." 
-                        className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-shadow"
-                        value={productSearchTerm}
-                        onChange={(e) => setProductSearchTerm(e.target.value)}
-                    />
-                </div>
-
+                <div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" placeholder="Search Available Devices (Brand, Model, Serial)..." className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-shadow" value={productSearchTerm} onChange={(e) => setProductSearchTerm(e.target.value)}/></div>
                 <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400">
-                            <tr>
-                                <th className="p-4 w-10"></th>
-                                <th className="p-4">Brand/Model</th>
-                                <th className="p-4">Serial No</th>
-                                <th className="p-4">GST %</th>
-                                <th className="p-4">Item Discount (₹)</th>
-                                <th className="p-4 text-right">Unit Price</th>
-                            </tr>
+                            <tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4">GST %</th><th className="p-4">Item Discount (₹)</th><th className="p-4 text-right">Unit Price</th></tr>
                         </thead>
                         <tbody className="divide-y">
                             {inventory.filter(i => {
-                                const match = i.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
-                                              i.model.toLowerCase().includes(productSearchTerm.toLowerCase()) || 
-                                              i.serialNumber.toLowerCase().includes(productSearchTerm.toLowerCase());
+                                const match = i.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) || i.model.toLowerCase().includes(productSearchTerm.toLowerCase()) || i.serialNumber.toLowerCase().includes(productSearchTerm.toLowerCase());
                                 return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match;
                             }).map(item => (
                                 <tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}>
@@ -355,54 +327,23 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <td className="p-4">
                                         {selectedItemIds.includes(item.id) && (
                                             <select className="border rounded p-1" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> 
-                                                <option value="0">0%</option>
-                                                <option value="5">5%</option>
-                                                <option value="12">12%</option>
-                                                <option value="18">18%</option>
+                                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
                                             </select>
                                         )}
                                     </td>
-                                    <td className="p-4">
-                                        {selectedItemIds.includes(item.id) && (
-                                            <input 
-                                                type="number" 
-                                                className="border rounded p-1 w-20 text-right outline-none focus:ring-1 ring-teal-500" 
-                                                placeholder="0"
-                                                value={itemDiscounts[item.id] || ''}
-                                                onChange={(e) => setItemDiscounts({...itemDiscounts, [item.id]: Number(e.target.value)})}
-                                            />
-                                        )}
-                                    </td>
+                                    <td className="p-4">{selectedItemIds.includes(item.id) && (<input type="number" className="border rounded p-1 w-20 text-right outline-none focus:ring-1 ring-teal-500" placeholder="0" value={itemDiscounts[item.id] || ''} onChange={(e) => setItemDiscounts({...itemDiscounts, [item.id]: Number(e.target.value)})}/>)}</td>
                                     <td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="p-4 bg-gray-50 rounded-xl border">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Global Adjustment (Total Disc. ₹)</label>
-                        <input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-black text-xl text-teal-700 outline-none focus:border-teal-500" placeholder="0.00" />
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-xl border">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label>
-                        <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" />
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-xl border">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1"><MessageSquare size={12}/> Invoice Notes</label>
-                        <textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 p-2 rounded-lg text-xs h-16 resize-none outline-none focus:border-teal-500" placeholder="Internal or external notes..." />
-                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Global Adjustment (Total Disc. ₹)</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-black text-xl text-teal-700 outline-none focus:border-teal-500" placeholder="0.00" /></div>
+                    <div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" /></div>
+                    <div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1"><MessageSquare size={12}/> Invoice Notes</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 p-2 rounded-lg text-xs h-16 resize-none outline-none focus:border-teal-500" placeholder="Internal or external notes..." /></div>
                 </div>
-                
-                <div className="mt-8 flex justify-between items-center">
-                    <div className="text-teal-900">
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Gross Amount (Net Payable)</p>
-                        <p className="text-3xl font-black">₹{finalTotal.toLocaleString('en-IN')}</p>
-                        {(totalItemDiscounts + totalAdjustment) > 0 && <p className="text-xs text-red-600 font-bold mt-1">Total Saving: ₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</p>}
-                    </div>
-                    <button onClick={() => setStep('payment')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Next: Payment Details &rarr;</button>
-                </div>
+                <div className="mt-8 flex justify-between items-center"><div className="text-teal-900"><p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Gross Amount (Net Payable)</p><p className="text-3xl font-black">₹{finalTotal.toLocaleString('en-IN')}</p>{(totalItemDiscounts + totalAdjustment) > 0 && <p className="text-xs text-red-600 font-bold mt-1">Total Saving: ₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</p>}</div><button onClick={() => setStep('payment')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800">Next: Payment Details &rarr;</button></div>
             </div>
         )}
 
@@ -418,47 +359,20 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <div><label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Bank</label><select className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-primary font-bold text-teal-700 bg-gray-50" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                             </div>
                         </div>
-
-                        {/* Advance Adjustment Section */}
                         {patientAdvances.length > 0 && (
                             <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
                                 <h4 className="text-xs font-black text-amber-800 uppercase tracking-widest mb-3">Available Advances</h4>
-                                <div className="space-y-2">
-                                    {patientAdvances.map(adv => (
-                                        <div key={adv.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm">
-                                            <div>
-                                                <p className="font-bold text-gray-800 text-sm">₹{adv.amount.toLocaleString()}</p>
-                                                <p className="text-[10px] text-gray-500 uppercase tracking-wider">{adv.date} • {adv.modelInterest || 'General'}</p>
-                                            </div>
-                                            <button onClick={() => handleApplyAdvance(adv)} className="px-4 py-1.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg hover:bg-amber-200 transition">Apply</button>
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="space-y-2">{patientAdvances.map(adv => (<div key={adv.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-100 shadow-sm"><div><p className="font-bold text-gray-800 text-sm">₹{adv.amount.toLocaleString()}</p><p className="text-[10px] text-gray-500 uppercase tracking-wider">{adv.date} • {adv.modelInterest || 'General'}</p></div><button onClick={() => handleApplyAdvance(adv)} className="px-4 py-1.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg hover:bg-amber-200 transition">Apply</button></div>))}</div>
                             </div>
                         )}
-
-                        {/* Applied Payments List */}
                         {existingPayments.length > 0 && (
                             <div className="bg-green-50 rounded-2xl border border-green-200 p-5">
                                 <h4 className="text-xs font-black text-green-800 uppercase tracking-widest mb-3">Applied Payments</h4>
-                                <div className="space-y-2">
-                                    {existingPayments.map(p => (
-                                        <div key={p.id} className="flex justify-between items-center text-sm border-b border-green-100 last:border-0 pb-1 mb-1 last:pb-0 last:mb-0">
-                                            <span className="text-green-900 font-medium">{p.method} {p.note ? `(${p.note})` : ''}</span>
-                                            <span className="font-bold text-green-900">₹{p.amount.toLocaleString()}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="space-y-2">{existingPayments.map(p => (<div key={p.id} className="flex justify-between items-center text-sm border-b border-green-100 last:border-0 pb-1 mb-1 last:pb-0 last:mb-0"><span className="text-green-900 font-medium">{p.method} {p.note ? `(${p.note})` : ''}</span><span className="font-bold text-green-900">₹{p.amount.toLocaleString()}</span></div>))}</div>
                             </div>
                         )}
                     </div>
-
-                    <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col justify-center items-center text-center h-full">
-                        <p className="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Remaining Balance</p>
-                        <p className="text-3xl font-black text-teal-900">
-                            ₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()}
-                        </p>
-                    </div>
+                    <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col justify-center items-center text-center h-full"><p className="text-[10px] font-black text-teal-800 uppercase tracking-widest mb-1">Remaining Balance</p><p className="text-3xl font-black text-teal-900">₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()}</p></div>
                 </div>
                 <div className="mt-12 flex justify-end"><button onClick={() => setStep('review')} className="bg-primary text-white px-12 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800 transition-all">Preview Invoice &rarr;</button></div>
             </div>
@@ -467,29 +381,18 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         {step === 'review' && (
             <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0">
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
-                    <div className="flex gap-6"><img src={LOGO_URL} alt="Logo" className="h-24 w-24 object-contain" /><div><h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{COMPANY_NAME}</h1><p className="text-xs text-gray-500 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p><p className="text-[10px] text-gray-500 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p><p className="text-[10px] text-gray-500 font-bold mt-2 uppercase">GSTIN: {CLINIC_GSTIN}</p></div></div>
+                    <div className="flex gap-6"><img src={logo} alt="Logo" className="h-24 w-24 object-contain" /><div><h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{COMPANY_NAME}</h1><p className="text-xs text-gray-500 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p><p className="text-[10px] text-gray-500 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p><p className="text-[10px] text-gray-500 font-bold mt-2 uppercase">GSTIN: {CLINIC_GSTIN}</p></div></div>
                     <div className="text-right"><div className="border-4 border-gray-800 px-6 py-1 inline-block mb-3"><h2 className="text-xl font-black uppercase tracking-widest">Tax Invoice</h2></div><p className="text-sm font-black text-gray-700"># {editingInvoiceId || generateNextId()}</p><p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-12 mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border border-gray-100"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Billed To:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-600">{patient.phone}</p><p className="text-xs text-gray-500 mt-1 uppercase">{patient.address}</p></div></div>
-                
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-6">
                   <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest">
-                    <tr>
-                        <th className="p-4 text-left">Device Description</th>
-                        <th className="p-4 text-center">HSN/SAC</th>
-                        <th className="p-4 text-right">Unit MRP</th>
-                        <th className="p-4 text-center">GST%</th>
-                        <th className="p-4 text-right">Discount</th>
-                        <th className="p-4 text-right">Taxable</th>
-                    </tr>
+                    <tr><th className="p-4 text-left">Device Description</th><th className="p-4 text-center">HSN/SAC</th><th className="p-4 text-right">Unit MRP</th><th className="p-4 text-center">GST%</th><th className="p-4 text-right">Discount</th><th className="p-4 text-right">Taxable</th></tr>
                   </thead>
                   <tbody>
                     {invoiceItems.map(item => (
                         <tr key={item.hearingAidId} className="border-b border-gray-200">
-                            <td className="p-4">
-                                <p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p>
-                                <p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p>
-                            </td>
+                            <td className="p-4"><p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p><p className="text-[10px] text-teal-600 font-bold uppercase">S/N: {item.serialNumber}</p></td>
                             <td className="p-4 text-center font-mono text-xs">{item.hsnCode || '90214090'}</td>
                             <td className="p-4 text-right font-bold text-gray-700">₹{item.price.toLocaleString()}</td>
                             <td className="p-4 text-center">{item.gstRate}%</td>
@@ -499,53 +402,27 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     ))}
                   </tbody>
                 </table>
-
                 <div className="mb-8 flex flex-col sm:flex-row justify-between gap-6">
                     <div className="max-w-lg flex-grow">
                         <h4 className="text-[9px] font-black uppercase text-teal-700 mb-1.5 tracking-widest">GST Tax Breakdown</h4>
                         <table className="w-full border-collapse border border-gray-200 text-[10px] text-center">
                             <thead className="bg-teal-50 font-bold uppercase text-teal-700"><tr className="border-b"><th className="p-2 text-left">Rate (%)</th><th className="p-2 text-right">Taxable Val</th><th className="p-2 text-right">CGST</th><th className="p-2 text-right">SGST</th><th className="p-2 text-right">Total Tax</th></tr></thead>
-                            <tbody>
-                                {Object.entries(gstSummary).map(([rate, vals]: any) => (
-                                    <tr key={rate} className="border-b border-gray-50">
-                                        <td className="p-2 text-left font-bold">{rate}%</td>
-                                        <td className="p-2 text-right">₹{vals.taxable.toFixed(2)}</td>
-                                        <td className="p-2 text-right">₹{vals.cgst.toFixed(2)}</td>
-                                        <td className="p-2 text-right">₹{vals.sgst.toFixed(2)}</td>
-                                        <td className="p-2 text-right font-bold text-gray-800">₹{(vals.cgst + vals.sgst).toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
+                            <tbody>{Object.entries(gstSummary).map(([rate, vals]: any) => (<tr key={rate} className="border-b border-gray-50"><td className="p-2 text-left font-bold">{rate}%</td><td className="p-2 text-right">₹{vals.taxable.toFixed(2)}</td><td className="p-2 text-right">₹{vals.cgst.toFixed(2)}</td><td className="p-2 text-right">₹{vals.sgst.toFixed(2)}</td><td className="p-2 text-right font-bold text-gray-800">₹{(vals.cgst + vals.sgst).toFixed(2)}</td></tr>))}</tbody>
                         </table>
                     </div>
-                    {invoiceNotes && (
-                        <div className="sm:w-1/3 bg-gray-50 p-4 border border-dashed rounded-xl">
-                            <h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Invoice Notes:</h4>
-                            <p className="text-xs text-gray-700 italic leading-relaxed">{invoiceNotes}</p>
-                        </div>
-                    )}
+                    {invoiceNotes && (<div className="sm:w-1/3 bg-gray-50 p-4 border border-dashed rounded-xl"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Invoice Notes:</h4><p className="text-xs text-gray-700 italic leading-relaxed">{invoiceNotes}</p></div>)}
                 </div>
-
                 <div className="mt-10 mb-8">
                     <h4 className="text-[10px] font-black uppercase text-teal-700 mb-3 border-b-2 border-teal-100 pb-1 tracking-widest">Payment History (ট্রানজ্যাকশন বিবরণ)</h4>
                     <table className="w-full text-[11px] border border-gray-200">
-                        <thead className="bg-gray-50 text-gray-500 uppercase font-bold">
-                            <tr><th className="p-2 border text-left">Date</th><th className="p-2 border text-left">Mode</th><th className="p-2 border text-left">Bank/Ref</th><th className="p-2 border text-right">Amount</th></tr>
-                        </thead>
+                        <thead className="bg-gray-50 text-gray-500 uppercase font-bold"><tr><th className="p-2 border text-left">Date</th><th className="p-2 border text-left">Mode</th><th className="p-2 border text-left">Bank/Ref</th><th className="p-2 border text-right">Amount</th></tr></thead>
                         <tbody>
-                            {existingPayments.map(p => (
-                                <tr key={p.id}><td className="p-2 border">{new Date(p.date).toLocaleDateString('en-IN')}</td><td className="p-2 border font-bold uppercase">{p.method}</td><td className="p-2 border text-gray-500">{p.bankDetails || p.note || 'Direct/Cash'}</td><td className="p-2 border text-right font-black text-teal-800">₹{p.amount.toLocaleString()}</td></tr>
-                            ))}
-                            {initialPayment > 0 && (
-                                <tr className="bg-teal-50"><td className="p-2 border">{new Date().toLocaleDateString('en-IN')}</td><td className="p-2 border font-bold uppercase">{paymentMethod}</td><td className="p-2 border text-gray-500">{paymentBank || 'Direct/Cash'}</td><td className="p-2 border text-right font-black text-teal-800">₹{initialPayment.toLocaleString()}</td></tr>
-                            )}
+                            {existingPayments.map(p => (<tr key={p.id}><td className="p-2 border">{new Date(p.date).toLocaleDateString('en-IN')}</td><td className="p-2 border font-bold uppercase">{p.method}</td><td className="p-2 border text-gray-500">{p.bankDetails || p.note || 'Direct/Cash'}</td><td className="p-2 border text-right font-black text-teal-800">₹{p.amount.toLocaleString()}</td></tr>))}
+                            {initialPayment > 0 && (<tr className="bg-teal-50"><td className="p-2 border">{new Date().toLocaleDateString('en-IN')}</td><td className="p-2 border font-bold uppercase">{paymentMethod}</td><td className="p-2 border text-gray-500">{paymentBank || 'Direct/Cash'}</td><td className="p-2 border text-right font-black text-teal-800">₹{initialPayment.toLocaleString()}</td></tr>)}
                         </tbody>
-                        <tfoot className="bg-gray-50 font-black">
-                            <tr><td colSpan={3} className="p-2 text-right uppercase border">Total Received:</td><td className="p-2 text-right border text-teal-800">₹{(existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment).toLocaleString()} /-</td></tr>
-                        </tfoot>
+                        <tfoot className="bg-gray-50 font-black"><tr><td colSpan={3} className="p-2 text-right uppercase border">Total Received:</td><td className="p-2 text-right border text-teal-800">₹{(existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment).toLocaleString()} /-</td></tr></tfoot>
                     </table>
                 </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mb-10">
                     <div className="flex-1 w-full sm:w-auto"><div className="p-6 bg-slate-50 border-2 border-teal-100 rounded-3xl"><div className="space-y-3 text-xs"><div className="flex justify-between font-black text-red-600 text-sm"><span>Outstanding Balance (বাকি):</span><span>₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</span></div></div></div></div>
                     <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-3xl border-2 border-gray-100">
@@ -557,7 +434,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Net Payable</span><span className="text-4xl font-black">₹{Math.round(finalTotal).toLocaleString()}</span></div>
                     </div>
                 </div>
-
                 <div className="bg-gray-50 p-4 border rounded-xl text-[10px] font-black uppercase mb-12 tracking-widest text-gray-600">Words: {numberToWords(finalTotal)}</div>
                 <div className="flex justify-between items-end mt-20"><div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-800 inline-block mb-3 tracking-widest">Terms & Conditions</p><div className="text-[8.5px] text-gray-500 font-bold space-y-1 leading-tight uppercase"><p>1. Please keep this Invoice safe.</p><p>2. Hearing aids are classification HSN 9021 40 90 (GST Exempt).</p><p>3. Warranty: {warranty}.</p></div></div><div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-800">Authorized Signatory</p></div></div>
                 <div className="mt-12 flex gap-4 print:hidden"><button onClick={() => setStep('payment')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs">Edit Payment</button><button onClick={handleSaveInvoice} className="flex-[2] bg-primary text-white py-4 px-12 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs"> <Save size={18}/> Confirm & Save</button><button onClick={handlePrint} className="p-4 bg-gray-900 text-white rounded-xl shadow-lg hover:bg-black transition-colors"><Printer/></button></div>

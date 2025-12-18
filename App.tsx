@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole, AdvanceBooking } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
@@ -22,8 +23,8 @@ import { fetchCollection, setDocument, updateDocument, deleteDocument } from './
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [companyLogo, setCompanyLogo] = useState<string>(() => localStorage.getItem('brg_app_logo') || COMPANY_LOGO_BASE64);
-  const [companySignature, setCompanySignature] = useState<string | null>(() => localStorage.getItem('brg_app_signature'));
+  const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
+  const [companySignature, setCompanySignature] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
@@ -39,7 +40,7 @@ const App: React.FC = () => {
   const refreshData = async () => {
     setLoading(true);
     try {
-      const [inv, invs, pats, quotes, notes, lds, trfs, advs] = await Promise.all([
+      const [inv, invs, pats, quotes, notes, lds, trfs, advs, settings] = await Promise.all([
           fetchCollection('inventory'),
           fetchCollection('invoices'),
           fetchCollection('patients'),
@@ -47,8 +48,18 @@ const App: React.FC = () => {
           fetchCollection('financialNotes'),
           fetchCollection('leads'),
           fetchCollection('stockTransfers'),
-          fetchCollection('advanceBookings')
+          fetchCollection('advanceBookings'),
+          fetchCollection('settings')
       ]);
+
+      // Load Cloud Settings (Logo & Signature)
+      if (settings && settings.length > 0) {
+          const clinicAssets = settings.find(s => s.id === 'clinic_assets');
+          if (clinicAssets) {
+              if (clinicAssets.logo) setCompanyLogo(clinicAssets.logo);
+              if (clinicAssets.signature) setCompanySignature(clinicAssets.signature);
+          }
+      }
 
       if (inv.length === 0 && invs.length === 0) {
          setInventory(INITIAL_INVENTORY);
@@ -72,15 +83,10 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.warn("Firebase unreachable. Loading local fallback data.", error);
-      // Keep existing data on error if possible, or fallback
       if (inventory.length === 0) {
           setInventory(INITIAL_INVENTORY);
           setInvoices(INITIAL_INVOICES);
-          setQuotations(INITIAL_QUOTATIONS);
-          setFinancialNotes(INITIAL_FINANCIAL_NOTES);
-          setLeads(INITIAL_LEADS);
           const initialPatients: Patient[] = [];
-          INITIAL_INVOICES.forEach(inv => { if(inv.patientDetails) initialPatients.push({ ...inv.patientDetails, addedDate: inv.date }); });
           setPatients(initialPatients);
           setAdvanceBookings([]);
       }
@@ -104,12 +110,23 @@ const App: React.FC = () => {
       setActiveView('front-cover');
   };
 
-  const handleUpdateSettings = (logo: string, signature: string | null) => {
+  const handleUpdateSettings = async (logo: string, signature: string | null) => {
     setCompanyLogo(logo);
     setCompanySignature(signature);
-    localStorage.setItem('brg_app_logo', logo);
-    if (signature) localStorage.setItem('brg_app_signature', signature);
-    else localStorage.removeItem('brg_app_signature');
+    
+    // Cloud Sync Settings
+    try {
+        await setDocument('settings', 'clinic_assets', {
+            logo,
+            signature,
+            updatedAt: new Date().toISOString()
+        });
+    } catch (e) {
+        console.error("Failed to sync settings to cloud:", e);
+        // Fallback to localStorage if cloud fails
+        localStorage.setItem('brg_app_logo', logo);
+        if (signature) localStorage.setItem('brg_app_signature', signature);
+    }
   };
 
   const handleDeleteInventoryItem = async (itemId: string) => {
@@ -185,8 +202,6 @@ const App: React.FC = () => {
 
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
-    
-    // Logic: If invoice is created, mark corresponding lead as "Won"
     const patientPhone = invoice.patientDetails?.phone;
     if (patientPhone) {
         const lead = leads.find(l => l.phone === patientPhone);
@@ -197,10 +212,8 @@ const App: React.FC = () => {
         }
     }
 
-    // Logic: If invoice uses an Advance Payment, mark the Advance Booking as 'Consumed'
     invoice.payments.forEach(p => {
         if (p.method === 'Advance' && p.note?.includes('Ref:')) {
-             // Extract Advance Booking ID from note (Format: "Ref: BRRPL-AD-...")
              const parts = p.note.split('Ref:');
              if (parts.length > 1) {
                  const bookingId = parts[1].trim();
@@ -216,9 +229,7 @@ const App: React.FC = () => {
 
     if (exists) {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
-      try {
-        await setDocument('invoices', invoice.id, invoice);
-      } catch (e) {}
+      try { await setDocument('invoices', invoice.id, invoice); } catch (e) {}
     } else {
       setInvoices([...invoices, invoice]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
@@ -274,8 +285,6 @@ const App: React.FC = () => {
 
   const handleAddPatient = async (p: Patient) => {
     const patientWithDate = { ...p, addedDate: p.addedDate || new Date().toISOString().split('T')[0] };
-    
-    // Logic: Automatic CRM entry when patient is added
     const leadExists = leads.some(l => l.phone === p.phone);
     if (!leadExists) {
         const newLead: Lead = {
@@ -296,7 +305,6 @@ const App: React.FC = () => {
         setLeads(prev => [newLead, ...prev]);
         setDocument('leads', newLead.id, newLead).catch(e => {});
     }
-
     setPatients([...patients, patientWithDate]);
     try { await setDocument('patients', p.id, patientWithDate); } catch(e) {}
   };
@@ -346,7 +354,7 @@ const App: React.FC = () => {
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
-          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.2 Stable</p>
+          <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.6.5 Cloud Assets</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
