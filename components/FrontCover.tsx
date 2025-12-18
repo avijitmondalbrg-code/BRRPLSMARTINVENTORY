@@ -38,7 +38,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
 
         <div className="mb-16 animate-fade-in">
           <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 uppercase drop-shadow-lg">
-            BRG Smart Intentory Management System V2.0
+            BRG Smart Inventory System V2.0
           </h1>
           <p className="text-xl md:text-2xl text-blue-100 font-bold uppercase tracking-[0.25em] max-w-3xl mx-auto leading-relaxed drop-shadow-md opacity-90">
             {COMPANY_TAGLINE}
@@ -78,7 +78,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         </div>
       </div>
 
-      <div className="absolute bottom-8 text-center text-white/40 text-[10px] font-black uppercase tracking-[0.6em] select-none">
+      <div className="absolute bottom-5 text-center text-white/60 text-[11px] font-black uppercase tracking-[0.4em] select-none z-10 w-full">
           Bengal Rehabilitation & Research Pvt. Ltd.
       </div>
       

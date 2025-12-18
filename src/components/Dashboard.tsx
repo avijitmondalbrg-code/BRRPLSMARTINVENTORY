@@ -2,7 +2,7 @@
 import React from 'react';
 import { HearingAid, Invoice } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, AlertCircle, IndianRupee, Package, Sparkles, AlertTriangle, ArrowRight, Clock, Building2 } from 'lucide-react';
+import { TrendingUp, IndianRupee, Package, Sparkles, Clock } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
 
 interface DashboardProps {
@@ -14,7 +14,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
   const [insights, setInsights] = React.useState<string>('');
   const [loadingInsights, setLoadingInsights] = React.useState(false);
 
-  const LOW_STOCK_THRESHOLD = 3;
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
   const availableItems = inventory.filter(i => i.status === 'Available');
@@ -27,10 +26,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
     availableItems.forEach(item => { data[item.brand] = (data[item.brand] || 0) + 1; });
     return Object.keys(data).map(brand => ({ name: brand, count: data[brand] }));
   }, [availableItems]);
-
-  const recentSales = React.useMemo(() => {
-    return [...invoices].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-  }, [invoices]);
 
   const handleGetInsights = async () => {
     setLoadingInsights(true);
@@ -48,53 +43,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
           </div>
           <div className="hidden md:block w-px h-12 bg-gray-100"></div>
           <div className="text-center md:text-left">
-              <h2 className="text-2xl font-black text-gray-800 tracking-tight">Performance Analytics</h2>
-              <p className="text-sm text-gray-500 font-medium uppercase">Dashboard Overview</p>
+              <h2 className="text-2xl font-black text-gray-800 tracking-tight">Clinical Insights</h2>
+              <p className="text-sm text-gray-400 font-bold uppercase">Enterprise Dashboard</p>
           </div>
           <div className="md:ml-auto flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#3159a6] rounded-full border border-blue-100 text-xs font-black uppercase">
-              <Clock size={14} /> Live: {new Date().toLocaleDateString('en-IN')}
+              <Clock size={14} /> LIVE: {new Date().toLocaleDateString('en-IN')}
           </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
           <div className="p-4 bg-blue-50 rounded-full text-[#3159a6]"><IndianRupee size={24} /></div>
-          <div><p className="text-gray-500 text-sm font-medium">Total Revenue</p><p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p></div>
+          <div><p className="text-gray-400 text-xs font-black uppercase tracking-widest">Total Sales</p><p className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</p></div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
           <div className="p-4 bg-indigo-50 rounded-full text-indigo-600"><Package size={24} /></div>
-          <div><p className="text-gray-500 text-sm font-medium">Stock Value</p><p className="text-2xl font-bold text-gray-900">₹{totalStockValue.toLocaleString()}</p></div>
+          <div><p className="text-gray-400 text-xs font-black uppercase tracking-widest">Asset Value</p><p className="text-2xl font-bold text-gray-900">₹{totalStockValue.toLocaleString()}</p></div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 transition hover:shadow-md">
            <div className="p-4 rounded-full bg-blue-100 text-[#3159a6]"><TrendingUp size={24} /></div>
-          <div><p className="text-gray-500 text-sm font-medium">Total Units</p><p className="text-2xl font-bold text-gray-900">{availableCount}</p></div>
+          <div><p className="text-gray-400 text-xs font-black uppercase tracking-widest">Available</p><p className="text-2xl font-bold text-gray-900">{availableCount} Units</p></div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-96 flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-700 mb-4">Stock Distribution</h3>
+        <div className="xl:col-span-2">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-96 flex flex-col">
+                <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-6">Stock Level by Brand</h3>
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stockByBrand}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#3159a6" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}} />
+                      <Tooltip 
+                        contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                        cursor={{fill: '#f8fafc'}}
+                      />
+                      <Bar dataKey="count" fill="#3159a6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
         </div>
 
-        <div className="space-y-6">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-xl shadow-sm text-white flex flex-col min-h-[300px]">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2"><Sparkles className="text-blue-400" size={20}/> AI Insights</h3>
-                    <button onClick={handleGetInsights} disabled={loadingInsights} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded transition">{loadingInsights ? '...' : 'Analyze'}</button>
+        <div className="bg-[#3159a6] p-8 rounded-3xl shadow-xl text-white flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Sparkles size={120} />
+            </div>
+            <div className="relative z-10 flex flex-col h-full">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles size={20}/> AI Intelligence
+                    </h3>
+                    <button 
+                      onClick={handleGetInsights} 
+                      disabled={loadingInsights} 
+                      className="text-[10px] font-black uppercase bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition-all backdrop-blur-sm"
+                    >
+                        {loadingInsights ? 'Processing...' : 'Run Analysis'}
+                    </button>
                 </div>
-                <div className="bg-white/5 rounded-lg p-4 flex-1 overflow-y-auto text-sm leading-relaxed text-gray-200">
-                    {insights || "Click Analyze to see stock trends."}
+                <div className="bg-white/10 rounded-2xl p-6 flex-1 overflow-y-auto text-sm leading-relaxed text-blue-50 font-medium custom-scrollbar backdrop-blur-md">
+                    {insights || "Click Run Analysis to let AI evaluate your inventory distribution across locations."}
                 </div>
             </div>
         </div>

@@ -154,7 +154,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
       </div>
       
-      <div className="absolute bottom-8 text-center text-white/30 text-[10px] font-black uppercase tracking-[0.5em] select-none z-10">
+      <div className="absolute bottom-5 text-center text-white/50 text-[11px] font-black uppercase tracking-[0.4em] select-none z-10 w-full">
           Bengal Rehabilitation & Research Pvt. Ltd.
       </div>
 
