@@ -23,8 +23,8 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         </div>
 
         <div className="mb-16">
-          <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 uppercase">
-            BRG Manager V2.6
+          <h1 className="text-4xl md:text-4xl font-black text-white tracking-tighter mb-4 uppercase">
+            BRG Inventory Management System V2.0
           </h1>
           <p className="text-xl text-teal-300 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed">
             {COMPANY_TAGLINE}
