@@ -120,11 +120,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   let runningSGST: number = 0;
   
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
-      const itemDisc = itemDiscounts[item.id] || 0;
-      const itemTaxable = Math.max(0, item.price - itemDisc);
-      const gstRate = gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0);
-      const cgst = (itemTaxable * (gstRate / 100)) / 2;
-      const sgst = (itemTaxable * (gstRate / 100)) / 2;
+      const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
+      const itemTaxable: number = Math.max(0, item.price - itemDisc);
+      const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
+      const cgst: number = (itemTaxable * (gstRate / 100)) / 2;
+      const sgst: number = (itemTaxable * (gstRate / 100)) / 2;
       runningTaxableTotal += itemTaxable; 
       runningCGST += cgst; 
       runningSGST += sgst; 
@@ -137,7 +137,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   });
 
   const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST) - totalAdjustment);
-  const totalItemDiscounts: number = Object.values(itemDiscounts).reduce((a: number, b: number) => a + b, 0);
+  const totalItemDiscounts: number = (Object.values(itemDiscounts) as number[]).reduce((a: number, b: number) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
     const summary: Record<number, { taxable: number, cgst: number, sgst: number }> = {};
@@ -423,8 +423,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="max-w-lg flex-grow">
                         <h4 className="text-[9px] font-black uppercase text-[#3159a6] mb-2 tracking-[0.3em]">GST Computation (Statutory)</h4>
                         <table className="w-full border-collapse border-2 border-gray-900 text-[9px] text-center rounded-lg overflow-hidden">
-                            <thead className="bg-gray-100 font-black uppercase text-gray-600"><tr className="border-b-2 border-gray-900"><th className="p-3 text-left border-r border-gray-900">Tax Rate</th><th className="p-3 text-right border-r border-gray-900">Taxable</th><th className="p-3 text-right border-r border-gray-900">CGST</th><th className="p-3 text-right border-r border-gray-900">SGST</th><th className="p-3 text-right">Total GST</th></tr></thead>
-                            <tbody className="font-bold">{Object.entries(gstSummary).map(([rate, vals]: any) => (<tr key={rate} className="border-b border-gray-900"><td className="p-3 text-left font-black bg-gray-50 border-r border-gray-900">{rate}% GST</td><td className="p-3 text-right border-r border-gray-900">₹{vals.taxable.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-900">₹{vals.cgst.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-900">₹{vals.sgst.toFixed(2)}</td><td className="p-3 text-right font-black text-gray-900">₹{(vals.cgst + vals.sgst).toFixed(2)}</td></tr>))}</tbody>
+                            <thead className="bg-gray-100 font-black uppercase text-gray-600"><tr className="border-b-2 border-gray-900"><th className="p-3 text-left border-r border-gray-900">Tax Rate</th><th className="p-3 text-right border-r border-gray-800">Taxable</th><th className="p-3 text-right border-r border-gray-800">CGST</th><th className="p-3 text-right border-r border-gray-800">SGST</th><th className="p-3 text-right">Total GST</th></tr></thead>
+                            <tbody className="font-bold">{Object.entries(gstSummary).map(([rate, vals]: any) => (<tr key={rate} className="border-b border-gray-900"><td className="p-3 text-left font-black bg-gray-50 border-r border-gray-900">{rate}% GST</td><td className="p-3 text-right border-r border-gray-900">₹{vals.taxable.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-800">₹{vals.cgst.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-800">₹{vals.sgst.toFixed(2)}</td><td className="p-3 text-right font-black text-gray-900">₹{(vals.cgst + vals.sgst).toFixed(2)}</td></tr>))}</tbody>
                         </table>
                     </div>
                     {invoiceNotes && (<div className="sm:w-1/3 bg-blue-50/50 p-6 border-2 border-dashed border-blue-100 rounded-3xl"><h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-3 border-b border-blue-100 pb-1 tracking-widest">Architectural Notes:</h4><p className="text-xs text-slate-700 italic leading-relaxed font-medium">"{invoiceNotes}"</p></div>)}
