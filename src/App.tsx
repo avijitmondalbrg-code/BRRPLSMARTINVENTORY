@@ -16,7 +16,7 @@ import { AdvanceBookings } from './components/AdvanceBookings';
 import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -121,6 +121,37 @@ const App: React.FC = () => {
         });
     } catch (e) {
         console.error("Failed to sync settings:", e);
+    }
+  };
+
+  const handleStockTransfer = async (itemId: string, toLocation: string, sender: string, transporter: string, receiver: string, note: string) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    const transferLog: StockTransferType = {
+      id: `TRF-${Date.now()}`,
+      hearingAidId: item.id,
+      brand: item.brand,
+      model: item.model,
+      serialNumber: item.serialNumber,
+      fromLocation: item.location,
+      toLocation,
+      date: new Date().toISOString().split('T')[0],
+      sender,
+      transporter,
+      receiver,
+      note
+    };
+
+    const updatedItem = { ...item, location: toLocation };
+    setInventory(inventory.map(i => i.id === itemId ? updatedItem : i));
+    setStockTransfers([transferLog, ...stockTransfers]);
+
+    try {
+      await updateDocument('inventory', itemId, { location: toLocation });
+      await setDocument('stockTransfers', transferLog.id, transferLog);
+    } catch (e) {
+      console.error("Sync failed:", e);
     }
   };
 
@@ -388,6 +419,7 @@ service cloud.firestore {
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase },
             { id: 'inventory', label: 'Inventory', icon: Package },
+            { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft },
             { id: 'quotation', label: 'Quotations', icon: FileQuestion },
             { id: 'billing', label: 'Billing', icon: FileText },
             { id: 'patients', label: 'Patients', icon: Users },
@@ -424,6 +456,7 @@ service cloud.firestore {
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
           {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
+          {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
