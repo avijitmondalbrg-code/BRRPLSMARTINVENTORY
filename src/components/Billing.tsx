@@ -380,129 +380,123 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         )}
 
         {step === 'review' && (
-            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen overflow-x-auto">
-                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[210mm] p-[10mm] flex flex-col">
-                    {/* Re-architected Header */}
-                    <div className="grid grid-cols-12 gap-4 border-b-2 border-slate-900 pb-4 mb-4 items-center">
-                        <div className="col-span-2 flex justify-center">
-                            <img src={logo} alt="Logo" className="h-20 w-auto object-contain" />
-                        </div>
-                        <div className="col-span-7 px-2">
-                            <h1 className="text-xl font-black text-slate-900 uppercase leading-none tracking-tight">{COMPANY_NAME}</h1>
-                            <p className="text-[10px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
-                            <p className="text-[9px] text-slate-900 mt-1 leading-tight font-medium">{COMPANY_ADDRESS}</p>
-                            <p className="text-[10px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
-                        </div>
-                        <div className="col-span-3 text-right">
-                            <div className="bg-[#3159a6] text-white px-3 py-1 inline-block mb-1.5 rounded-lg w-full">
-                                <h2 className="text-sm font-black uppercase tracking-widest text-center">Tax Invoice</h2>
+            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen">
+                {/* Print area container with A4 dimensions in pixels approx (800-900px wide) */}
+                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0">
+                    
+                    {/* Simplified Header for absolute alignment */}
+                    <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
+                        <div className="flex items-center gap-6">
+                            <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
+                                <p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
+                                <p className="text-[10px] text-slate-900 mt-2 leading-tight max-w-md font-semibold">{COMPANY_ADDRESS}</p>
+                                <p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
                             </div>
-                            <p className="text-[11px] font-black text-slate-900 tracking-tighter uppercase"># {editingInvoiceId || generateNextId()}</p>
-                            <p className="text-[10px] font-black text-slate-700 uppercase mt-0.5 tracking-widest">DATE: {new Date().toLocaleDateString('en-IN')}</p>
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                            <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
+                                <h2 className="text-lg font-black uppercase tracking-widest text-center">Tax Invoice</h2>
+                            </div>
+                            <p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateNextId()}</p>
+                            <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date().toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
 
-                    {/* Parties Section */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                            <h4 className="text-[9px] font-black uppercase text-slate-500 mb-1 border-b border-slate-200 pb-0.5 tracking-widest">Consignee / Bill To:</h4>
-                            <p className="font-black text-lg text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p>
-                            <p className="font-bold text-slate-900 text-xs">{patient.phone}</p>
-                            <p className="text-[9px] text-slate-800 mt-1 uppercase font-semibold leading-tight">{patient.address}</p>
+                    {/* Parties Grid */}
+                    <div className="grid grid-cols-2 gap-8 mb-6">
+                        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
+                            <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4>
+                            <p className="font-black text-xl text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p>
+                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone}</p>
+                            <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
-                            <div className="mt-3 pt-2 border-t border-slate-200 grid grid-cols-2 gap-2">
-                                <div className="flex items-start gap-1">
-                                    <div className="p-1 bg-blue-100 rounded text-[#3159a6]"><Stethoscope size={10}/></div>
-                                    <div><p className="text-[8px] font-black uppercase text-slate-500">Ref. Dr.</p><p className="text-[9px] font-black text-slate-900">{patient.referDoctor || 'Self'}</p></div>
-                                </div>
-                                <div className="flex items-start gap-1">
-                                    <div className="p-1 bg-blue-100 rounded text-[#3159a6]"><UserCheck size={10}/></div>
-                                    <div><p className="text-[8px] font-black uppercase text-slate-500">Audio.</p><p className="text-[9px] font-black text-slate-900">{patient.audiologist || 'Internal'}</p></div>
-                                </div>
+                            <div className="mt-4 pt-3 border-t-2 border-slate-200 flex gap-6">
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Ref. Doctor</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-slate-900 uppercase">{patient.audiologist || 'Clinical Lead'}</p></div>
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                            <h4 className="text-[9px] font-black uppercase text-slate-500 mb-1 border-b border-slate-200 pb-0.5 tracking-widest">Biller / Bill By:</h4>
-                            <p className="font-black text-[11px] text-slate-900 uppercase tracking-tight mb-1">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
-                            <div className="space-y-0.5 text-[8.5px] text-slate-800 font-bold uppercase leading-tight">
-                                <p><span className="text-slate-500 font-black mr-1 uppercase">PAN:</span> AALCB1534C | <span className="text-slate-500 font-black mr-1 ml-1 uppercase">PH:</span> +91 98749 25867</p>
+                        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
+                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: +91 98749 25867</p>
                             </div>
                             
-                            <div className="mt-2 pt-1.5 border-t border-slate-200">
-                                <h5 className="text-[8px] font-black uppercase text-[#3159a6] tracking-widest mb-0.5">Settlement (SBI Bank):</h5>
-                                <div className="grid grid-cols-2 gap-x-2 text-[8px] uppercase font-black text-slate-800">
-                                    <div><span className="text-slate-500 mr-0.5 font-bold uppercase">IFSC:</span> SBIN0001357</div>
-                                    <div><span className="text-slate-500 mr-0.5 font-bold uppercase">Acc:</span> <span className="text-slate-900 font-black">42367906742</span></div>
+                            <div className="mt-4 pt-3 border-t-2 border-slate-200">
+                                <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-[0.2em] mb-1">Bank Settlement Details:</h5>
+                                <div className="grid grid-cols-2 text-[10px] uppercase font-black text-slate-800">
+                                    <p>SBI ACC: <span className="text-slate-900">42367906742</span></p>
+                                    <p className="text-right">IFSC: SBIN0001357</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Items Table */}
-                    <div className="mb-4">
-                        <table className="w-full border-collapse border-2 border-slate-900 text-[11px]">
+                    {/* Main Table */}
+                    <div className="mb-6">
+                        <table className="w-full border-collapse border-4 border-slate-900 text-[12px]">
                             <thead className="bg-[#3159a6] text-white uppercase font-black tracking-tight">
                                 <tr>
-                                    <th className="p-2 text-left border-r border-white/20 w-[40%]">Description of Goods</th>
-                                    <th className="p-2 text-center border-r border-white/20">HSN</th>
-                                    <th className="p-2 text-right border-r border-white/20">Price</th>
-                                    <th className="p-2 text-center border-r border-white/20">GST</th>
-                                    <th className="p-2 text-right border-r border-white/20">Disc.</th>
-                                    <th className="p-2 text-right">Value</th>
+                                    <th className="p-3 text-left border-r-2 border-white/20">Description of Goods / HSN 90214090</th>
+                                    <th className="p-3 text-right border-r-2 border-white/20 w-32">Price (INR)</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-20">GST %</th>
+                                    <th className="p-3 text-right border-r-2 border-white/20 w-24">Disc.</th>
+                                    <th className="p-3 text-right w-36">Value</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
                                 {invoiceItems.map(item => (
-                                    <tr key={item.hearingAidId} className="border-b border-slate-900 last:border-b-0">
-                                        <td className="p-1.5 px-2 border-r-2 border-slate-900">
-                                            <p className="font-black text-slate-900 uppercase text-[10px] tracking-tight">{item.brand} {item.model}</p>
-                                            <p className="text-[8.5px] text-[#3159a6] font-black uppercase tracking-widest">S/N: {item.serialNumber}</p>
+                                    <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-4 last:border-slate-900">
+                                        <td className="p-2 border-r-2 border-slate-900">
+                                            <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand} {item.model}</p>
+                                            <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">S/N: {item.serialNumber}</p>
                                         </td>
-                                        <td className="p-1.5 text-center font-mono text-[9px] border-r-2 border-slate-900">{item.hsnCode}</td>
-                                        <td className="p-1.5 text-right border-r-2 border-slate-900">₹{item.price.toLocaleString()}</td>
-                                        <td className="p-1.5 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
-                                        <td className="p-1.5 text-right text-red-700 border-r-2 border-slate-900">{item.discount > 0 ? `-₹${item.discount}` : '0.00'}</td>
-                                        <td className="p-1.5 text-right font-black bg-slate-50/50">₹{item.totalAmount.toFixed(2)}</td>
+                                        <td className="p-2 text-right border-r-2 border-slate-900 font-mono">₹{item.price.toLocaleString()}</td>
+                                        <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                        <td className="p-2 text-right text-red-700 border-r-2 border-slate-900">-₹{item.discount.toLocaleString()}</td>
+                                        <td className="p-2 text-right font-black bg-slate-50/50">₹{item.totalAmount.toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
 
-                    {/* Breakdown & Payments */}
-                    <div className="grid grid-cols-2 gap-4 mb-4 items-start">
+                    {/* Summary and Breakdown */}
+                    <div className="grid grid-cols-2 gap-8 mb-6 items-start">
                         <div className="space-y-4">
                             <div>
-                                <h4 className="text-[8px] font-black uppercase text-[#3159a6] mb-1 tracking-widest">GST Analysis</h4>
-                                <table className="w-full border-collapse border border-slate-900 text-[8px] text-center">
+                                <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-1 tracking-[0.2em]">GST Analysis</h4>
+                                <table className="w-full border-collapse border-2 border-slate-900 text-[10px] text-center">
                                     <thead className="bg-slate-100 font-black text-slate-800">
-                                        <tr className="border-b border-slate-900">
-                                            <th className="p-1 text-left border-r border-slate-900">Rate</th>
-                                            <th className="p-1 text-right border-r border-slate-900">Taxable</th>
-                                            <th className="p-1 text-right border-r border-slate-900">CGST</th>
-                                            <th className="p-1 text-right">SGST</th>
+                                        <tr className="border-b-2 border-slate-900">
+                                            <th className="p-1.5 text-left border-r-2 border-slate-900">Rate</th>
+                                            <th className="p-1.5 text-right border-r-2 border-slate-900">Taxable</th>
+                                            <th className="p-1.5 text-right border-r-2 border-slate-900">CGST</th>
+                                            <th className="p-1.5 text-right">SGST</th>
                                         </tr>
                                     </thead>
                                     <tbody className="font-bold text-slate-900 uppercase">
                                         {Object.entries(gstSummary).map(([rate, vals]: any) => (
-                                            <tr key={rate} className="border-b border-slate-300 last:border-b-0">
-                                                <td className="p-1 text-left font-black bg-slate-50 border-r border-slate-900">{rate}% GST</td>
-                                                <td className="p-1 text-right border-r border-slate-900">₹{vals.taxable.toFixed(2)}</td>
-                                                <td className="p-1 text-right border-r border-slate-900">₹{vals.cgst.toFixed(2)}</td>
-                                                <td className="p-1 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                            <tr key={rate} className="border-b-2 border-slate-200 last:border-b-0">
+                                                <td className="p-1.5 text-left font-black bg-slate-50 border-r-2 border-slate-900">{rate}% GST</td>
+                                                <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.taxable.toFixed(2)}</td>
+                                                <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.cgst.toFixed(2)}</td>
+                                                <td className="p-1.5 text-right">₹{vals.sgst.toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <div className="bg-red-50 p-2.5 rounded-xl border border-red-100 text-center">
-                                <p className="text-[8px] font-black text-red-700 uppercase tracking-widest mb-0.5">Final Outstanding Balance</p>
-                                <p className="text-xl font-black text-red-600 tracking-tight leading-none">₹{(finalTotal - totalPaidSoFar).toLocaleString()} /-</p>
+                            <div className="bg-red-50 p-4 rounded-2xl border-4 border-white shadow-lg text-center">
+                                <p className="text-[10px] font-black text-red-700 uppercase tracking-[0.3em] mb-1">Current Outstanding Balance</p>
+                                <p className="text-3xl font-black text-red-600 tracking-tighter leading-none">₹{(finalTotal - totalPaidSoFar).toLocaleString()} /-</p>
                                 
-                                <div className="mt-2 pt-2 border-t border-red-200">
-                                    <div className="space-y-0.5 text-[8px] text-left">
+                                <div className="mt-3 pt-3 border-t-2 border-red-200">
+                                    <div className="space-y-1 text-[10px] text-left">
                                         {existingPayments.map(p => (
                                             <div key={p.id} className="flex justify-between font-bold text-slate-700 uppercase">
                                                 <span>{p.method} ({new Date(p.date).toLocaleDateString('en-IN')})</span>
@@ -510,8 +504,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                             </div>
                                         ))}
                                         {initialPayment > 0 && (
-                                            <div className="flex justify-between font-black text-[#3159a6] uppercase">
-                                                <span>{paymentMethod} (Current)</span>
+                                            <div className="flex justify-between font-black text-[#3159a6] uppercase border-t border-[#3159a6]/20 pt-1">
+                                                <span>{paymentMethod} (Collection)</span>
                                                 <span>₹{initialPayment.toLocaleString()}</span>
                                             </div>
                                         )}
@@ -521,57 +515,57 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         </div>
 
                         <div className="space-y-4">
-                            <div className="bg-slate-50 p-4 rounded-xl border-2 border-slate-200 shadow-inner font-bold text-slate-900">
-                                <div className="flex justify-between text-[9px] uppercase text-slate-600"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[9px] uppercase text-red-600"><span>Applied Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[9px] uppercase text-slate-600"><span>Net GST Tax</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div>
-                                <div className="h-px bg-slate-300 my-1.5"></div>
+                            <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-white shadow-xl font-bold text-slate-900">
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Applied Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-3"><span>Net GST Tax</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div>
+                                <div className="h-0.5 bg-slate-900 mb-3"></div>
                                 <div className="flex justify-between items-center text-slate-900">
-                                    <span className="text-[10px] font-black uppercase tracking-tight">Net Payable</span>
-                                    <span className="text-3xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
+                                    <span className="text-xs font-black uppercase tracking-[0.2em]">Net Payable</span>
+                                    <span className="text-4xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
                                 </div>
                             </div>
 
                             {invoiceNotes && (
-                                <div className="bg-blue-50/50 p-2.5 border border-dashed border-blue-200 rounded-xl">
-                                    <h4 className="text-[8px] font-black uppercase text-[#3159a6] mb-1 border-b border-blue-100 pb-0.5 tracking-widest uppercase">Remarks:</h4>
-                                    <p className="text-[8.5px] text-slate-800 italic leading-tight font-semibold uppercase">"{invoiceNotes}"</p>
+                                <div className="bg-blue-50/50 p-4 border-2 border-dashed border-blue-200 rounded-2xl">
+                                    <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-2 border-b border-blue-100 pb-1 tracking-widest">Remarks:</h4>
+                                    <p className="text-xs text-slate-800 italic leading-relaxed font-semibold uppercase">"{invoiceNotes}"</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="bg-[#3159a6] text-white p-2.5 rounded-lg text-[9px] font-black uppercase tracking-[0.1em] mb-4 text-center">
-                        Total Payable in Words: {numberToWords(finalTotal)}
+                    <div className="bg-[#3159a6] text-white p-3 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 text-center shadow-lg">
+                        Grand Total in Words: {numberToWords(finalTotal)}
                     </div>
 
-                    {/* Terms & Signature */}
-                    <div className="flex justify-between items-end mt-4">
+                    {/* Terms and Signature area */}
+                    <div className="flex justify-between items-end mt-auto pt-10">
                         <div className="w-[60%]">
-                            <p className="font-black text-[9px] uppercase border-b-2 border-slate-900 inline-block mb-1.5 tracking-widest text-slate-900">Terms & Conditions:</p>
-                            <div className="text-[8.5px] text-slate-800 font-bold space-y-0.5 leading-tight uppercase tracking-tight">
-                                <p>1. Hearing aids are medical prosthesis classification HSN 90214090.</p>
-                                <p>2. Goods once sold are non-refundable. Warranty: {warranty}.</p>
-                                <p>3. UDYAM-WB-18-0032916 (Micro Enterprise Certified).</p>
+                            <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
+                            <div className="text-[10px] text-slate-800 font-bold space-y-1 leading-tight uppercase tracking-tight">
+                                <p>1. Certified Medical Hearing aids (HSN 90214090).</p>
+                                <p>2. Non-Refundable clinical goods. Warranty: {warranty}.</p>
+                                <p>3. UDYAM-WB-18-0032916 (Micro Enterprise Hub).</p>
                                 <p>4. Subject to Jurisdiction of Courts in Kolkata, West Bengal.</p>
                             </div>
                         </div>
-                        <div className="text-center w-48">
-                            {signature ? <img src={signature} className="h-16 mb-1 mx-auto mix-blend-multiply" /> : <div className="h-14 w-full border-b-2 border-dashed border-slate-300 mb-1"></div>}
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-900 border-t-2 border-slate-900 pt-1">Authorized Signatory</p>
+                        <div className="text-center w-64">
+                            {signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply transition-all hover:scale-110" /> : <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>}
+                            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
                         </div>
                     </div>
 
-                    <div className="mt-10 text-center opacity-20 pointer-events-none">
-                        <p className="text-[7px] font-black uppercase tracking-[0.6em] text-slate-500">BENGAL REHABILITATION & RESEARCH PVT. LTD. COMPUTER GENERATED DOCUMENT</p>
+                    <div className="mt-12 text-center opacity-30 pointer-events-none pb-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.7em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD. COMPUTER GENERATED</p>
                     </div>
                 </div>
 
-                {/* Controls */}
-                <div className="mt-8 flex gap-4 w-full max-w-[210mm] print:hidden">
-                    <button onClick={() => setStep('payment')} className="flex-1 py-4 border-2 border-slate-800 rounded-2xl font-black uppercase tracking-widest hover:bg-white text-[10px] transition-all">Go Back</button>
-                    <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-4 px-12 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 flex items-center justify-center gap-3 text-[10px] transition-all"> <Save size={18}/> Finalize & Save</button>
-                    <button onClick={() => window.print()} className="p-4 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all flex items-center justify-center"><Printer size={20}/></button>
+                {/* Print Controls */}
+                <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
+                    <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Go Back</button>
+                    <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"> <Save size={22}/> Save Database Record</button>
+                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90"><Printer size={28}/></button>
                 </div>
             </div>
         )}

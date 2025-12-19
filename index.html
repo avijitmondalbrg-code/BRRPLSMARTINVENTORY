@@ -28,12 +28,13 @@
       @media print {
         @page {
           size: A4 portrait;
-          margin: 15mm 10mm;
+          margin: 10mm;
         }
         body {
           background-color: white !important;
           margin: 0 !important;
           padding: 0 !important;
+          width: 210mm;
         }
         #root {
           padding: 0 !important;
@@ -41,30 +42,33 @@
         .no-print, .print\:hidden {
             display: none !important;
         }
-        #invoice-printable-area, 
-        #receipt-printable-area {
+        #invoice-printable-area {
           visibility: visible !important;
-          position: static !important;
+          position: absolute;
+          left: 0;
+          top: 0;
           width: 100% !important;
           margin: 0 !important;
-          padding: 0 !important;
+          padding: 5mm !important;
           box-shadow: none !important;
           border: none !important;
           display: block !important;
         }
-        /* Ensure tables fill width and don't break weirdly */
+        /* Ensure tables look good */
         table {
           width: 100% !important;
           border-collapse: collapse !important;
         }
-        /* Force color backgrounds in print */
+        th, td {
+          border: 1px solid #000 !important;
+        }
+        /* Force colors */
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
       }
 
-      /* Custom scrollbar for web view */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
         height: 6px;
