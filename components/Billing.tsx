@@ -440,11 +440,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <table className="w-full border-collapse border-4 border-slate-900 text-[12px]">
                             <thead className="bg-[#3159a6] text-white uppercase font-black tracking-tight">
                                 <tr>
-                                    <th className="p-3 text-left border-r-2 border-white/20">Description of Goods / HSN 90214090</th>
-                                    <th className="p-3 text-right border-r-2 border-white/20 w-32">Price (INR)</th>
-                                    <th className="p-3 text-center border-r-2 border-white/20 w-20">GST %</th>
-                                    <th className="p-3 text-right border-r-2 border-white/20 w-24">Disc.</th>
-                                    <th className="p-3 text-right w-36">Value</th>
+                                    <th className="p-3 text-left border-r-2 border-white/20 w-[35%]">Description of Goods</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-[15%]">HSN Code</th>
+                                    <th className="p-3 text-right border-r-2 border-white/20 w-[15%]">Price (INR)</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-[10%]">GST %</th>
+                                    <th className="p-3 text-right border-r-2 border-white/20 w-[10%]">Disc.</th>
+                                    <th className="p-3 text-right w-[15%]">Value</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
@@ -454,6 +455,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                             <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand} {item.model}</p>
                                             <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">S/N: {item.serialNumber}</p>
                                         </td>
+                                        <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode || '90214090'}</td>
                                         <td className="p-2 text-right border-r-2 border-slate-900 font-mono">₹{item.price.toLocaleString()}</td>
                                         <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
                                         <td className="p-2 text-right text-red-700 border-r-2 border-slate-900">-₹{item.discount.toLocaleString()}</td>
