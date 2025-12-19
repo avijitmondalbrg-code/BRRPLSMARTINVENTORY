@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, History, Trash2, X, User, Wallet, IndianRupee, Edit, MessageSquare, Stethoscope, UserCheck } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, History, Trash2, X, User, Wallet, IndianRupee, Edit, MessageSquare, Stethoscope, UserCheck, Building2 } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -185,7 +185,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       if (!collectingInvoice || !onUpdateInvoice || newPaymentAmount <= 0) return;
       const newPayment: PaymentRecord = { id: `PAY-${Date.now()}`, date: payDate, amount: newPaymentAmount, method: payMethod, bankDetails: payBank || "" };
       const updatedPayments = [...(collectingInvoice.payments || []), newPayment];
-      const totalPaid = updatedPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
+      const totalPaid = updatedPayments.reduce((sum, p: PaymentRecord) => sum + p.amount, 0);
       const balanceDue = Math.max(0, collectingInvoice.finalTotal - totalPaid);
       const updatedInvoice: Invoice = { ...collectingInvoice, payments: updatedPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : 'Partial' };
       onUpdateInvoice(updatedInvoice);
@@ -379,10 +379,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         {step === 'review' && (
             <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0">
                 <div className="flex justify-between items-start border-b-4 border-gray-900 pb-8 mb-8">
-                    <div className="flex gap-6"><img src={logo} alt="Logo" className="h-32 w-32 object-contain" /><div><h1 className="text-4xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1><p className="text-sm text-gray-500 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p><p className="text-xs text-gray-500 mt-4 leading-relaxed max-w-lg">{COMPANY_ADDRESS}</p><p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p></div></div>
+                    <div className="flex gap-6"><img src={logo} alt="Logo" className="h-32 w-32 object-contain" /><div><h1 className="text-4xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1><p className="text-sm text-gray-500 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p><p className="text-xs text-gray-500 font-bold mt-2 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p></div></div>
                     <div className="text-right"><div className="bg-[#3159a6] text-white px-8 py-2 inline-block mb-4 rounded-lg"><h2 className="text-2xl font-black uppercase tracking-[0.3em]">Tax Invoice</h2></div><p className="text-base font-black text-gray-900 tracking-widest mt-1 uppercase"># {editingInvoiceId || generateNextId()}</p><p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mt-1">ISSUED: {new Date().toLocaleDateString('en-IN')}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-12 mb-10 text-sm">
+                  {/* Bill To Section */}
                   <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-50 shadow-inner relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><User size={100}/></div>
                     <h4 className="text-xs font-black uppercase text-gray-400 mb-4 border-b border-gray-200 pb-1 tracking-[0.2em]">Consignee / Bill To:</h4>
@@ -401,7 +402,30 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         </div>
                     </div>
                   </div>
+
+                  {/* Bill By Section */}
+                  <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-50 shadow-inner relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Building2 size={100}/></div>
+                    <h4 className="text-xs font-black uppercase text-gray-400 mb-4 border-b border-gray-200 pb-1 tracking-[0.2em]">Biller / Bill By:</h4>
+                    <p className="font-black text-xl text-gray-900 uppercase tracking-tighter mb-2">BENGAL REHABILITATION & RESEARCH PRIVATE LIMITED</p>
+                    <div className="space-y-1 text-xs text-gray-600 font-bold">
+                        <p><span className="text-gray-400 uppercase tracking-widest mr-1 font-black">Add:</span> 34 Das Para Budge Budge, KOLKATA, WB, India-700138</p>
+                        <p><span className="text-gray-400 uppercase tracking-widest mr-1 font-black">PAN:</span> AALCB1534C</p>
+                        <p><span className="text-gray-400 uppercase tracking-widest mr-1 font-black">Email:</span> infobrg18@gmail.com</p>
+                        <p><span className="text-gray-400 uppercase tracking-widest mr-1 font-black">Phone:</span> +91 98749 25867</p>
+                    </div>
+                    
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                        <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-widest mb-2">Settlement Hub (Bank Details):</h5>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] uppercase font-black text-gray-500">
+                            <div><span className="text-gray-400 mr-1">IFSC:</span> SBIN0001357</div>
+                            <div><span className="text-gray-400 mr-1">Branch:</span> SBI THAKURPUKUR</div>
+                            <div className="col-span-2 mt-1"><span className="text-gray-400 mr-1">ACC NO:</span> <span className="text-gray-900 text-sm tracking-widest">42367906742</span></div>
+                        </div>
+                    </div>
+                  </div>
                 </div>
+
                 <table className="w-full border-collapse border-2 border-gray-900 text-sm mb-8 overflow-hidden rounded-xl">
                   <thead className="bg-[#3159a6] text-white uppercase text-xs font-black tracking-[0.2em]">
                     <tr><th className="p-5 text-left border-r border-white/20">Description of Goods</th><th className="p-5 text-center border-r border-white/20">HSN</th><th className="p-5 text-right border-r border-white/20">Unit Price</th><th className="p-5 text-center border-r border-white/20">GST</th><th className="p-5 text-right border-r border-white/20">Disc.</th><th className="p-5 text-right">Taxable Val</th></tr>
