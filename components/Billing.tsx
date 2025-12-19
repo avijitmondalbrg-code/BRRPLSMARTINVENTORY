@@ -277,6 +277,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     !existingPayments.some(p => p.note?.includes(b.id))
   );
 
+  const totalPaidSoFar = existingPayments.reduce((s: number, p: PaymentRecord) => s + p.amount, 0) + initialPayment;
+
   return (
     <div className="max-w-5xl mx-auto pb-10">
         <div className="mb-6 flex items-center justify-between print:hidden">
@@ -371,7 +373,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             </div>
                         )}
                     </div>
-                    <div className="p-8 bg-[#3159a6] rounded-[2.5rem] shadow-2xl shadow-blue-900/40 flex flex-col justify-center items-center text-center h-full relative overflow-hidden"><div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none -rotate-12 translate-y-12 scale-150"></div><p className="text-[10px] font-black text-blue-100 uppercase tracking-[0.4em] mb-4 relative z-10">Outstanding Balance</p><p className="text-5xl font-black text-white tracking-tighter relative z-10">₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()}</p></div>
+                    <div className="p-8 bg-[#3159a6] rounded-[2.5rem] shadow-2xl shadow-blue-900/40 flex flex-col justify-center items-center text-center h-full relative overflow-hidden"><div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none -rotate-12 translate-y-12 scale-150"></div><p className="text-[10px] font-black text-blue-100 uppercase tracking-[0.4em] mb-4 relative z-10">Outstanding Balance</p><p className="text-5xl font-black text-white tracking-tighter relative z-10">₹{(finalTotal - totalPaidSoFar).toLocaleString()}</p></div>
                 </div>
                 <div className="mt-12 flex justify-end"><button onClick={() => setStep('review')} className="bg-[#3159a6] text-white px-16 py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs">Review Digital Draft &rarr;</button></div>
             </div>
@@ -511,7 +513,26 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="flex justify-between items-stretch gap-4 mb-4">
                         <div className="flex-1 bg-red-50 p-3 px-4 rounded-xl border-2 border-white shadow-sm flex flex-col justify-center text-center">
                             <p className="text-[8px] font-black text-red-700 uppercase tracking-widest mb-0.5">Outstanding Balance</p>
-                            <p className="text-xl font-black text-red-600 tracking-tight">₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</p>
+                            <p className="text-xl font-black text-red-600 tracking-tight">₹{(finalTotal - totalPaidSoFar).toLocaleString()} /-</p>
+                            
+                            {/* Payments Received Section */}
+                            <div className="mt-2 pt-2 border-t border-red-200">
+                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-wider mb-1 text-left">Payments History:</p>
+                                <div className="space-y-0.5 text-[8px] text-left">
+                                    {existingPayments.map(p => (
+                                        <div key={p.id} className="flex justify-between font-bold text-slate-700">
+                                            <span>{p.method} ({new Date(p.date).toLocaleDateString('en-IN')})</span>
+                                            <span>₹{p.amount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                    {initialPayment > 0 && (
+                                        <div className="flex justify-between font-black text-[#3159a6]">
+                                            <span>{paymentMethod} (Current)</span>
+                                            <span>₹{initialPayment.toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="w-[45%] space-y-1 bg-slate-50 p-3 px-5 rounded-xl border border-slate-200 shadow-inner font-bold text-slate-900">
                             <div className="flex justify-between text-[9px] uppercase text-slate-600"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
