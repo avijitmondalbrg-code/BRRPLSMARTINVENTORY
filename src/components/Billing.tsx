@@ -377,114 +377,184 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         )}
 
         {step === 'review' && (
-            <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0">
-                <div className="flex justify-between items-start border-b-4 border-gray-900 pb-8 mb-8">
-                    <div className="flex gap-6"><img src={logo} alt="Logo" className="h-32 w-32 object-contain" /><div><h1 className="text-4xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1><p className="text-sm text-gray-700 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p><p className="text-xs text-gray-800 mt-4 leading-relaxed max-w-lg">{COMPANY_ADDRESS}</p><p className="text-xs text-gray-700 font-bold mt-2 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p></div></div>
-                    <div className="text-right"><div className="bg-[#3159a6] text-white px-8 py-2 inline-block mb-4 rounded-lg"><h2 className="text-2xl font-black uppercase tracking-[0.3em]">Tax Invoice</h2></div><p className="text-base font-black text-gray-900 tracking-widest mt-1 uppercase"># {editingInvoiceId || generateNextId()}</p><p className="text-xs font-black text-gray-600 uppercase tracking-[0.2em] mt-1">ISSUED: {new Date().toLocaleDateString('en-IN')}</p></div>
-                </div>
-                <div className="grid grid-cols-2 gap-12 mb-10 text-sm">
-                  {/* Bill To Section */}
-                  <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-50 shadow-inner relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><User size={100}/></div>
-                    <h4 className="text-xs font-black uppercase text-gray-600 mb-4 border-b border-gray-200 pb-1 tracking-[0.2em]">Consignee / Bill To:</h4>
-                    <p className="font-black text-3xl text-gray-900 uppercase tracking-tighter">{patient.name}</p>
-                    <p className="font-bold text-gray-800 text-sm mt-1">{patient.phone}</p>
-                    <p className="text-xs text-gray-700 mt-3 uppercase font-semibold leading-relaxed">{patient.address}</p>
-                    
-                    <div className="mt-6 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
-                        <div className="flex items-start gap-2">
-                          <div className="p-1.5 bg-blue-100 rounded text-[#3159a6]"><Stethoscope size={14}/></div>
-                          <div><p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Ref. Doctor</p><p className="text-xs font-black text-gray-900">{patient.referDoctor || 'Self'}</p></div>
+            <div className="flex flex-col items-center bg-gray-200/50 p-10 min-h-screen">
+                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-[210mm] min-h-[297mm] p-[15mm]">
+                    {/* Header */}
+                    <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
+                        <div className="flex gap-6">
+                            <img src={logo} alt="Logo" className="h-32 w-32 object-contain" />
+                            <div>
+                                <h1 className="text-3xl font-black text-slate-900 uppercase leading-none">{COMPANY_NAME}</h1>
+                                <p className="text-sm text-slate-800 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                                <p className="text-[11px] text-slate-900 mt-4 leading-relaxed max-w-lg font-medium">{COMPANY_ADDRESS}</p>
+                                <p className="text-xs text-slate-900 font-black mt-2 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
+                            </div>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <div className="p-1.5 bg-blue-100 rounded text-[#3159a6]"><UserCheck size={14}/></div>
-                          <div><p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Audiologist</p><p className="text-xs font-black text-gray-900">{patient.audiologist || 'Internal'}</p></div>
+                        <div className="text-right">
+                            <div className="bg-[#3159a6] text-white px-6 py-2 inline-block mb-4 rounded-lg">
+                                <h2 className="text-xl font-black uppercase tracking-[0.2em]">Tax Invoice</h2>
+                            </div>
+                            <p className="text-base font-black text-slate-900 tracking-widest mt-1 uppercase"># {editingInvoiceId || generateNextId()}</p>
+                            <p className="text-xs font-black text-slate-700 uppercase tracking-[0.1em] mt-1">DATE: {new Date().toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
-                  </div>
 
-                  {/* Bill By Section */}
-                  <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-50 shadow-inner relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Building2 size={100}/></div>
-                    <h4 className="text-xs font-black uppercase text-gray-600 mb-4 border-b border-gray-200 pb-1 tracking-[0.2em]">Biller / Bill By:</h4>
-                    <p className="font-black text-xl text-gray-900 uppercase tracking-tighter mb-2">BENGAL REHABILITATION & RESEARCH PRIVATE LIMITED</p>
-                    <div className="space-y-1 text-xs text-gray-800 font-bold">
-                        <p><span className="text-gray-500 uppercase tracking-widest mr-1 font-black">Add:</span> 34 Das Para Budge Budge, KOLKATA, WB, India-700138</p>
-                        <p><span className="text-gray-500 uppercase tracking-widest mr-1 font-black">PAN:</span> AALCB1534C</p>
-                        <p><span className="text-gray-500 uppercase tracking-widest mr-1 font-black">Email:</span> infobrg18@gmail.com</p>
-                        <p><span className="text-gray-500 uppercase tracking-widest mr-1 font-black">Phone:</span> +91 98749 25867</p>
-                    </div>
-                    
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                        <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-widest mb-2">Settlement Hub (Bank Details):</h5>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] uppercase font-black text-gray-600">
-                            <div><span className="text-gray-500 mr-1">IFSC:</span> <span className="text-gray-900">SBIN0001357</span></div>
-                            <div><span className="text-gray-500 mr-1">Branch:</span> <span className="text-gray-900">SBI THAKURPUKUR</span></div>
-                            <div className="col-span-2 mt-1"><span className="text-gray-500 mr-1">ACC NO:</span> <span className="text-gray-900 text-sm tracking-widest">42367906742</span></div>
+                    {/* Parties */}
+                    <div className="grid grid-cols-2 gap-10 mb-10 text-sm">
+                    {/* Bill To */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 relative overflow-hidden h-full">
+                        <h4 className="text-[10px] font-black uppercase text-slate-500 mb-3 border-b border-slate-200 pb-1 tracking-[0.2em]">Consignee / Bill To:</h4>
+                        <p className="font-black text-2xl text-slate-900 uppercase tracking-tighter">{patient.name}</p>
+                        <p className="font-bold text-slate-900 text-sm mt-1">{patient.phone}</p>
+                        <p className="text-[11px] text-slate-800 mt-3 uppercase font-semibold leading-relaxed">{patient.address}</p>
+                        
+                        <div className="mt-6 pt-4 border-t border-slate-200 grid grid-cols-2 gap-4">
+                            <div className="flex items-start gap-2">
+                            <div className="p-1.5 bg-blue-100 rounded text-[#3159a6]"><Stethoscope size={14}/></div>
+                            <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Ref. Doctor</p><p className="text-[11px] font-black text-slate-900">{patient.referDoctor || 'Self'}</p></div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                            <div className="p-1.5 bg-blue-100 rounded text-[#3159a6]"><UserCheck size={14}/></div>
+                            <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Audiologist</p><p className="text-[11px] font-black text-slate-900">{patient.audiologist || 'Internal'}</p></div>
+                            </div>
                         </div>
                     </div>
-                  </div>
-                </div>
 
-                <table className="w-full border-collapse border-2 border-gray-900 text-sm mb-8 overflow-hidden rounded-xl">
-                  <thead className="bg-[#3159a6] text-white uppercase text-xs font-black tracking-[0.2em]">
-                    <tr><th className="p-5 text-left border-r border-white/20">Description of Goods</th><th className="p-5 text-center border-r border-white/20">HSN</th><th className="p-5 text-right border-r border-white/20">Unit Price</th><th className="p-5 text-center border-r border-white/20">GST</th><th className="p-5 text-right border-r border-white/20">Disc.</th><th className="p-5 text-right">Taxable Val</th></tr>
-                  </thead>
-                  <tbody className="font-bold text-base">
-                    {invoiceItems.map(item => (
-                        <tr key={item.hearingAidId} className="border-b-2 border-gray-900">
-                            <td className="p-5 border-r-2 border-gray-900"><p className="font-black text-gray-900 uppercase text-base tracking-tighter">{item.brand} {item.model}</p><p className="text-[11px] text-[#3159a6] font-black uppercase mt-1 tracking-widest opacity-80">SERIAL NO: {item.serialNumber}</p></td>
-                            <td className="p-5 text-center font-mono text-xs border-r-2 border-gray-900 text-gray-900">{item.hsnCode}</td>
-                            <td className="p-5 text-right border-r-2 border-gray-900 text-gray-900">₹{item.price.toLocaleString()}</td>
-                            <td className="p-5 text-center border-r-2 border-gray-900 text-gray-900">{item.gstRate}%</td>
-                            <td className="p-5 text-right text-red-600 border-r-2 border-gray-900">{item.discount > 0 ? `-₹${item.discount.toLocaleString()}` : '0.00'}</td>
-                            <td className="p-5 text-right font-black bg-gray-50/50 text-gray-900">₹{item.totalAmount.toFixed(2)}</td>
+                    {/* Bill By */}
+                    <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 relative overflow-hidden h-full">
+                        <h4 className="text-[10px] font-black uppercase text-slate-500 mb-3 border-b border-slate-200 pb-1 tracking-[0.2em]">Biller / Bill By:</h4>
+                        <p className="font-black text-lg text-slate-900 uppercase tracking-tighter mb-2">BENGAL REHABILITATION & RESEARCH PRIVATE LIMITED</p>
+                        <div className="space-y-1 text-[10px] text-slate-800 font-bold uppercase">
+                            <p><span className="text-slate-500 font-black mr-1">Add:</span> 34 Das Para Budge Budge, Kolkata-700138</p>
+                            <p><span className="text-slate-500 font-black mr-1">PAN:</span> AALCB1534C</p>
+                            <p><span className="text-slate-500 font-black mr-1">Phone:</span> +91 98749 25867</p>
+                        </div>
+                        
+                        <div className="mt-5 pt-3 border-t border-slate-200">
+                            <h5 className="text-[9px] font-black uppercase text-[#3159a6] tracking-widest mb-1">Settlement Hub (Bank Details):</h5>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[9px] uppercase font-black text-slate-800">
+                                <div><span className="text-slate-500 mr-1 font-bold">IFSC:</span> SBIN0001357</div>
+                                <div><span className="text-slate-500 mr-1 font-bold">Branch:</span> SBI THAKURPUKUR</div>
+                                <div className="col-span-2 mt-1"><span className="text-slate-500 mr-1 font-bold">ACC NO:</span> <span className="text-slate-900 text-xs tracking-widest">42367906742</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    {/* Table */}
+                    <table className="w-full border-collapse border-2 border-slate-900 text-sm mb-8 overflow-hidden">
+                    <thead className="bg-[#3159a6] text-white uppercase text-[11px] font-black tracking-[0.1em]">
+                        <tr>
+                            <th className="p-4 text-left border-r border-white/20">Description of Goods</th>
+                            <th className="p-4 text-center border-r border-white/20">HSN</th>
+                            <th className="p-4 text-right border-r border-white/20">Unit Price</th>
+                            <th className="p-4 text-center border-r border-white/20">GST</th>
+                            <th className="p-4 text-right border-r border-white/20">Disc.</th>
+                            <th className="p-4 text-right">Taxable Val</th>
                         </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="mb-10 flex flex-col sm:flex-row justify-between gap-10">
-                    <div className="max-w-xl flex-grow">
-                        <h4 className="text-[11px] font-black uppercase text-[#3159a6] mb-3 tracking-[0.3em]">GST Computation (Statutory)</h4>
-                        <table className="w-full border-collapse border-2 border-gray-900 text-[11px] text-center rounded-lg overflow-hidden">
-                            <thead className="bg-gray-100 font-black uppercase text-gray-800"><tr className="border-b-2 border-gray-900"><th className="p-3 text-left border-r border-gray-900">Tax Rate</th><th className="p-3 text-right border-r border-gray-900">Taxable</th><th className="p-3 text-right border-r border-gray-800">CGST</th><th className="p-3 text-right border-r border-gray-800">SGST</th><th className="p-3 text-right">Total GST</th></tr></thead>
-                            <tbody className="font-bold text-gray-900">{Object.entries(gstSummary).map(([rate, vals]: any) => (<tr key={rate} className="border-b border-gray-900"><td className="p-3 text-left font-black bg-gray-50 border-r border-gray-900">{rate}% GST</td><td className="p-3 text-right border-r border-gray-900">₹{vals.taxable.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-800">₹{vals.cgst.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-800">₹{vals.sgst.toFixed(2)}</td><td className="p-3 text-right font-black text-gray-900">₹{(vals.cgst + vals.sgst).toFixed(2)}</td></tr>))}</tbody>
-                        </table>
-                    </div>
-                    {invoiceNotes && (<div className="sm:w-1/3 bg-blue-50/50 p-6 border-2 border-dashed border-blue-100 rounded-3xl"><h4 className="text-xs font-black uppercase text-[#3159a6] mb-3 border-b border-blue-100 pb-1 tracking-widest">Architectural Notes:</h4><p className="text-sm text-gray-800 italic leading-relaxed font-medium">"{invoiceNotes}"</p></div>)}
-                </div>
-                <div className="mt-12 mb-10">
-                    <h4 className="text-xs font-black uppercase text-[#3159a6] mb-4 border-b-4 border-blue-50 pb-2 tracking-[0.3em]">Transaction Registry (settlement history)</h4>
-                    <table className="w-full text-xs border-2 border-gray-900 rounded-xl overflow-hidden shadow-sm">
-                        <thead className="bg-gray-100 text-gray-800 uppercase font-black tracking-widest"><tr><th className="p-4 border-r border-gray-900 text-left">Date</th><th className="p-4 border-r border-gray-900 text-left">Settlement Mode</th><th className="p-4 border-r border-gray-900 text-left">Reference / Bank</th><th className="p-4 text-right">Amount</th></tr></thead>
-                        <tbody className="font-bold text-gray-900">
-                            {existingPayments.map(p => (<tr key={p.id} className="border-t border-gray-900"><td className="p-4 border-r border-gray-900">{new Date(p.date).toLocaleDateString('en-IN')}</td><td className="p-4 border-r border-gray-900 uppercase">{p.method}</td><td className="p-4 border-r border-gray-900 text-gray-700 uppercase">{p.bankDetails || p.note || 'Direct Node'}</td><td className="p-4 text-right text-gray-900">₹{p.amount.toLocaleString()}</td></tr>))}
-                            {initialPayment > 0 && (<tr className="border-t-2 border-gray-900 bg-blue-50/50"><td className="p-4 border-r border-gray-900">{new Date().toLocaleDateString('en-IN')}</td><td className="p-4 border-r border-gray-900 uppercase font-black text-[#3159a6]">{paymentMethod} (NOW)</td><td className="p-4 border-r border-gray-900 text-gray-700 uppercase">{paymentBank || 'Direct Node'}</td><td className="p-4 text-right font-black text-[#3159a6]">₹{initialPayment.toLocaleString()}</td></tr>)}
-                        </tbody>
-                        <tfoot className="bg-[#3159a6] text-white font-black text-sm"><tr><td colSpan={3} className="p-5 text-right uppercase tracking-[0.2em] border-r border-white/20">Total Settlement Received:</td><td className="p-5 text-right">₹{(existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment).toLocaleString()} /-</td></tr></tfoot>
+                    </thead>
+                    <tbody className="font-bold text-slate-900">
+                        {invoiceItems.map(item => (
+                            <tr key={item.hearingAidId} className="border-b-2 border-slate-900">
+                                <td className="p-4 border-r-2 border-slate-900">
+                                    <p className="font-black text-slate-900 uppercase text-sm tracking-tight">{item.brand} {item.model}</p>
+                                    <p className="text-[10px] text-[#3159a6] font-black uppercase mt-1 tracking-widest">SERIAL: {item.serialNumber}</p>
+                                </td>
+                                <td className="p-4 text-center font-mono text-[11px] border-r-2 border-slate-900">{item.hsnCode}</td>
+                                <td className="p-4 text-right border-r-2 border-slate-900">₹{item.price.toLocaleString()}</td>
+                                <td className="p-4 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                <td className="p-4 text-right text-red-700 border-r-2 border-slate-900">{item.discount > 0 ? `-₹${item.discount.toLocaleString()}` : '0.00'}</td>
+                                <td className="p-4 text-right font-black bg-slate-50/50">₹{item.totalAmount.toFixed(2)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
                     </table>
-                </div>
-                <div className="flex flex-col sm:flex-row justify-between items-stretch gap-10 mb-12">
-                    <div className="flex-1 bg-red-50 p-8 rounded-[2rem] border-4 border-white shadow-xl flex flex-col justify-center"><p className="text-xs font-black text-red-600 uppercase tracking-[0.4em] mb-2 text-center opacity-80">Net Outstanding Payable</p><p className="text-4xl font-black text-red-600 text-center tracking-tighter">₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</p></div>
-                    <div className="w-full sm:w-1/2 space-y-3 bg-gray-50 p-8 rounded-[2rem] border-2 border-white shadow-inner font-bold">
-                        <div className="flex justify-between text-xs text-gray-600 uppercase tracking-widest"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-xs text-red-600 uppercase tracking-widest"><span>Applied Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
-                        <div className="flex justify-between text-xs text-gray-600 uppercase tracking-widest"><span>Net Statutory GST</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div>
-                        <div className="h-px bg-gray-300 my-4"></div>
-                        <div className="flex justify-between items-center text-gray-900"><span className="text-sm font-black uppercase tracking-[0.3em]">Final Net Payable</span><span className="text-5xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span></div>
+
+                    {/* GST & Notes */}
+                    <div className="mb-10 flex justify-between gap-10">
+                        <div className="flex-1">
+                            <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-2 tracking-[0.2em]">Statutory GST Breakdown</h4>
+                            <table className="w-full border-collapse border-2 border-slate-900 text-[10px] text-center">
+                                <thead className="bg-slate-100 font-black uppercase text-slate-800">
+                                    <tr className="border-b-2 border-slate-900">
+                                        <th className="p-2 text-left border-r border-slate-900">Rate</th>
+                                        <th className="p-2 text-right border-r border-slate-900">Taxable</th>
+                                        <th className="p-2 text-right border-r border-slate-800">CGST</th>
+                                        <th className="p-2 text-right border-r border-slate-800">SGST</th>
+                                        <th className="p-2 text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="font-bold text-slate-900">
+                                    {Object.entries(gstSummary).map(([rate, vals]: any) => (
+                                        <tr key={rate} className="border-b border-slate-900">
+                                            <td className="p-2 text-left font-black bg-slate-50 border-r border-slate-900">{rate}% GST</td>
+                                            <td className="p-2 text-right border-r border-slate-900">₹{vals.taxable.toFixed(2)}</td>
+                                            <td className="p-2 text-right border-r border-slate-800">₹{vals.cgst.toFixed(2)}</td>
+                                            <td className="p-2 text-right border-r border-slate-800">₹{vals.sgst.toFixed(2)}</td>
+                                            <td className="p-2 text-right font-black text-slate-900">₹{(vals.cgst + vals.sgst).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {invoiceNotes && (
+                            <div className="w-[30%] bg-blue-50/50 p-4 border-2 border-dashed border-blue-100 rounded-2xl">
+                                <h4 className="text-[9px] font-black uppercase text-[#3159a6] mb-2 border-b border-blue-100 pb-1 tracking-widest">Clinical Remarks:</h4>
+                                <p className="text-[10px] text-slate-800 italic leading-relaxed font-semibold">"{invoiceNotes}"</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Financial Footer */}
+                    <div className="flex justify-between items-stretch gap-8 mb-8">
+                        <div className="flex-1 bg-red-50 p-6 rounded-2xl border-4 border-white shadow-md flex flex-col justify-center text-center">
+                            <p className="text-[10px] font-black text-red-700 uppercase tracking-[0.2em] mb-1">Outstanding Balance</p>
+                            <p className="text-3xl font-black text-red-600 tracking-tighter">₹{(finalTotal - (existingPayments.reduce((s: number, p: PaymentRecord)=>s+p.amount,0) + initialPayment)).toLocaleString()} /-</p>
+                        </div>
+                        <div className="w-[45%] space-y-2 bg-slate-50 p-6 rounded-2xl border-2 border-white shadow-inner font-bold text-slate-900">
+                            <div className="flex justify-between text-[11px] uppercase text-slate-600"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                            <div className="flex justify-between text-[11px] uppercase text-red-600"><span>Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
+                            <div className="flex justify-between text-[11px] uppercase text-slate-600"><span>Net Tax</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div>
+                            <div className="h-px bg-slate-300 my-2"></div>
+                            <div className="flex justify-between items-center text-slate-900">
+                                <span className="text-xs font-black uppercase tracking-[0.1em]">Total Payable</span>
+                                <span className="text-4xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#3159a6] text-white p-4 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] mb-10 shadow-md">
+                        Amount In Words: {numberToWords(finalTotal)}
+                    </div>
+
+                    <div className="flex justify-between items-end mt-16">
+                        <div className="w-[60%]">
+                            <p className="font-black text-[10px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-[0.2em] text-slate-900">Terms & Conditions:</p>
+                            <div className="text-[9px] text-slate-800 font-black space-y-1 leading-tight uppercase">
+                                <p>1. Certified Hearing aids are medical prosthesis classification HSN 90214090.</p>
+                                <p>2. Non-Refundable clinical Goods. Warranty: {warranty}.</p>
+                                <p>3. Certification No. UDYAM-WB-18-0032916 (Micro Enterprise).</p>
+                                <p>4. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                            </div>
+                        </div>
+                        <div className="text-center w-60">
+                            {signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-20 w-full border-b-2 border-dashed border-slate-200 mb-2"></div>}
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 border-t-2 border-slate-900 pt-1">Authorized Signatory</p>
+                        </div>
+                    </div>
+
+                    {/* Footer watermark */}
+                    <div className="absolute bottom-5 left-0 right-0 text-center opacity-20 pointer-events-none">
+                        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-slate-400">BENGAL REHABILITATION & RESEARCH PRIVATE LIMITED</p>
                     </div>
                 </div>
-                <div className="bg-[#3159a6] text-white p-6 rounded-2xl text-xs font-black uppercase tracking-[0.2em] mb-16 shadow-lg">Amount In Words: {numberToWords(finalTotal)}</div>
-                <div className="flex justify-between items-end mt-24">
-                    <div className="w-2/3"><p className="font-black text-xs uppercase border-b-4 border-gray-900 inline-block mb-4 tracking-[0.3em] text-gray-900">Terms & Conditions:</p><div className="text-[11px] text-gray-800 font-black space-y-2 leading-tight uppercase tracking-wider">
-                    <p>1. Please keep this Invoice safe for future correspondence</p>
-                    <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
-                    <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. Theseexemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June2017.</p>
-                    <p>4. Hearing aids are classified under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>
-                    <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p></div></div>
-                    <div className="text-center w-64">{signature ? <img src={signature} className="h-24 mb-3 mx-auto mix-blend-multiply opacity-90" /> : <div className="h-24 w-full border-b-4 border-dashed border-gray-200 mb-3"></div>}<p className="text-xs font-black uppercase tracking-[0.3em] text-gray-900 border-t-2 border-gray-900 pt-2">Authorized Signatory</p></div>
+
+                {/* Fixed controls for review screen */}
+                <div className="mt-10 flex gap-4 w-[210mm] print:hidden">
+                    <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-[0.2em] hover:bg-slate-100 text-[11px] transition-all bg-white">Back to Settlement</button>
+                    <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-[11px] transition-all"> <Save size={20}/> Finalize & Sync</button>
+                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-xl hover:bg-black transition-all flex items-center justify-center"><Printer/></button>
                 </div>
-                <div className="mt-16 flex gap-5 print:hidden"><button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-gray-900 rounded-[2rem] font-black uppercase tracking-[0.3em] hover:bg-gray-100 text-[10px] transition-all">Revise Settlement</button><button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/40 hover:bg-slate-800 flex items-center justify-center gap-4 text-[10px] transition-all"> <Save size={20}/> Certify & Finalize</button><button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-[2rem] shadow-xl hover:bg-black transition-all flex items-center justify-center"><Printer/></button></div>
             </div>
         )}
     </div>
