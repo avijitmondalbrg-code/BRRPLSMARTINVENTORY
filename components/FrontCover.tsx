@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion } from 'lucide-react';
 import { ViewState } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -45,25 +45,28 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 w-full max-w-6xl px-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-9 gap-5 w-full max-w-7xl px-4">
           {[
             { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, color: 'text-blue-200' },
             { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-200' },
+            { id: 'crm', label: 'Pipeline', icon: Briefcase, color: 'text-teal-200' },
             { id: 'assets', label: 'Equipment', icon: HardDrive, color: 'text-amber-200' },
             { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-200' },
+            { id: 'quotation', label: 'Quotations', icon: FileQuestion, color: 'text-yellow-100' },
             { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200' },
-            { id: 'receipts', label: 'Receipts', icon: Receipt, color: 'text-emerald-200' }
+            { id: 'credit-note', label: 'Credit Note', icon: FileMinus, color: 'text-red-200' },
+            { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200' }
           ].map((item, idx) => (
             <button 
               key={item.id}
               onClick={() => onNavigate(item.id as any)}
               style={{ animationDelay: `${idx * 50}ms` }}
-              className="group bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up"
+              className="group bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up"
             >
-              <div className={`p-4 rounded-2xl mb-4 bg-white/10 group-hover:bg-white/20 transition-all ${item.color} group-hover:scale-110`}>
-                <item.icon size={28} />
+              <div className={`p-3 rounded-2xl mb-3 bg-white/10 group-hover:bg-white/20 transition-all ${item.color} group-hover:scale-110`}>
+                <item.icon size={24} />
               </div>
-              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{item.label}</h3>
+              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.15em]">{item.label}</h3>
             </button>
           ))}
         </div>

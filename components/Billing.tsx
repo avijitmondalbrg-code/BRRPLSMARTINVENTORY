@@ -120,11 +120,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   let runningSGST: number = 0;
   
   const invoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
-      const itemDisc = itemDiscounts[item.id] || 0;
-      const itemTaxable = Math.max(0, item.price - itemDisc);
-      const gstRate = gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0);
-      const cgst = (itemTaxable * (gstRate / 100)) / 2;
-      const sgst = (itemTaxable * (gstRate / 100)) / 2;
+      // FIX: Ensure itemDisc and gstRate are treated as numbers to fix 'unknown' type errors during arithmetic assignments
+      const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
+      const itemTaxable: number = Math.max(0, item.price - itemDisc);
+      const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
+      const cgst: number = (itemTaxable * (gstRate / 100)) / 2;
+      const sgst: number = (itemTaxable * (gstRate / 100)) / 2;
       runningTaxableTotal += itemTaxable; 
       runningCGST += cgst; 
       runningSGST += sgst; 
@@ -137,7 +138,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   });
 
   const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST) - totalAdjustment);
-  const totalItemDiscounts: number = Object.values(itemDiscounts).reduce((a: number, b: number) => a + b, 0);
+  // FIX: Cast Object.values to number[] to resolve 'unknown' type assignment issue in reduce operation
+  const totalItemDiscounts: number = (Object.values(itemDiscounts) as number[]).reduce((a: number, b: number) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
     const summary: Record<number, { taxable: number, cgst: number, sgst: number }> = {};
@@ -423,7 +425,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="max-w-lg flex-grow">
                         <h4 className="text-[9px] font-black uppercase text-[#3159a6] mb-2 tracking-[0.3em]">GST Computation (Statutory)</h4>
                         <table className="w-full border-collapse border-2 border-gray-900 text-[9px] text-center rounded-lg overflow-hidden">
-                            <thead className="bg-gray-100 font-black uppercase text-gray-600"><tr className="border-b-2 border-gray-900"><th className="p-3 text-left border-r border-gray-900">Tax Rate</th><th className="p-3 text-right border-r border-gray-900">Taxable</th><th className="p-3 text-right border-r border-gray-900">CGST</th><th className="p-3 text-right border-r border-gray-900">SGST</th><th className="p-3 text-right">Total GST</th></tr></thead>
+                            <thead className="bg-gray-100 font-black uppercase text-gray-600"><tr className="border-b-2 border-gray-900"><th className="p-3 text-left border-r border-gray-900">Tax Rate</th><th className="p-3 text-right border-r border-gray-800">Taxable</th><th className="p-3 text-right border-r border-gray-800">CGST</th><th className="p-3 text-right border-r border-gray-800">SGST</th><th className="p-3 text-right">Total GST</th></tr></thead>
                             <tbody className="font-bold">{Object.entries(gstSummary).map(([rate, vals]: any) => (<tr key={rate} className="border-b border-gray-900"><td className="p-3 text-left font-black bg-gray-50 border-r border-gray-900">{rate}% GST</td><td className="p-3 text-right border-r border-gray-900">₹{vals.taxable.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-900">₹{vals.cgst.toFixed(2)}</td><td className="p-3 text-right border-r border-gray-900">₹{vals.sgst.toFixed(2)}</td><td className="p-3 text-right font-black text-gray-900">₹{(vals.cgst + vals.sgst).toFixed(2)}</td></tr>))}</tbody>
                         </table>
                     </div>
@@ -452,12 +454,4 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 </div>
                 <div className="bg-gray-900 text-white p-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] mb-16 shadow-lg">Amount In Words: {numberToWords(finalTotal)}</div>
                 <div className="flex justify-between items-end mt-24">
-                    <div className="w-2/3"><p className="font-black text-[10px] uppercase border-b-4 border-gray-900 inline-block mb-4 tracking-[0.3em]">Commercial Protocol</p><div className="text-[9px] text-gray-500 font-black space-y-2 leading-tight uppercase tracking-wider"><p>1. Certified Hearing aids are medical prosthesis classification HSN 90214090.</p><p>2. Non-Refundable clinical Goods. Warranty: {warranty}.</p><p>3. Subject to jurisdiction of Courts in Kolkata, WB.</p></div></div>
-                    <div className="text-center w-64">{signature ? <img src={signature} className="h-20 mb-3 mx-auto mix-blend-multiply opacity-90" /> : <div className="h-20 w-full border-b-4 border-dashed border-gray-200 mb-3"></div>}<p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-900 border-t-2 border-gray-900 pt-2">Authorized Signatory</p></div>
-                </div>
-                <div className="mt-16 flex gap-5 print:hidden"><button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-gray-900 rounded-[2rem] font-black uppercase tracking-[0.3em] hover:bg-gray-100 text-[10px] transition-all">Revise Settlement</button><button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/40 hover:bg-slate-800 flex items-center justify-center gap-4 text-[10px] transition-all"> <Save size={20}/> Certify & Finalize</button><button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-[2rem] shadow-xl hover:bg-black transition-all flex items-center justify-center"><Printer/></button></div>
-            </div>
-        )}
-    </div>
-  );
-};
+                    <div className="w-2/3"><p className="font-black text-[10px] uppercase border-b-4 border-gray-900 inline-block mb-4 tracking-[0.3em]">Commercial Protocol</p><div className="text-[9px] text-gray-500 font-black space-y-2 leading-

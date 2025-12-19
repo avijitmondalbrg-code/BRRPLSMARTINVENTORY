@@ -80,7 +80,6 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       console.error("Data refresh failed:", err);
-      // Check specifically for permission errors
       if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
           setError({ 
               code: 'PERMISSION_DENIED', 
@@ -123,6 +122,31 @@ const App: React.FC = () => {
     } catch (e) {
         console.error("Failed to sync settings:", e);
     }
+  };
+
+  const handleAddQuotation = async (quotation: Quotation) => {
+    setQuotations([quotation, ...quotations]);
+    try { await setDocument('quotations', quotation.id.replace(/\//g, '-'), quotation); } catch(e) {}
+  };
+
+  const handleUpdateQuotation = async (quotation: Quotation) => {
+    setQuotations(quotations.map(q => q.id === quotation.id ? quotation : q));
+    try { await updateDocument('quotations', quotation.id.replace(/\//g, '-'), quotation); } catch(e) {}
+  };
+
+  const handleDeleteQuotation = async (id: string) => {
+    setQuotations(quotations.filter(q => q.id !== id));
+    try { await deleteDocument('quotations', id.replace(/\//g, '-')); } catch(e) {}
+  };
+
+  const handleAddFinancialNote = async (note: FinancialNote) => {
+    setFinancialNotes([note, ...financialNotes]);
+    try { await setDocument('financialNotes', note.id, note); } catch(e) {}
+  };
+
+  const handleDeleteFinancialNote = async (id: string) => {
+    setFinancialNotes(financialNotes.filter(n => n.id !== id));
+    try { await deleteDocument('financialNotes', id); } catch(e) {}
   };
 
   const handleAddCompanyAsset = async (asset: CompanyAsset) => {
@@ -364,8 +388,11 @@ service cloud.firestore {
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase },
             { id: 'inventory', label: 'Inventory', icon: Package },
+            { id: 'quotation', label: 'Quotations', icon: FileQuestion },
             { id: 'billing', label: 'Billing', icon: FileText },
             { id: 'patients', label: 'Patients', icon: Users },
+            { id: 'credit-note', label: 'Credit Note', icon: FileMinus },
+            { id: 'debit-note', label: 'Debit Note', icon: FilePlus },
             { id: 'receipts', label: 'Receipts', icon: Receipt },
             { id: 'settings', label: 'Settings', icon: SettingsIcon }
           ].map(item => (
@@ -397,9 +424,12 @@ service cloud.firestore {
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
           {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
+          {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} invoices={invoices} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} invoices={invoices} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
         </div>
