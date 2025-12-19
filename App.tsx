@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset } from './types';
+import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
 import { StockTransfer } from './components/StockTransfer';
+import { AssetTransfer } from './components/AssetTransfer';
 import { Dashboard } from './components/Dashboard';
 import { Patients } from './components/Patients';
 import { Quotations } from './components/Quotations';
@@ -16,7 +17,7 @@ import { AdvanceBookings } from './components/AdvanceBookings';
 import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [financialNotes, setFinancialNotes] = useState<FinancialNote[]>([]);
   const [stockTransfers, setStockTransfers] = useState<StockTransferType[]>([]);
+  const [assetTransfers, setAssetTransfers] = useState<AssetTransferType[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [advanceBookings, setAdvanceBookings] = useState<AdvanceBooking[]>([]);
@@ -53,12 +55,13 @@ const App: React.FC = () => {
           fetchCollection('financialNotes'),
           fetchCollection('leads'),
           fetchCollection('stockTransfers'),
+          fetchCollection('assetTransfers'),
           fetchCollection('advanceBookings'),
           fetchCollection('settings'),
           fetchCollection('companyAssets')
       ]);
 
-      const [inv, invs, pats, quotes, notes, lds, trfs, advs, settings, assets] = await fetchPromise;
+      const [inv, invs, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
@@ -75,6 +78,7 @@ const App: React.FC = () => {
       setFinancialNotes((notes as FinancialNote[]) || []);
       setLeads((lds as Lead[]) || []);
       setStockTransfers((trfs as StockTransferType[]) || []);
+      setAssetTransfers((atrfs as AssetTransferType[]) || []);
       setAdvanceBookings((advs as AdvanceBooking[]) || []);
       setCompanyAssets((assets as CompanyAsset[]) || []);
       
@@ -152,6 +156,36 @@ const App: React.FC = () => {
       await setDocument('stockTransfers', transferLog.id, transferLog);
     } catch (e) {
       console.error("Sync failed:", e);
+    }
+  };
+
+  const handleAssetTransfer = async (assetId: string, toLocation: string, sender: string, transporter: string, receiver: string, note: string) => {
+    const asset = companyAssets.find(a => a.id === assetId);
+    if (!asset) return;
+
+    const transferLog: AssetTransferType = {
+      id: `ATRF-${Date.now()}`,
+      assetId: asset.id,
+      assetName: asset.name,
+      serialNumber: asset.serialNumber,
+      fromLocation: asset.location,
+      toLocation,
+      date: new Date().toISOString().split('T')[0],
+      sender,
+      transporter,
+      receiver,
+      note
+    };
+
+    const updatedAsset = { ...asset, location: toLocation };
+    setCompanyAssets(companyAssets.map(a => a.id === assetId ? updatedAsset : a));
+    setAssetTransfers([transferLog, ...assetTransfers]);
+
+    try {
+      await updateDocument('companyAssets', assetId, { location: toLocation });
+      await setDocument('assetTransfers', transferLog.id, transferLog);
+    } catch (e) {
+      console.error("Asset sync failed:", e);
     }
   };
 
@@ -416,6 +450,7 @@ service cloud.firestore {
             { id: 'front-cover', label: 'Home', icon: Home },
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'assets', label: 'Company Assets', icon: HardDrive },
+            { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck },
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase },
             { id: 'inventory', label: 'Inventory', icon: Package },
@@ -455,6 +490,7 @@ service cloud.firestore {
           {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} />}
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
           {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
+          {activeView === 'asset-transfer' && <AssetTransfer assets={companyAssets} transferHistory={assetTransfers} onTransfer={handleAssetTransfer} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}

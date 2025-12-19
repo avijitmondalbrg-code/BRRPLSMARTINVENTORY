@@ -244,8 +244,8 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                   <div className="h-20 w-20 sm:h-24 sm:w-24 flex items-center justify-center border-2 border-gray-100 rounded-3xl p-2"><img src={logo} alt="Logo" className="h-full w-full object-contain" /></div>
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black text-gray-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                    <p className="text-[10px] text-gray-400 font-black uppercase mt-3 tracking-[0.2em] italic">{COMPANY_TAGLINE}</p>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase mt-4 leading-relaxed max-w-xs hidden sm:block">{COMPANY_ADDRESS}</p>
+                    <p className="text-[10px] text-gray-700 font-black uppercase mt-3 tracking-[0.2em] italic">{COMPANY_TAGLINE}</p>
+                    <p className="text-[9px] text-gray-800 font-bold uppercase mt-4 leading-relaxed max-w-xs hidden sm:block">{COMPANY_ADDRESS}</p>
                     <p className="text-[10px] text-gray-900 uppercase mt-4 font-black tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
                   </div>
                 </div>
@@ -254,13 +254,13 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                     <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.4em]">Advance Token</h2>
                   </div>
                   <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-widest">REC NO: {selectedBooking.id}</p>
-                  <p className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mt-1">DATE: {new Date(selectedBooking.date).toLocaleDateString('en-IN')}</p>
+                  <p className="text-[10px] sm:text-xs font-black text-gray-600 uppercase tracking-widest mt-1">DATE: {new Date(selectedBooking.date).toLocaleDateString('en-IN')}</p>
                 </div>
               </div>
 
               <div className="space-y-12 text-sm sm:text-lg leading-loose text-gray-900 font-bold py-6 relative z-10">
                 <div className="flex flex-wrap gap-4 items-baseline"><span>Received with thanks from Mr./Mrs./Ms.</span><span className="border-b-2 border-gray-100 flex-grow px-4 font-black text-[#3159a6] text-xl sm:text-3xl uppercase tracking-tighter">{selectedBooking.patientName}</span></div>
-                <div className="flex flex-wrap gap-4 items-baseline"><span>Residing at</span><span className="border-b-2 border-gray-100 flex-grow px-4 font-black text-gray-700 uppercase tracking-tight text-xs sm:text-sm">{selectedBooking.address || '____________________________________________________'}</span></div>
+                <div className="flex flex-wrap gap-4 items-baseline"><span>Residing at</span><span className="border-b-2 border-gray-100 flex-grow px-4 font-black text-gray-800 uppercase tracking-tight text-xs sm:text-sm">{selectedBooking.address || '____________________________________________________'}</span></div>
                 <div className="flex flex-wrap gap-4 items-baseline"><span>A sum of Indian Rupees</span><span className="border-b-2 border-gray-100 flex-grow px-4 font-black text-[#3159a6] text-xl sm:text-3xl tracking-tighter">₹ {selectedBooking.amount.toLocaleString('en-IN')} /-</span></div>
                 <div className="flex flex-wrap gap-4 items-baseline"><span>By <b> {selectedBooking.paymentMethod} </b> {selectedBooking.bankDetails ? `deposited in <b> ${selectedBooking.bankDetails} </b>` : ''} towards booking of</span><span className="border-b-2 border-gray-100 flex-grow px-4 font-black text-gray-900 italic tracking-tighter">{selectedBooking.modelInterest || 'General Medical Order'}</span></div>
               </div>
@@ -279,7 +279,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 </div>
               </div>
 
-              <div className="mt-24 pt-10 border-t-2 border-gray-100 text-[10px] text-gray-400 text-center uppercase tracking-[0.5em] font-black select-none">
+              <div className="mt-24 pt-10 border-t-2 border-gray-100 text-[10px] text-gray-500 text-center uppercase tracking-[0.5em] font-black select-none">
                 Bengal Rehabilitation & Research Pvt. Ltd.
               </div>
             </div>

@@ -1,5 +1,4 @@
 
-
 export interface HearingAid {
   id: string;
   brand: string;
@@ -13,7 +12,6 @@ export interface HearingAid {
   gstRate?: number; // Percentage (e.g., 12, 18)
 }
 
-// FIX: Added CompanyAsset interface for machine and equipment tracking
 export interface CompanyAsset {
   id: string;
   name: string;
@@ -22,6 +20,20 @@ export interface CompanyAsset {
   type: string;
   addedDate: string;
   notes?: string;
+}
+
+export interface AssetTransfer {
+  id: string;
+  assetId: string;
+  assetName: string;
+  serialNumber: string;
+  fromLocation: string;
+  toLocation: string;
+  date: string;
+  sender: string;
+  transporter: string;
+  receiver: string;
+  note: string;
 }
 
 export interface Patient {
@@ -96,7 +108,6 @@ export interface Invoice {
   balanceDue: number;
 }
 
-// FIX: Added missing 'address' property to AdvanceBooking interface
 export interface AdvanceBooking {
   id: string;
   patientId: string;
@@ -160,7 +171,7 @@ export interface StockTransfer {
   note?: string;
 }
 
-// CRM Types
+// FIX: Restored CRM Types to resolve Module not found errors
 export type LeadStatus = 'New' | 'Contacted' | 'Appointment' | 'Trial' | 'Won' | 'Lost';
 
 export interface Activity {
@@ -186,8 +197,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-// FIX: Added 'assets' to ViewState
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [

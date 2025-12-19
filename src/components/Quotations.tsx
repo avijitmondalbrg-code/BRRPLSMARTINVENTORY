@@ -144,46 +144,46 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                     <div className="flex gap-6">
                         <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
                         <div>
-                            <h1 className="text-2xl font-black text-gray-800 uppercase leading-none">{COMPANY_NAME}</h1>
-                            <p className="text-xs text-gray-500 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
-                            <p className="text-[10px] text-gray-500 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p>
-                            <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                            <h1 className="text-2xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1>
+                            <p className="text-xs text-gray-700 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                            <p className="text-[10px] text-gray-800 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p>
+                            <p className="text-[10px] text-gray-800 mt-1 uppercase font-bold">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
                         </div>
                     </div>
-                    <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-700"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-400">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
+                    <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
                 </div>
-                <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-600">{patient.phone}</p></div></div>
+                <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-600 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-800">{patient.phone}</p></div></div>
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
                     <thead className="bg-[#3159a6] text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
-                    <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
+                    <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-900 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
                 </table>
                 
                 <div className="flex flex-col sm:flex-row justify-between gap-8 mb-10">
                     <div className="flex-grow">
                         {quotationNotes && (
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-dashed">
-                                <h4 className="text-[9px] font-black uppercase text-gray-400 mb-2 border-b pb-1 tracking-widest">Quotation Notes / Custom Remarks:</h4>
-                                <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{quotationNotes}</p>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
+                                <h4 className="text-[9px] font-black uppercase text-gray-600 mb-2 border-b border-slate-200 pb-1 tracking-widest">Quotation Notes / Custom Remarks:</h4>
+                                <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{quotationNotes}</p>
                             </div>
                         )}
                     </div>
                     <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-inner">
                         <div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Estimated Net Total</span><span className="text-4xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</span></div>
-                        <p className="text-[9px] text-right text-gray-400 font-bold uppercase tracking-wider">Adjustment of ₹{discountValue.toLocaleString()} applied</p>
+                        <p className="text-[9px] text-right text-gray-600 font-bold uppercase tracking-wider">Adjustment of ₹{discountValue.toLocaleString()} applied</p>
                     </div>
                 </div>
 
                 <div className="flex justify-between items-end mt-20">
-                    <div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-800 inline-block mb-3 tracking-widest">Standard Terms</p>
-                        <div className="text-[8.5px] text-gray-500 font-bold space-y-1 leading-tight uppercase">
+                    <div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-900 inline-block mb-3 tracking-widest text-gray-900">Standard Terms</p>
+                        <div className="text-[8.5px] text-gray-800 font-bold space-y-1 leading-tight uppercase">
                             <p>1. This is a tentative estimate and valid for 15 days from date of issuance.</p>
                             <p>2. Hearing aids are classification HSN 9021 40 90 (GST Exempt).</p>
                             <p>3. Subject to Kolkata Jurisdiction.</p>
                         </div>
                     </div>
-                    <div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-800">Authorized Signatory</p></div>
+                    <div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Authorized Signatory</p></div>
                 </div>
-                <div className="mt-12 flex gap-4 print:hidden"><button onClick={() => setStep('product')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs">Edit Details</button><button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-4 px-12 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs"> <Save size={18}/> Save Quotation</button></div>
+                <div className="mt-12 flex gap-4 print:hidden"><button onClick={() => setStep('product')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs text-gray-900">Edit Details</button><button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-4 px-12 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs"> <Save size={18}/> Save Quotation</button></div>
             </div>
         )}
     </div>

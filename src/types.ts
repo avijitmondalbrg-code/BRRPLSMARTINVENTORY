@@ -22,6 +22,20 @@ export interface CompanyAsset {
   notes?: string;
 }
 
+export interface AssetTransfer {
+  id: string;
+  assetId: string;
+  assetName: string;
+  serialNumber: string;
+  fromLocation: string;
+  toLocation: string;
+  date: string;
+  sender: string;
+  transporter: string;
+  receiver: string;
+  note: string;
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -94,7 +108,6 @@ export interface Invoice {
   balanceDue: number;
 }
 
-// FIX: Added missing 'address' property to AdvanceBooking interface
 export interface AdvanceBooking {
   id: string;
   patientId: string;
@@ -158,7 +171,7 @@ export interface StockTransfer {
   note?: string;
 }
 
-// CRM Types
+// FIX: Restored CRM Types to resolve Module not found errors
 export type LeadStatus = 'New' | 'Contacted' | 'Appointment' | 'Trial' | 'Won' | 'Lost';
 
 export interface Activity {
@@ -184,7 +197,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [
