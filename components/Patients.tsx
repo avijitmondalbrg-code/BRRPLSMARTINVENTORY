@@ -60,11 +60,10 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><User className="text-[#3159a6]" /> Patient Registry</h2>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Master Database & Records</p>
         </div>
-        {userRole === 'admin' && (
-            <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-3 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all font-black uppercase text-[10px] tracking-widest">
-                <Plus size={18} /> New Patient
-            </button>
-        )}
+        {/* Rules updated: Both admin and staff (user) can add new patient */}
+        <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-3 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all font-black uppercase text-[10px] tracking-widest">
+            <Plus size={18} /> New Patient Entry
+        </button>
       </div>
       
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
@@ -107,6 +106,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                         )}
                       </div>
                   </div>
+                  {/* Administrative Controls: Edit and Delete remains Admin-only for security */}
                   {userRole === 'admin' && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={()=>handleOpenEdit(patient)} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition"><Edit size={18}/></button>
