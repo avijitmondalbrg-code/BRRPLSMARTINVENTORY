@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, getFinancialYear } from '../constants';
@@ -149,11 +150,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                             <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
                         </div>
                     </div>
-                    <div className="text-right"><div className="border-4 border-gray-800 px-6 py-1 inline-block mb-3"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-700"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-400">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
+                    <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-700"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-400">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
                 </div>
                 <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-400 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-600">{patient.phone}</p></div></div>
                 <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
-                    <thead className="bg-gray-800 text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
+                    <thead className="bg-[#3159a6] text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
                     <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-800 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
                 </table>
                 

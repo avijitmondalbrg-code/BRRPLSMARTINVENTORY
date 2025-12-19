@@ -250,7 +250,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="bg-gray-900 text-white px-5 py-2 inline-block mb-4 rounded-xl">
+                  <div className="bg-[#3159a6] text-white px-5 py-2 inline-block mb-4 rounded-xl">
                     <h2 className="text-xs sm:text-sm font-black uppercase tracking-[0.4em]">Advance Token</h2>
                   </div>
                   <p className="text-[10px] sm:text-xs font-black text-gray-900 uppercase tracking-widest">REC NO: {selectedBooking.id}</p>
@@ -266,10 +266,10 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
               </div>
 
               <div className="mt-28 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-16 relative z-10">
-                <div className="bg-gray-900 p-8 sm:p-10 rounded-[2.5rem] text-center flex flex-col gap-2 w-full sm:w-auto shadow-2xl relative">
-                  <div className="absolute -top-4 -left-4 bg-[#3159a6] p-2 rounded-full text-white shadow-lg"><IndianRupee size={16}/></div>
+                <div className="bg-[#3159a6] p-8 sm:p-10 rounded-[2.5rem] text-center flex flex-col gap-2 w-full sm:w-auto shadow-2xl relative">
+                  <div className="absolute -top-4 -left-4 bg-white p-2 rounded-full text-[#3159a6] shadow-lg border border-blue-50"><IndianRupee size={16}/></div>
                   <div className="space-y-3">
-                    <p className="text-[10px] uppercase font-black text-gray-400 tracking-[0.4em] mb-1">Net Fund In-flow</p>
+                    <p className="text-[10px] uppercase font-black text-blue-100 tracking-[0.4em] mb-1 opacity-80">Net Fund In-flow</p>
                     <p className="text-4xl sm:text-5xl font-black text-white tracking-tighter">₹{selectedBooking.amount.toLocaleString()}</p>
                   </div>
                 </div>
