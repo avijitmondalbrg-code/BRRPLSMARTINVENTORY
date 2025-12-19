@@ -27,8 +27,8 @@
       
       @media print {
         @page {
-          size: A4;
-          margin: 10mm; /* Minimal safe margin for printers */
+          size: A4 portrait;
+          margin: 15mm 10mm;
         }
         body {
           background-color: white !important;
@@ -44,28 +44,27 @@
         #invoice-printable-area, 
         #receipt-printable-area {
           visibility: visible !important;
-          position: relative !important;
-          width: 190mm !important; /* A4 width 210mm - 20mm margins */
-          height: auto !important;
-          max-height: 277mm !important; /* A4 height 297mm - 20mm margins */
-          margin: 0 auto !important;
+          position: static !important;
+          width: 100% !important;
+          margin: 0 !important;
           padding: 0 !important;
-          background-color: white !important;
           box-shadow: none !important;
           border: none !important;
-          overflow: visible !important;
+          display: block !important;
         }
-        /* Tighten text specifically for print */
-        p, span, td, th {
-          line-height: 1.2 !important;
+        /* Ensure tables fill width and don't break weirdly */
+        table {
+          width: 100% !important;
+          border-collapse: collapse !important;
         }
+        /* Force color backgrounds in print */
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
       }
 
-      /* Custom scrollbar */
+      /* Custom scrollbar for web view */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
         height: 6px;
