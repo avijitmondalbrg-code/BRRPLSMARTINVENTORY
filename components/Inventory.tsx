@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { HearingAid, LOCATIONS, BRANDS, UserRole } from '../types';
-import { Plus, Search, Package, Layers, List, MapPin, CheckCircle, XCircle, Truck, Edit, Trash2, X, ChevronRight } from 'lucide-react';
+import { Plus, Search, Package, Layers, List, MapPin, CheckCircle, XCircle, Truck, Edit, Trash2, X, ChevronRight, Hash } from 'lucide-react';
 
 interface InventoryProps {
   inventory: HearingAid[];
@@ -28,7 +28,8 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     return inventory.filter(item => {
       const matchesSearch = item.brand.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             item.model.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+                            item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.hsnCode && item.hsnCode.includes(searchTerm));
       const matchesLoc = locationFilter === 'ALL' || item.location === locationFilter;
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
       return matchesSearch && matchesLoc && matchesStatus;
@@ -55,12 +56,15 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       return;
     }
 
+    const currentHsn = newItem.hsnCode || '90214090';
+
     if (isBulkMode) {
       const serials = bulkSerials.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
       const newItems: HearingAid[] = serials.map(sn => ({
         ...newItem,
         id: `HA-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         serialNumber: sn,
+        hsnCode: currentHsn,
         addedDate: new Date().toISOString().split('T')[0],
       } as HearingAid));
       onAdd(newItems);
@@ -68,11 +72,15 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       onAdd({
         ...newItem,
         id: `HA-${Date.now()}`,
+        hsnCode: currentHsn,
         addedDate: new Date().toISOString().split('T')[0],
       } as HearingAid);
     }
     setShowAddModal(false);
     setBulkSerials('');
+    setNewItem({
+        brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0
+    });
   };
 
   return (
@@ -114,7 +122,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search serial or model..." 
+              placeholder="Search serial, HSN or model..." 
               className="w-full pl-10 pr-4 py-3 border-2 border-gray-50 rounded-xl focus:border-[#3159a6] outline-none font-medium transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -172,6 +180,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <thead className="bg-[#3159a6] text-white uppercase font-black text-[10px] tracking-[0.2em] border-b">
                 <tr>
                   <th className="p-4">Brand/Model</th>
+                  <th className="p-4 text-center">HSN Code</th>
                   <th className="p-4">Serial No</th>
                   <th className="p-4">Location</th>
                   <th className="p-4">Base Value</th>
@@ -181,13 +190,14 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredInventory.length === 0 ? (
-                  <tr><td colSpan={6} className="p-20 text-center text-gray-400 italic font-medium uppercase tracking-widest text-[10px]">Stock database empty for current filters</td></tr>
+                  <tr><td colSpan={7} className="p-20 text-center text-gray-400 italic font-medium uppercase tracking-widest text-[10px]">Stock database empty for current filters</td></tr>
                 ) : filteredInventory.map(item => (
                   <tr key={item.id} className="hover:bg-blue-50/30 transition">
                     <td className="p-4">
                       <p className="font-black text-gray-800 uppercase tracking-tighter">{item.brand}</p>
                       <p className="text-[10px] text-gray-400 font-bold">{item.model}</p>
                     </td>
+                    <td className="p-4 text-center font-mono text-xs font-bold text-slate-500">{item.hsnCode || '90214090'}</td>
                     <td className="p-4 font-mono font-black text-[#3159a6] tracking-widest uppercase">{item.serialNumber}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-1.5 text-gray-600 font-bold text-xs uppercase">
@@ -207,8 +217,8 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     {userRole === 'admin' && (
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => {}} className="p-2 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
-                          <button onClick={() => { if(window.confirm(`Delete unit ${item.serialNumber}?`)) onDelete(item.id); }} className="p-2 text-gray-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
+                          <button onClick={() => {}} className="p-1.5 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
+                          <button onClick={() => { if(window.confirm(`Delete unit ${item.serialNumber}?`)) onDelete(item.id); }} className="p-1.5 text-gray-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
                         </div>
                       </td>
                     )}
@@ -266,14 +276,22 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                   <input type="number" className="w-full border-2 border-gray-50 rounded-2xl p-3 text-lg font-black text-[#3159a6] outline-none" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} placeholder="0.00" />
                 </div>
                 <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">HSN Code</label>
+                  <input className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm font-mono font-bold focus:border-[#3159a6] outline-none" value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} placeholder="90214090" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Store Location</label>
                   <select className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm bg-gray-50 font-bold focus:border-[#3159a6] outline-none" value={newItem.location} onChange={e => setNewItem({...newItem, location: e.target.value})}>
                     {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                   </select>
                 </div>
+                <div className="flex flex-col justify-end">
+                    <button onClick={handleSave} className="w-full py-4 bg-[#3159a6] text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all active:scale-95">Verify & Add</button>
+                </div>
               </div>
-
-              <button onClick={handleSave} className="w-full py-5 bg-[#3159a6] text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all active:scale-95 mt-6">Confirm Stock Entry</button>
             </div>
           </div>
         </div>

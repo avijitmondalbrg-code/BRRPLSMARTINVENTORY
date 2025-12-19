@@ -56,12 +56,15 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       return;
     }
 
+    const currentHsn = newItem.hsnCode || '90214090';
+
     if (isBulkMode) {
       const serials = bulkSerials.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
       const newItems: HearingAid[] = serials.map(sn => ({
         ...newItem,
         id: `HA-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         serialNumber: sn,
+        hsnCode: currentHsn,
         addedDate: new Date().toISOString().split('T')[0],
       } as HearingAid));
       onAdd(newItems);
@@ -69,6 +72,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       onAdd({
         ...newItem,
         id: `HA-${Date.now()}`,
+        hsnCode: currentHsn,
         addedDate: new Date().toISOString().split('T')[0],
       } as HearingAid);
     }
@@ -176,7 +180,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <thead className="bg-[#3159a6] text-white uppercase font-black text-[10px] tracking-[0.2em] border-b">
                 <tr>
                   <th className="p-4">Brand/Model</th>
-                  <th className="p-4 text-center">HSN</th>
+                  <th className="p-4 text-center">HSN Code</th>
                   <th className="p-4">Serial No</th>
                   <th className="p-4">Location</th>
                   <th className="p-4">Base Value</th>
@@ -213,8 +217,8 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     {userRole === 'admin' && (
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => {}} className="p-2 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
-                          <button onClick={() => { if(window.confirm(`Delete unit ${item.serialNumber}?`)) onDelete(item.id); }} className="p-2 text-gray-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
+                          <button onClick={() => {}} className="p-1.5 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
+                          <button onClick={() => { if(window.confirm(`Delete unit ${item.serialNumber}?`)) onDelete(item.id); }} className="p-1.5 text-gray-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
                         </div>
                       </td>
                     )}
