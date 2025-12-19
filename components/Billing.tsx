@@ -476,9 +476,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 </div>
                 <div className="bg-[#3159a6] text-white p-6 rounded-2xl text-xs font-black uppercase tracking-[0.2em] mb-16 shadow-lg">Amount In Words: {numberToWords(finalTotal)}</div>
                 <div className="flex justify-between items-end mt-24">
-                    <div className="w-2/3"><p className="font-black text-xs uppercase border-b-4 border-gray-900 inline-block mb-4 tracking-[0.3em]">Terms & Conditions:</p><div className="text-[11px] text-gray-500 font-black space-y-2 leading-tight uppercase tracking-wider"><p>1. This is an estimated price based on selected model and valid for 15 days from date of issuance.</p><p>2. Hearing Aid will be delivered within 7 days of receipt of the confirmed order.</p>
-                    <p>3. Cheque payment is subject to the realization.</p>
-                    <p>4. Hearing aids are classified under HSN 9021 40 90 (GST Exempted).</p>
+                    <div className="w-2/3"><p className="font-black text-xs uppercase border-b-4 border-gray-900 inline-block mb-4 tracking-[0.3em]">Terms & Conditions:</p><div className="text-[11px] text-gray-500 font-black space-y-2 leading-tight uppercase tracking-wider">
+                    <p>1. Please keep this Invoice safe for future correspondence</p>
+                    <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                    <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. Theseexemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June2017.</p>
+                    <p>4. Hearing aids are classified under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>
                     <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p></div></div>
                     <div className="text-center w-64">{signature ? <img src={signature} className="h-24 mb-3 mx-auto mix-blend-multiply opacity-90" /> : <div className="h-24 w-full border-b-4 border-dashed border-gray-200 mb-3"></div>}<p className="text-xs font-black uppercase tracking-[0.3em] text-gray-900 border-t-2 border-gray-900 pt-2">Authorized Signatory</p></div>
                 </div>
