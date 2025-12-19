@@ -25,7 +25,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         </div>
       </div>
 
-      <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center">
+      <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center pb-20">
         
         {/* Logo Container with Solid White Background */}
         <div className="bg-white p-10 rounded-[3rem] inline-block mb-12 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-8 border-white/20 ring-1 ring-black/5 animate-fade-in-up">
@@ -82,9 +82,12 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         </div>
       </div>
 
-      <div className="absolute bottom-5 text-center text-white/60 text-[11px] font-black uppercase tracking-[0.4em] select-none z-10 w-full">
-          Bengal Rehabilitation & Research Pvt. Ltd.
-      </div>
+      <footer className="absolute bottom-8 w-full text-center z-10 px-6">
+          <div className="h-px w-24 bg-white/20 mx-auto mb-4"></div>
+          <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.5em] select-none">
+              © Bengal Rehabilitation & Research Pvt. Ltd. | 2025
+          </p>
+      </footer>
       
       <style>{`
         @keyframes fade-in-up {
