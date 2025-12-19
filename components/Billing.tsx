@@ -381,7 +381,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
         {step === 'review' && (
             <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen">
-                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-[210mm] min-h-[297mm] p-[10mm] flex flex-col">
+                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-[210mm] p-[10mm]">
                     {/* Compact Header */}
                     <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3 mb-4">
                         <div className="flex gap-4">
@@ -443,8 +443,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         </div>
                     </div>
 
-                    {/* Table - Very Compact */}
-                    <div className="flex-grow">
+                    {/* Table - Natural Flow (No flex-grow) */}
+                    <div>
                         <table className="w-full border-collapse border-2 border-slate-900 text-[11px] mb-4">
                             <thead className="bg-[#3159a6] text-white uppercase font-black tracking-tight">
                                 <tr>
@@ -474,7 +474,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         </table>
 
                         {/* GST & Notes Row */}
-                        <div className="mb-4 flex justify-between gap-4">
+                        <div className="mb-6 flex justify-between gap-4">
                             <div className="flex-1">
                                 <h4 className="text-[8px] font-black uppercase text-[#3159a6] mb-1 tracking-widest">GST Breakdown</h4>
                                 <table className="w-full border-collapse border border-slate-900 text-[8px] text-center">
@@ -550,8 +550,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         Amount In Words: {numberToWords(finalTotal)}
                     </div>
 
-                    {/* Bottom Area - Compressed */}
-                    <div className="flex justify-between items-end mt-auto">
+                    {/* Bottom Area - Flow (No mt-auto) */}
+                    <div className="flex justify-between items-end mt-4">
                         <div className="w-[60%]">
                             <p className="font-black text-[9px] uppercase border-b-2 border-slate-900 inline-block mb-1.5 tracking-widest text-slate-900">Terms & Conditions:</p>
                             <div className="text-[8.5px] text-slate-800 font-bold space-y-0.5 leading-tight uppercase tracking-tight">
@@ -568,7 +568,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     </div>
 
                     {/* Watermark */}
-                    <div className="mt-4 text-center opacity-10 pointer-events-none">
+                    <div className="mt-8 text-center opacity-10 pointer-events-none">
                         <p className="text-[7px] font-black uppercase tracking-[0.5em] text-slate-400">BENGAL REHABILITATION & RESEARCH PVT. LTD. COMPUTER GENERATED DOCUMENT</p>
                     </div>
                 </div>
