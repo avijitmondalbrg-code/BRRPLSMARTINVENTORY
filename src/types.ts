@@ -40,6 +40,7 @@ export interface Patient {
   id: string;
   name: string;
   address: string;
+  district?: string;
   state?: string;
   country?: string;
   phone: string;
@@ -48,6 +49,7 @@ export interface Patient {
   audiologist: string;
   gstin?: string; // Patient's GSTIN (for B2B)
   addedDate?: string; // Date patient was added to system
+  notes?: string; // Paragraph notes about the patient
 }
 
 export interface PaymentRecord {

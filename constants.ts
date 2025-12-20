@@ -1,3 +1,4 @@
+
 import { HearingAid, Invoice, Quotation, FinancialNote, Lead } from './types';
 
 export const CLINIC_GSTIN = "19AALCB1534C1ZY"; 
@@ -18,6 +19,14 @@ export const INDIAN_STATES = [
   "Gujarat", "Rajasthan", "Uttar Pradesh", "Madhya Pradesh", "Punjab", "Haryana", "Other"
 ];
 
+export const WEST_BENGAL_DISTRICTS = [
+  "Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", 
+  "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", 
+  "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", 
+  "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"
+];
+
+// FIX: Added missing bank accounts constant required by billing and receipt modules
 export const COMPANY_BANK_ACCOUNTS = [
   { name: "SBI CA", accountNumber: "42367906742", ifsc: "SBIN0001357", branch: "Thakurpukur" },
   { name: "SBI CC", accountNumber: "42736238038", ifsc: "SBIN0001357", branch: "Thakurpukur" },
@@ -31,15 +40,13 @@ export const INITIAL_QUOTATIONS: Quotation[] = [];
 export const INITIAL_FINANCIAL_NOTES: FinancialNote[] = [];
 export const INITIAL_LEADS: Lead[] = [];
 
-// FIX: Forcefully set the logo URL for consistency with production assets
+// Forcefully set the logo URL
 export const COMPANY_LOGO_BASE64 = `https://bengalrehabilitationgroup.com/images/brg_logo.png`;
 
-// Helper function for Financial Year (e.g., 24-25)
 export const getFinancialYear = () => {
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth() + 1; // getMonth() is 0-indexed
-  // FY starts in April (Month 4)
+  const month = now.getMonth() + 1;
   if (month >= 4) {
     const nextYear = (year + 1).toString().slice(-2);
     return `${year.toString().slice(-2)}-${nextYear}`;

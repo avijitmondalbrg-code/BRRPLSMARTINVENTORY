@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Patient, Invoice, UserRole } from '../types';
-import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2 } from 'lucide-react';
+import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote } from 'lucide-react';
+import { INDIAN_STATES, WEST_BENGAL_DISTRICTS } from '../constants';
 
 interface PatientsProps {
   patients: Patient[];
@@ -24,14 +25,35 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
   const [endDate, setEndDate] = useState('');
 
   const [formData, setFormData] = useState<Patient>({ 
-    id: '', name: '', phone: '', email: '', address: '', state: 'West Bengal', country: 'India', referDoctor: '', audiologist: '', addedDate: new Date().toISOString().split('T')[0] 
+    id: '', 
+    name: '', 
+    phone: '', 
+    email: '', 
+    address: '', 
+    district: 'Kolkata',
+    state: 'West Bengal', 
+    country: 'India', 
+    referDoctor: '', 
+    audiologist: '', 
+    addedDate: new Date().toISOString().split('T')[0],
+    notes: ''
   });
 
   const handleOpenAdd = () => { 
     setEditingId(null); 
     setFormData({ 
-      id: '', name: '', phone: '', email: '', address: '', state: 'West Bengal', country: 'India', referDoctor: '', audiologist: '', 
-      addedDate: new Date().toISOString().split('T')[0] 
+      id: '', 
+      name: '', 
+      phone: '', 
+      email: '', 
+      address: '', 
+      district: 'Kolkata',
+      state: 'West Bengal', 
+      country: 'India', 
+      referDoctor: '', 
+      audiologist: '', 
+      addedDate: new Date().toISOString().split('T')[0],
+      notes: ''
     }); 
     setShowModal(true); 
   };
@@ -60,7 +82,6 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><User className="text-[#3159a6]" /> Patient Registry</h2>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Master Database & Records</p>
         </div>
-        {/* Rules updated: Both admin and staff (user) can add new patient */}
         <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-3 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all font-black uppercase text-[10px] tracking-widest">
             <Plus size={18} /> New Patient Entry
         </button>
@@ -106,7 +127,6 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                         )}
                       </div>
                   </div>
-                  {/* Administrative Controls: Edit and Delete remains Admin-only for security */}
                   {userRole === 'admin' && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={()=>handleOpenEdit(patient)} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition"><Edit size={18}/></button>
@@ -117,7 +137,19 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
               
               <div className="space-y-3 text-sm text-gray-600 mb-8 border-t border-gray-50 pt-6 relative z-10">
                   <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest"><Phone size={16} className="text-[#3159a6]" /> {patient.phone}</p>
-                  <p className="flex items-start gap-4 text-xs font-medium leading-relaxed"><MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" /> {patient.address || 'Location data not registered'}</p>
+                  <p className="flex items-start gap-4 text-xs font-medium leading-relaxed">
+                    <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" /> 
+                    <span>
+                      {patient.address && `${patient.address}, `}
+                      {patient.district && `${patient.district}, `}
+                      {patient.state || 'Location data not registered'}
+                    </span>
+                  </p>
+                  {patient.notes && (
+                    <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 text-[11px] italic text-amber-900 line-clamp-3">
+                      "{patient.notes}"
+                    </div>
+                  )}
               </div>
 
               <button 
@@ -131,8 +163,8 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
       </div>
 
       {showModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md">
-              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in border-4 border-white">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md overflow-y-auto">
+              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-8">
                   <div className="bg-[#3159a6] p-6 text-white flex justify-between items-center">
                     <h3 className="font-black uppercase tracking-widest text-sm">{editingId ? 'Modify' : 'New'} Patient Entry</h3>
                     <button onClick={()=>setShowModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
@@ -148,10 +180,54 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                               <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} placeholder="Mobile number" />
                           </div>
                       </div>
-                      <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Residential Address</label>
-                          <textarea className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-medium text-gray-700 bg-gray-50 focus:bg-white transition-all h-32 resize-none" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} placeholder="Full correspondence address" />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">State</label>
+                              <select 
+                                className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white focus:border-[#3159a6] transition-all"
+                                value={formData.state}
+                                onChange={e => setFormData({...formData, state: e.target.value})}
+                              >
+                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                          </div>
+                          <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">District</label>
+                              {formData.state === 'West Bengal' ? (
+                                <select 
+                                  className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white focus:border-[#3159a6] transition-all"
+                                  value={formData.district}
+                                  onChange={e => setFormData({...formData, district: e.target.value})}
+                                >
+                                  {WEST_BENGAL_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                              ) : (
+                                <input 
+                                  className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" 
+                                  value={formData.district} 
+                                  onChange={e=>setFormData({...formData, district: e.target.value})} 
+                                  placeholder="Enter District" 
+                                />
+                              )}
+                          </div>
                       </div>
+
+                      <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Address Line</label>
+                          <input className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} placeholder="Flat/House No, Street, Landmark" />
+                      </div>
+
+                      <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1 flex items-center gap-2"><StickyNote size={12}/> Clinical Notes / History</label>
+                          <textarea 
+                            className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-medium text-gray-700 bg-gray-50 focus:bg-white transition-all h-32 resize-none" 
+                            value={formData.notes} 
+                            onChange={e=>setFormData({...formData, notes: e.target.value})} 
+                            placeholder="Add relevant patient details, clinical history, or specific requirements here..." 
+                          />
+                      </div>
+
                       <button onClick={() => { editingId ? onUpdatePatient(formData) : onAddPatient({...formData, id: `P-${Date.now()}`}); setShowModal(false); }} className="w-full bg-[#3159a6] text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all uppercase tracking-[0.3em] text-[10px]">Save Clinical Profile</button>
                   </div>
               </div>

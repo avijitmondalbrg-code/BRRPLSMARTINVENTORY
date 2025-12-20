@@ -1,3 +1,4 @@
+
 import { HearingAid, Invoice, Quotation, FinancialNote, Lead } from './types';
 
 export const CLINIC_GSTIN = "19AALCB1534C1ZY"; 
@@ -18,6 +19,14 @@ export const INDIAN_STATES = [
   "Gujarat", "Rajasthan", "Uttar Pradesh", "Madhya Pradesh", "Punjab", "Haryana", "Other"
 ];
 
+export const WEST_BENGAL_DISTRICTS = [
+  "Alipurduar", "Bankura", "Birbhum", "Cooch Behar", "Dakshin Dinajpur", "Darjeeling", 
+  "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", 
+  "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", 
+  "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"
+];
+
+// FIX: Added missing bank accounts constant required by billing and receipt modules
 export const COMPANY_BANK_ACCOUNTS = [
   { name: "SBI CA", accountNumber: "42367906742", ifsc: "SBIN0001357", branch: "Thakurpukur" },
   { name: "SBI CC", accountNumber: "42736238038", ifsc: "SBIN0001357", branch: "Thakurpukur" },
