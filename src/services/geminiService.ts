@@ -4,9 +4,8 @@ import { Invoice } from "../types";
 
 export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audiologist: string): Promise<string> => {
   try {
-    // Initialize inside the function as per best practices for runtime key access
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = 'gemini-3-flash-preview';
+    const modelName = 'gemini-3-flash-preview';
     const itemsList = invoice.items.map(i => `${i.brand} ${i.model}`).join(', ');
     const warrantyInfo = invoice.warranty || "Standard 1 Year Warranty";
     
@@ -27,7 +26,7 @@ export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audi
     `;
 
     const response = await ai.models.generateContent({
-      model: model,
+      model: modelName,
       contents: prompt,
     });
 
@@ -42,19 +41,8 @@ export const analyzeStockTrends = async (inventoryText: string): Promise<string>
   try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `
-        You are an expert Inventory Manager for a Hearing Aid Clinic.
-        Analyze the provided inventory list and provide 3-5 strategic, actionable insights.
-        
-        Focus on:
-        1. **Stock Levels**: Identify critical low stock for popular models.
-        2. **Value Distribution**: Are we overstocked on expensive items?
-        3. **Location Balance**: Is stock distributed evenly across locations?
-        4. **Brand Mix**: Any over-reliance on a single brand?
-        
-        Format the output as a concise list of bullet points.
-        
-        Current Inventory Data:
-        ${inventoryText}
+        Analyze this hearing aid inventory data and give 3 short, bulleted strategic insights about stock levels, brand distribution, or sales potential.
+        Data: ${inventoryText}
       `;
       
       const response = await ai.models.generateContent({
@@ -65,6 +53,6 @@ export const analyzeStockTrends = async (inventoryText: string): Promise<string>
       return response.text || "No insights available.";
   } catch (e) {
       console.error(e);
-      return "Could not analyze stock trends at this time.";
+      return "Could not analyze stock at this time.";
   }
 }
