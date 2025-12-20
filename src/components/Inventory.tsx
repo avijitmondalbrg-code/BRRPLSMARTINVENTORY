@@ -20,6 +20,8 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
 
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [bulkSerials, setBulkSerials] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
   const [newItem, setNewItem] = useState<Partial<HearingAid>>({
     brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0
   });
@@ -50,6 +52,22 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     return Object.values(groups).sort((a, b) => b.available - a.available);
   }, [filteredInventory]);
 
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setIsBulkMode(false);
+    setNewItem({
+        brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0
+    });
+    setShowAddModal(true);
+  };
+
+  const handleOpenEdit = (item: HearingAid) => {
+    setEditingId(item.id);
+    setIsBulkMode(false);
+    setNewItem({ ...item });
+    setShowAddModal(true);
+  };
+
   const handleSave = () => {
     if (!newItem.brand || !newItem.model || (!isBulkMode && !newItem.serialNumber)) {
       alert("Required fields missing.");
@@ -58,7 +76,15 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
 
     const currentHsn = newItem.hsnCode || '90214090';
 
-    if (isBulkMode) {
+    if (editingId) {
+      // Update logic
+      onUpdate({
+        ...newItem,
+        id: editingId,
+        hsnCode: currentHsn,
+      } as HearingAid);
+    } else if (isBulkMode) {
+      // Bulk add logic
       const serials = bulkSerials.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
       const newItems: HearingAid[] = serials.map(sn => ({
         ...newItem,
@@ -69,6 +95,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       } as HearingAid));
       onAdd(newItems);
     } else {
+      // Single add logic
       onAdd({
         ...newItem,
         id: `HA-${Date.now()}`,
@@ -76,7 +103,9 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         addedDate: new Date().toISOString().split('T')[0],
       } as HearingAid);
     }
+    
     setShowAddModal(false);
+    setEditingId(null);
     setBulkSerials('');
     setNewItem({
         brand: BRANDS[0], model: '', serialNumber: '', price: 0, location: LOCATIONS[0], status: 'Available', hsnCode: '90214090', gstRate: 0
@@ -109,7 +138,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
             </button>
           </div>
           {userRole === 'admin' && (
-            <button onClick={() => setShowAddModal(true)} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition font-black uppercase text-[10px] tracking-widest">
+            <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition font-black uppercase text-[10px] tracking-widest">
               <Plus size={16} /> New Entry
             </button>
           )}
@@ -217,7 +246,7 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     {userRole === 'admin' && (
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => {}} className="p-1.5 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
+                          <button onClick={() => handleOpenEdit(item)} className="p-1.5 text-gray-400 hover:text-[#3159a6] transition"><Edit size={16}/></button>
                           <button onClick={() => { if(window.confirm(`Delete unit ${item.serialNumber}?`)) onDelete(item.id); }} className="p-1.5 text-gray-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
                         </div>
                       </td>
@@ -234,8 +263,10 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in border-4 border-white">
             <div className="bg-[#3159a6] p-6 text-white flex justify-between items-center">
-              <h3 className="font-black uppercase tracking-widest text-sm">Inventory On-boarding</h3>
-              <button onClick={() => setShowAddModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
+              <h3 className="font-black uppercase tracking-widest text-sm">
+                {editingId ? 'Modify Unit Info' : 'Inventory On-boarding'}
+              </h3>
+              <button onClick={() => { setShowAddModal(false); setEditingId(null); }} className="hover:rotate-90 transition-transform"><X size={24}/></button>
             </div>
             <div className="p-8 space-y-5 max-h-[80vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-5">
@@ -254,9 +285,11 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <div className="space-y-2">
                 <div className="flex justify-between items-center px-1">
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Serial Capture</label>
-                  <button onClick={() => setIsBulkMode(!isBulkMode)} className="text-[9px] font-black text-[#3159a6] uppercase border-b-2 border-[#3159a6] transition">
-                    {isBulkMode ? 'Single Switch' : 'Bulk Batch Switch'}
-                  </button>
+                  {!editingId && (
+                    <button onClick={() => setIsBulkMode(!isBulkMode)} className="text-[9px] font-black text-[#3159a6] uppercase border-b-2 border-[#3159a6] transition">
+                        {isBulkMode ? 'Single Switch' : 'Bulk Batch Switch'}
+                    </button>
+                  )}
                 </div>
                 {isBulkMode ? (
                   <textarea 
@@ -289,7 +322,9 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                   </select>
                 </div>
                 <div className="flex flex-col justify-end">
-                    <button onClick={handleSave} className="w-full py-4 bg-[#3159a6] text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all active:scale-95">Verify & Add</button>
+                    <button onClick={handleSave} className="w-full py-4 bg-[#3159a6] text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 transition-all active:scale-95">
+                        {editingId ? 'Update Product' : 'Verify & Add'}
+                    </button>
                 </div>
               </div>
             </div>
