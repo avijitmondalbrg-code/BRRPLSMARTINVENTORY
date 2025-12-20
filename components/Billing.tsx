@@ -236,9 +236,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-red-50 text-red-700 border-red-100'}`}>{inv.paymentStatus}</span></td>
                                     <td className="p-5 text-center">
                                         <div className="flex justify-center items-center gap-1">
-                                            <button onClick={() => handleEditInvoice(inv, 'review')} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
-                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice"><Edit size={18}/></button>
-                                            <button onClick={() => openCollectModal(inv)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0}><Wallet size={18} className={inv.balanceDue <= 0 ? 'opacity-20' : ''}/></button>
+                                            <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
+                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice"><Edit size={18}/></button>
+                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0}><Wallet size={18} className={inv.balanceDue <= 0 ? 'opacity-20' : ''}/></button>
                                             {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>)}
                                         </div>
                                     </td>
@@ -311,7 +311,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 <div className="max-h-96 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-10 shadow-inner custom-scrollbar overflow-hidden">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-[#3159a6] text-white sticky top-0 uppercase font-black text-[10px] tracking-widest">
-                            <tr><th className="p-5 w-14"></th><th className="p-5">Device Unit</th><th className="p-5">Serial No</th><th className="p-5 text-center">Tax %</th><th className="p-5 text-center">Discount (₹)</th><th className="p-5 text-right">Unit MRP</th></tr>
+                            <tr><th className="p-5 w-14"></th><th className="p-5">Device Unit</th><th className="p-5 text-center">HSN Code</th><th className="p-5">Serial No</th><th className="p-5 text-center">Tax %</th><th className="p-5 text-center">Discount (₹)</th><th className="p-5 text-right">Unit MRP</th></tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {inventory.filter(i => {
@@ -321,6 +321,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <tr key={item.id} className={`${selectedItemIds.includes(item.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'} transition`}>
                                     <td className="p-5 text-center"><input type="checkbox" className="h-5 w-5 rounded-lg border-2 border-gray-200 text-[#3159a6] focus:ring-[#3159a6] transition" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) { setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); const newDiscounts = {...itemDiscounts}; delete newDiscounts[item.id]; setItemDiscounts(newDiscounts); } else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
                                     <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{item.brand} {item.model}</td>
+                                    <td className="p-5 text-center font-mono font-bold text-gray-400">{item.hsnCode || '90214090'}</td>
                                     <td className="p-5 font-mono font-black text-[#3159a6] tracking-widest">{item.serialNumber}</td>
                                     <td className="p-5 text-center">
                                         {selectedItemIds.includes(item.id) && (
@@ -421,8 +422,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
                             <div>
                                 <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
-                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
-                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: +91 98749 25867</p>
+                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: {COMPANY_PHONES}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL}</p>
                             </div>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200">

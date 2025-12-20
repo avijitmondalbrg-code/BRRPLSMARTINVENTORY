@@ -239,7 +239,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                             <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
                                             <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice"><Edit size={18}/></button>
                                             <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0}><Wallet size={18} className={inv.balanceDue <= 0 ? 'opacity-20' : ''}/></button>
-                                            {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>)}
+                                            {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>)}
                                         </div>
                                     </td>
                                 </tr>
@@ -422,8 +422,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
                             <div>
                                 <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
-                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
-                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: +91 98749 25867</p>
+                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: {COMPANY_PHONES}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL}</p>
                             </div>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200">
