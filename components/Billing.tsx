@@ -532,7 +532,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200 flex gap-6">
-                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Ref. Doctor</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Referred By</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
                             </div>
                         </div>
