@@ -127,7 +127,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   };
 
   const handleSelectPatient = (p: Patient) => { 
-    setPatient({ ...p, state: p.state || 'West Bengal' }); 
+    setPatient({ ...p, state: p.state || 'West Bengal', referDoctor: p.referDoctor || '' }); 
     setPatientSearchTerm(p.name); 
     setShowPatientResults(false); 
   };
@@ -368,6 +368,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Full Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Ref. Dr. (Referrer)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="e.g. Dr. Name" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">State (Supply Destination)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.state} onChange={e => setPatient({...patient, state: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Name" /></div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
@@ -531,7 +532,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200 flex gap-6">
-                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Supply Source</p><p className="text-xs font-black text-slate-900 uppercase">West Bengal</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Ref. Doctor</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
                             </div>
                         </div>
