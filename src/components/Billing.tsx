@@ -105,7 +105,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
     
-    // Split inventory items from manual items based on whether hearingAidId exists in current inventory
+    // Split inventory items from manual items
     const inventoryIds = inv.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
     const manItems = inv.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
     
@@ -126,7 +126,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setViewMode('edit');
   };
 
-  const handleSelectPatient = (p: Patient) => { setPatient({ ...p }); setPatientSearchTerm(p.name); setShowPatientResults(false); };
+  const handleSelectPatient = (p: Patient) => { 
+    setPatient({ ...p, state: p.state || 'West Bengal' }); 
+    setPatientSearchTerm(p.name); 
+    setShowPatientResults(false); 
+  };
 
   const handleAddManualItem = () => {
       if (!tempManual.model || tempManual.price <= 0) return;
@@ -140,10 +144,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           gstRate: tempManual.gst,
           discount: 0,
           taxableValue: tempManual.price,
-          cgstAmount: (tempManual.price * (tempManual.gst / 100)) / 2,
-          sgstAmount: (tempManual.price * (tempManual.gst / 100)) / 2,
+          cgstAmount: 0, // Will be recalculated based on state
+          sgstAmount: 0,
           igstAmount: 0,
-          totalAmount: tempManual.price + (tempManual.price * (tempManual.gst / 100))
+          totalAmount: 0 // Will be recalculated
       };
       setManualItems([...manualItems, newItem]);
       setTempManual({ brand: 'Service', model: '', hsn: '9987', price: 0, gst: 0 });
@@ -153,55 +157,88 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       setManualItems(manualItems.filter(i => i.hearingAidId !== id));
   };
 
+  // INTER-STATE DETECTION
+  const isInterState = patient.state && patient.state !== 'West Bengal';
+
   // COMBINED CALCULATION
   const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
   
   let runningTaxableTotal: number = 0;
   let runningCGST: number = 0;
   let runningSGST: number = 0;
+  let runningIGST: number = 0;
   let totalSubtotal: number = 0;
 
-  // 1. Calculate from Inventory
+  // 1. Process Inventory Items
   const invInvoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
       const itemTaxable: number = Math.max(0, item.price - itemDisc);
       const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
-      const cgst: number = (itemTaxable * (gstRate / 100)) / 2;
-      const sgst: number = (itemTaxable * (gstRate / 100)) / 2;
+      
+      const totalTax = itemTaxable * (gstRate / 100);
+      let cgst = 0, sgst = 0, igst = 0;
+
+      if (isInterState) {
+          igst = totalTax;
+          runningIGST += igst;
+      } else {
+          cgst = totalTax / 2;
+          sgst = totalTax / 2;
+          runningCGST += cgst;
+          runningSGST += sgst;
+      }
       
       runningTaxableTotal += itemTaxable; 
-      runningCGST += cgst; 
-      runningSGST += sgst; 
       totalSubtotal += item.price;
 
       return { 
           hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, 
           price: item.price, discount: itemDisc, gstRate, taxableValue: itemTaxable, 
-          cgstAmount: cgst, sgstAmount: sgst, igstAmount: 0, totalAmount: itemTaxable + cgst + sgst, 
+          cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: itemTaxable + totalTax, 
           hsnCode: item.hsnCode || '90214090' 
       };
   });
 
-  // 2. Add Manual Items to running totals
-  manualItems.forEach(item => {
+  // 2. Process Manual Items
+  const processedManualItems: InvoiceItem[] = manualItems.map(item => {
+      const totalTax = item.taxableValue * (item.gstRate / 100);
+      let cgst = 0, sgst = 0, igst = 0;
+
+      if (isInterState) {
+          igst = totalTax;
+          runningIGST += igst;
+      } else {
+          cgst = totalTax / 2;
+          sgst = totalTax / 2;
+          runningCGST += cgst;
+          runningSGST += sgst;
+      }
+
       runningTaxableTotal += item.taxableValue;
-      runningCGST += item.cgstAmount;
-      runningSGST += item.sgstAmount;
       totalSubtotal += item.price;
+
+      return {
+          ...item,
+          cgstAmount: cgst,
+          sgstAmount: sgst,
+          igstAmount: igst,
+          totalAmount: item.taxableValue + totalTax
+      };
   });
 
-  const allInvoiceItems = [...invInvoiceItems, ...manualItems];
-  const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST) - totalAdjustment);
+  const allInvoiceItems = [...invInvoiceItems, ...processedManualItems];
+  const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST + runningIGST) - totalAdjustment);
   const totalItemDiscounts: number = (Object.values(itemDiscounts) as number[]).reduce((a: number, b: number) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
-    const summary: Record<number, { taxable: number, cgst: number, sgst: number }> = {};
+    const summary: Record<number, { taxable: number, cgst: number, sgst: number, igst: number }> = {};
     allInvoiceItems.forEach(item => {
       const rate = item.gstRate;
-      if (!summary[rate]) summary[rate] = { taxable: 0, cgst: 0, sgst: 0 };
+      if (!summary[rate]) summary[rate] = { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
       summary[rate].taxable += item.taxableValue;
       summary[rate].cgst += item.cgstAmount;
       summary[rate].sgst += item.sgstAmount;
+      summary[rate].igst += item.igstAmount;
     });
     return summary;
   }, [allInvoiceItems]);
@@ -220,7 +257,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     const invData: Invoice = { 
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
       subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
-      placeOfSupply: 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: 0, totalTax: runningCGST + runningSGST, 
+      placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
       finalTotal: finalTotal, date: new Date().toISOString().split('T')[0], warranty, patientDetails: patient, notes: invoiceNotes,
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
@@ -250,7 +287,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   };
 
   const openCollectModal = (inv: Invoice) => {
-      setViewMode('list'); // Safety
+      setViewMode('list'); 
       setCollectingInvoice(inv);
       setNewPaymentAmount(inv.balanceDue);
       setShowCollectModal(true);
@@ -303,25 +340,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     </table>
                   </div>
               </div>
-              {showCollectModal && collectingInvoice && (
-                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-fade-in border-4 border-white">
-                          <div className="bg-slate-900 p-6 text-white flex justify-between items-center"><div><h3 className="font-black uppercase tracking-widest text-xs">Collection Entry</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{collectingInvoice.id}</p></div><button onClick={() => setShowCollectModal(false)}><X size={24}/></button></div>
-                          <div className="p-10 space-y-8">
-                              <div className="flex justify-between items-end border-b-2 border-dashed border-gray-100 pb-6"><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Due Amount</p><p className="text-4xl font-black text-red-600 tracking-tighter">₹{collectingInvoice.balanceDue.toLocaleString()}</p></div><div className="text-right"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Net Invoice</p><p className="text-lg font-black text-gray-700">₹{collectingInvoice.finalTotal.toLocaleString()}</p></div></div>
-                              <div className="space-y-5">
-                                  <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Receipt Date</label><input type="date" className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-black text-slate-700 bg-gray-50 focus:bg-white transition" value={payDate} onChange={e=>setPayDate(e.target.value)} /></div>
-                                  <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Collected Amount (INR)</label><div className="relative"><IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3159a6]" size={20} /><input type="number" className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-[#3159a6] outline-none text-2xl font-black text-slate-800 bg-gray-50 focus:bg-white transition" value={newPaymentAmount} onChange={e => setNewPaymentAmount(Math.min(Number(e.target.value), collectingInvoice.balanceDue))} /></div></div>
-                                  <div className="grid grid-cols-2 gap-5">
-                                      <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Payment Method</label><select className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-black text-slate-700 bg-gray-50 focus:border-[#3159a6]" value={payMethod} onChange={e => setPayMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Transfer</option><option value="Cheque">Cheque</option><option value="EMI">EMI</option></select></div>
-                                      <div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Bank Hub</label><select className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-black text-[#3159a6] bg-gray-50 focus:border-[#3159a6]" value={payBank} onChange={e => setPayBank(e.target.value)}> <option value="">None (Cash)</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
-                                  </div>
-                              </div>
-                              <button onClick={handleConfirmCollection} className="w-full py-5 bg-[#3159a6] text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition active:scale-95">Finalize Collection</button>
-                          </div>
-                      </div>
-                  </div>
-              )}
           </div>
       );
   }
@@ -344,13 +362,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         {step === 'patient' && (
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
                 <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 1: Client Selection</h3>
-                <div className="mb-10 relative"><label className="block text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest ml-1">Recall Registered Patient</label><div className="relative"><Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Start typing name or mobile..." className="w-full pl-12 pr-4 py-5 border-2 border-gray-50 bg-gray-50/50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all shadow-sm font-bold text-lg" value={patientSearchTerm} onFocus={() => setShowPatientResults(true)} onChange={(e) => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }} /></div>{showPatientResults && (<div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2"><div className="space-y-1">{patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group"><div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone}</p></div><span className="text-[#3159a6] text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-[#3159a6] group-hover:text-white transition-all">Select</span></button>))}</div></div>)}</div>
+                <div className="mb-10 relative"><label className="block text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest ml-1">Recall Registered Patient</label><div className="relative"><Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Start typing name or mobile..." className="w-full pl-12 pr-4 py-5 border-2 border-gray-50 bg-gray-50/50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all shadow-sm font-bold text-lg" value={patientSearchTerm} onFocus={() => setShowPatientResults(true)} onChange={(e) => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }} /></div>{showPatientResults && (<div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2"><div className="space-y-1">{patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group"><div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone} • {p.state}</p></div><span className="text-[#3159a6] text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-[#3159a6] group-hover:text-white transition-all">Select</span></button>))}</div></div>)}</div>
                 <div className="bg-blue-50/30 p-8 rounded-[2rem] border-2 border-dashed border-blue-100 space-y-8">
                     <p className="text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em]">Verification & Contact Details</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Full Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
-                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Referrer Doctor</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="Dr. Name" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">State (Supply Destination)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.state} onChange={e => setPatient({...patient, state: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Name" /></div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
                     </div>
@@ -361,7 +379,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
         {step === 'product' && (
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
-                <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 2: Inventory Assignment</h3>
+                <div className="flex justify-between items-center mb-6 border-b-2 border-blue-50 pb-4">
+                    <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em]">Phase 2: Inventory Assignment</h3>
+                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${isInterState ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                        {isInterState ? `INTER-STATE (IGST MODE) - ${patient.state}` : `INTRA-STATE (CGST/SGST MODE)`}
+                    </div>
+                </div>
                 <div className="relative mb-6 flex gap-4"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Find serial number or model..." className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 bg-gray-50/50 rounded-2xl focus:bg-white focus:border-[#3159a6] outline-none transition font-bold" value={productSearchTerm} onChange={(e) => setProductSearchTerm(e.target.value)}/></div></div>
                 <div className="max-h-80 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-8 shadow-inner custom-scrollbar overflow-hidden">
                     <table className="w-full text-left text-xs">
@@ -393,7 +416,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     </table>
                 </div>
 
-                {/* MANUAL ENTRY SECTION */}
                 <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-dashed border-slate-200 mb-8">
                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
                         <Wrench size={14}/> Manual Service / Non-Inventory Entry
@@ -505,12 +527,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
                             <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4>
                             <p className="font-black text-xl text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p>
-                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone}</p>
+                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.state}</p>
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200 flex gap-6">
-                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Ref. Doctor</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
-                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-slate-900 uppercase">{patient.audiologist || 'Clinical Lead'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Supply Source</p><p className="text-xs font-black text-slate-900 uppercase">West Bengal</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
                             </div>
                         </div>
 
@@ -536,12 +558,16 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <table className="w-full border-collapse border-4 border-slate-900 text-[12px]">
                             <thead className="bg-[#3159a6] text-white uppercase font-black tracking-tight">
                                 <tr>
-                                    <th className="p-3 text-left border-r-2 border-white/20 w-[35%]">Description of Goods</th>
+                                    <th className="p-3 text-left border-r-2 border-white/20 w-[30%]">Description of Goods</th>
                                     <th className="p-3 text-center border-r-2 border-white/20 w-[15%]">HSN Code</th>
                                     <th className="p-3 text-right border-r-2 border-white/20 w-[15%]">Price (INR)</th>
                                     <th className="p-3 text-center border-r-2 border-white/20 w-[10%]">GST %</th>
-                                    <th className="p-3 text-right border-r-2 border-white/20 w-[10%]">Disc.</th>
-                                    <th className="p-3 text-right w-[15%]">Value</th>
+                                    {isInterState ? (
+                                        <th className="p-3 text-right border-r-2 border-white/20 w-[15%]">IGST</th>
+                                    ) : (
+                                        <th className="p-3 text-right border-r-2 border-white/20 w-[15%]">C+S GST</th>
+                                    )}
+                                    <th className="p-3 text-right w-[15%]">Total Value</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
@@ -554,9 +580,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                             </p>
                                         </td>
                                         <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode || '90214090'}</td>
-                                        <td className="p-2 text-right border-r-2 border-slate-900 font-mono">₹{item.price.toLocaleString()}</td>
+                                        <td className="p-2 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
                                         <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
-                                        <td className="p-2 text-right text-red-700 border-r-2 border-slate-900">{item.discount > 0 ? `-₹${item.discount.toLocaleString()}` : '-'}</td>
+                                        <td className="p-2 text-right border-r-2 border-slate-900 text-slate-500">
+                                            {isInterState ? `₹${item.igstAmount.toFixed(2)}` : `₹${(item.cgstAmount + item.sgstAmount).toFixed(2)}`}
+                                        </td>
                                         <td className="p-2 text-right font-black bg-slate-50/50">₹{item.totalAmount.toFixed(2)}</td>
                                     </tr>
                                 ))}
@@ -567,14 +595,20 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="grid grid-cols-2 gap-8 mb-6 items-start">
                         <div className="space-y-4">
                             <div>
-                                <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-1 tracking-[0.2em]">GST Analysis</h4>
+                                <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-1 tracking-[0.2em]">GST Analysis ({isInterState ? 'Inter-State' : 'Intra-State'})</h4>
                                 <table className="w-full border-collapse border-2 border-slate-900 text-[10px] text-center">
                                     <thead className="bg-slate-100 font-black text-slate-800">
                                         <tr className="border-b-2 border-slate-900">
                                             <th className="p-1.5 text-left border-r-2 border-slate-900">Rate</th>
                                             <th className="p-1.5 text-right border-r-2 border-slate-900">Taxable</th>
-                                            <th className="p-1.5 text-right border-r-2 border-slate-900">CGST</th>
-                                            <th className="p-1.5 text-right">SGST</th>
+                                            {isInterState ? (
+                                                <th className="p-1.5 text-right">IGST</th>
+                                            ) : (
+                                                <>
+                                                    <th className="p-1.5 text-right border-r-2 border-slate-900">CGST</th>
+                                                    <th className="p-1.5 text-right">SGST</th>
+                                                </>
+                                            )}
                                         </tr>
                                     </thead>
                                     <tbody className="font-bold text-slate-900 uppercase">
@@ -582,8 +616,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                             <tr key={rate} className="border-b-2 border-slate-200 last:border-b-0">
                                                 <td className="p-1.5 text-left font-black bg-slate-50 border-r-2 border-slate-900">{rate}% GST</td>
                                                 <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.taxable.toFixed(2)}</td>
-                                                <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.cgst.toFixed(2)}</td>
-                                                <td className="p-1.5 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                                {isInterState ? (
+                                                    <td className="p-1.5 text-right font-black text-[#3159a6]">₹{vals.igst.toFixed(2)}</td>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.cgst.toFixed(2)}</td>
+                                                        <td className="p-1.5 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                                    </>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -617,7 +657,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-white shadow-xl font-bold text-slate-900">
                                 <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{totalSubtotal.toLocaleString()}</span></div>
                                 <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Applied Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-3"><span>Net GST Tax</span><span>₹{(runningCGST + runningSGST).toFixed(2)}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-3">
+                                    <span>Net GST Tax</span>
+                                    <span>₹{(runningCGST + runningSGST + runningIGST).toFixed(2)}</span>
+                                </div>
                                 <div className="h-0.5 bg-slate-900 mb-3"></div>
                                 <div className="flex justify-between items-center text-slate-900">
                                     <span className="text-xs font-black uppercase tracking-[0.2em]">Net Payable</span>
