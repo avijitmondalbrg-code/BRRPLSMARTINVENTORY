@@ -81,7 +81,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                )}
            </div>
            <h1 className="text-3xl font-black text-gray-800 tracking-tight uppercase leading-none">BRG Inventory Manager</h1>
-           <p className="text-[#3159a6] text-[10px] font-black uppercase tracking-[0.3em] mt-3">Advanced Clinical ERP</p>
+           <p className="text-[#3159a6] text-[10px] font-black uppercase tracking-[0.3em] mt-3">Advanced Smart ERP</p>
         </div>
 
         {/* Form Section */}
