@@ -141,14 +141,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   {!loading && <ArrowRight size={18} />}
                 </button>
                 
-                <button 
-                  type="button"
-                  onClick={handleQuickLogin}
-                  disabled={loading}
-                  className="w-full bg-blue-50 text-[#3159a6] hover:bg-blue-100 font-black py-4 rounded-2xl transition-all border-2 border-blue-100 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
-                >
-                  <Sparkles size={16} /> Fast Demo Access
-                </button>
+                
             </div>
           </form>
         </div>
