@@ -73,7 +73,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const generateNextId = () => {
     const fy = getFinancialYear();
-    const prefix = `BRRPL-SR-${fy}-`;
+    const prefix = `BRRPL-HA-${fy}-`;
     const fyInvoices = (invoices || []).filter(inv => inv.id.startsWith(prefix));
     const maxSeq = fyInvoices.length === 0 ? 0 : Math.max(...fyInvoices.map(inv => parseInt(inv.id.split('-').pop() || '0', 10)));
     return `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
