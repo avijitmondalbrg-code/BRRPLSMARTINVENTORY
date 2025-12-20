@@ -222,5 +222,9 @@ export const BRANDS = [
   'Signia',
   'Unitron',
   'Alps',
-  'Widex'
+  'Widex',
+  'Battery 13',
+  'Battery 675',
+  'Battery 312',
+  'Battery 10',
 ];
