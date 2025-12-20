@@ -1,11 +1,11 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Invoice } from "../types";
 
 export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audiologist: string): Promise<string> => {
   try {
-    // FIX: Initializing GoogleGenAI directly with process.env.API_KEY as per coding guidelines
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = 'gemini-3-flash-preview';
+    const modelName = 'gemini-3-flash-preview';
     const itemsList = invoice.items.map(i => `${i.brand} ${i.model}`).join(', ');
     const warrantyInfo = invoice.warranty || "Standard 1 Year Warranty";
     
@@ -26,7 +26,7 @@ export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audi
     `;
 
     const response = await ai.models.generateContent({
-      model: model,
+      model: modelName,
       contents: prompt,
     });
 
@@ -39,7 +39,6 @@ export const generateInvoiceNote = async (invoice: Invoice, doctor: string, audi
 
 export const analyzeStockTrends = async (inventoryText: string): Promise<string> => {
   try {
-      // FIX: Adhering to coding guidelines for direct API key initialization
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `
         Analyze this hearing aid inventory data and give 3 short, bulleted strategic insights about stock levels, brand distribution, or sales potential.
