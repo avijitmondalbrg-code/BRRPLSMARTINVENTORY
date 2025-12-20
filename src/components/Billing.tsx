@@ -657,7 +657,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="space-y-4">
                             <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-white shadow-xl font-bold text-slate-900">
                                 <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{totalSubtotal.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Applied Rebates</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Special Consideration</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
                                 <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-3">
                                     <span>Net GST Tax</span>
                                     <span>₹{(runningCGST + runningSGST + runningIGST).toFixed(2)}</span>
