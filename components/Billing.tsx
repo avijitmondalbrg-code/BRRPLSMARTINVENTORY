@@ -58,7 +58,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
   
   // Temp state for new manual item input
-  const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '9987', price: 0, gst: 0 });
+  const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
 
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
@@ -96,7 +96,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setPaymentMethod('Cash'); 
     setPaymentBank(''); 
     setExistingPayments([]);
-    setTempManual({ brand: 'Service', model: '', hsn: '9987', price: 0, gst: 0 });
+    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -150,7 +150,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           totalAmount: 0 // Will be recalculated
       };
       setManualItems([...manualItems, newItem]);
-      setTempManual({ brand: 'Service', model: '', hsn: '9987', price: 0, gst: 0 });
+      setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleRemoveManualItem = (id: string) => {
@@ -423,7 +423,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
                         <div className="md:col-span-2">
-                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Description (e.g. Shell Repair / Service)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Description (e.g. Shell Repair: / Service:)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
                         </div>
                         <div>
                             <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-[#3159a6]" placeholder="HSN (9987)" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
@@ -576,7 +576,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                         <td className="p-2 border-r-2 border-slate-900">
                                             <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand} {item.model}</p>
                                             <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">
-                                                {item.serialNumber === 'N/A' ? 'NON-INVENTORY ITEM' : `S/N: ${item.serialNumber}`}
+                                                {item.serialNumber === 'N/A' ? 'PROCEDURE' : `S/N: ${item.serialNumber}`}
                                             </p>
                                         </td>
                                         <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode || '90214090'}</td>
