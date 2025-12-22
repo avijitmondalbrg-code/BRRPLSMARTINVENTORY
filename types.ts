@@ -39,6 +39,7 @@ export interface AssetTransfer {
 export interface Patient {
   id: string;
   name: string;
+  dob?: string; // Date of Birth
   address: string;
   district?: string;
   state?: string;

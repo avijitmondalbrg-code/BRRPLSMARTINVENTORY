@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Patient, Invoice, UserRole } from '../types';
-import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote } from 'lucide-react';
+import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote, Baby } from 'lucide-react';
 import { INDIAN_STATES, WEST_BENGAL_DISTRICTS } from '../constants';
 
 interface PatientsProps {
@@ -27,6 +27,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
   const [formData, setFormData] = useState<Patient>({ 
     id: '', 
     name: '', 
+    dob: '', // Initial empty DOB
     phone: '', 
     email: '', 
     address: '', 
@@ -44,6 +45,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
     setFormData({ 
       id: '', 
       name: '', 
+      dob: '',
       phone: '', 
       email: '', 
       address: '', 
@@ -62,6 +64,18 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
     setEditingId(p.id); 
     setFormData({ ...p }); 
     setShowModal(true); 
+  };
+
+  const calculateAge = (dobString?: string) => {
+    if (!dobString) return null;
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+    return age;
   };
 
   const filteredPatients = patients.filter(p => {
@@ -111,55 +125,64 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                 <User className="mx-auto h-16 w-16 text-gray-100 mb-4" />
                 <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">No records found matching criteria</p>
             </div>
-        ) : filteredPatients.map(patient => (
-            <div key={patient.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#3159a6]/[0.02] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-              
-              <div className="flex justify-between items-start mb-6 relative z-10">
-                  <div className="flex-1">
-                      <h3 className="font-black text-xl text-gray-800 leading-tight group-hover:text-[#3159a6] transition-colors uppercase tracking-tight">{patient.name}</h3>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[9px] bg-gray-50 text-gray-400 font-mono px-2 py-0.5 rounded-lg border border-gray-100">ID: {patient.id.slice(-6)}</span>
-                        {patient.addedDate && (
-                            <span className="text-[9px] bg-blue-50 text-[#3159a6] px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1">
-                              <Calendar size={10}/> {new Date(patient.addedDate).toLocaleDateString('en-IN')}
-                            </span>
-                        )}
+        ) : filteredPatients.map(patient => {
+            const age = calculateAge(patient.dob);
+            return (
+              <div key={patient.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#3159a6]/[0.02] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                
+                <div className="flex justify-between items-start mb-6 relative z-10">
+                    <div className="flex-1">
+                        <h3 className="font-black text-xl text-gray-800 leading-tight group-hover:text-[#3159a6] transition-colors uppercase tracking-tight">
+                            {patient.name} {age !== null && <span className="text-[#3159a6] opacity-40 ml-1">({age}y)</span>}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[9px] bg-gray-50 text-gray-400 font-mono px-2 py-0.5 rounded-lg border border-gray-100">ID: {patient.id.slice(-6)}</span>
+                          {patient.addedDate && (
+                              <span className="text-[9px] bg-blue-50 text-[#3159a6] px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1">
+                                <Calendar size={10}/> {new Date(patient.addedDate).toLocaleDateString('en-IN')}
+                              </span>
+                          )}
+                        </div>
+                    </div>
+                    {userRole === 'admin' && (
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={()=>handleOpenEdit(patient)} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition"><Edit size={18}/></button>
+                        <button onClick={()=>{ if(window.confirm(`Permanently delete ${patient.name}?`)) onDelete(patient.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
                       </div>
-                  </div>
-                  {userRole === 'admin' && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={()=>handleOpenEdit(patient)} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition"><Edit size={18}/></button>
-                      <button onClick={()=>{ if(window.confirm(`Permanently delete ${patient.name}?`)) onDelete(patient.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
-                    </div>
-                  )}
-              </div>
-              
-              <div className="space-y-3 text-sm text-gray-600 mb-8 border-t border-gray-50 pt-6 relative z-10">
-                  <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest"><Phone size={16} className="text-[#3159a6]" /> {patient.phone}</p>
-                  <p className="flex items-start gap-4 text-xs font-medium leading-relaxed">
-                    <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" /> 
-                    <span>
-                      {patient.address && `${patient.address}, `}
-                      {patient.district && `${patient.district}, `}
-                      {patient.state || 'Location data not registered'}
-                    </span>
-                  </p>
-                  {patient.notes && (
-                    <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 text-[11px] italic text-amber-900 line-clamp-3">
-                      "{patient.notes}"
-                    </div>
-                  )}
-              </div>
+                    )}
+                </div>
+                
+                <div className="space-y-3 text-sm text-gray-600 mb-8 border-t border-gray-50 pt-6 relative z-10">
+                    <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest"><Phone size={16} className="text-[#3159a6]" /> {patient.phone}</p>
+                    <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
+                        <Baby size={16} className="text-[#3159a6]" /> 
+                        {patient.dob ? new Date(patient.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric'}) : 'DOB not provided'}
+                    </p>
+                    <p className="flex items-start gap-4 text-xs font-medium leading-relaxed">
+                      <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" /> 
+                      <span>
+                        {patient.address && `${patient.address}, `}
+                        {patient.district && `${patient.district}, `}
+                        {patient.state || 'Location data not registered'}
+                      </span>
+                    </p>
+                    {patient.notes && (
+                      <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 text-[11px] italic text-amber-900 line-clamp-3">
+                        "{patient.notes}"
+                      </div>
+                    )}
+                </div>
 
-              <button 
-                onClick={() => setViewingHistoryId(patient.id)} 
-                className="w-full py-4 text-[10px] text-[#3159a6] bg-blue-50 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-[#3159a6] hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 relative z-10"
-              >
-                <History size={14}/> Transaction Ledger
-              </button>
-            </div>
-        ))}
+                <button 
+                  onClick={() => setViewingHistoryId(patient.id)} 
+                  className="w-full py-4 text-[10px] text-[#3159a6] bg-blue-50 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-[#3159a6] hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 relative z-10"
+                >
+                  <History size={14}/> Transaction Ledger
+                </button>
+              </div>
+            );
+        })}
       </div>
 
       {showModal && (
@@ -176,12 +199,19 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                               <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} placeholder="Full name" />
                           </div>
                           <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Contact No *</label>
-                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} placeholder="Mobile number" />
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Date of Birth</label>
+                              <div className="relative">
+                                  <Baby className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
+                                  <input type="date" className="w-full pl-12 border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.dob} onChange={e=>setFormData({...formData, dob: e.target.value})} />
+                              </div>
                           </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Contact No *</label>
+                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} placeholder="Mobile number" />
+                          </div>
                           <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">State</label>
                               <select 
@@ -192,6 +222,9 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                                 {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                               </select>
                           </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">District</label>
                               {formData.state === 'West Bengal' ? (
@@ -211,11 +244,10 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                                 />
                               )}
                           </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Address Line</label>
-                          <input className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} placeholder="Flat/House No, Street, Landmark" />
+                          <div className="space-y-1.5">
+                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Address Line</label>
+                              <input className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} placeholder="Flat/House No, Street, Landmark" />
+                          </div>
                       </div>
 
                       <div className="space-y-1.5">
