@@ -15,16 +15,24 @@ interface ReceiptProps {
 
 export const Receipt: React.FC<ReceiptProps> = ({ payment, invoice, onClose, logo, signature }) => {
   const handlePrint = () => { window.print(); };
-  useEffect(() => { const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', handleEsc); return () => window.removeEventListener('keydown', handleEsc); }, [onClose]);
+  
+  useEffect(() => { 
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; 
+    window.addEventListener('keydown', handleEsc); 
+    return () => window.removeEventListener('keydown', handleEsc); 
+  }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 bg-opacity-75 z-[70] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm print:p-0 print:bg-white print:absolute print:inset-0">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in print:shadow-none print:w-full print:rounded-none print:max-h-none">
-        {/* Sticky Header for UI */}
-        <div className="bg-[#3159a6] p-4 flex justify-between items-center text-white flex-shrink-0 print:hidden">
+    <div className="fixed inset-0 bg-black/80 bg-opacity-75 z-[70] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm print:bg-white print:p-0 print:block print:static">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in print:shadow-none print:w-full print:max-w-none print:rounded-none print:max-h-none print:overflow-visible">
+        {/* Header - Hidden on Print */}
+        <div className="bg-[#3159a6] p-4 flex justify-between items-center text-white flex-shrink-0 print:hidden !important">
           <h3 className="font-bold uppercase tracking-widest text-xs ml-2">Digital Receipt Preview</h3>
           <div className="flex gap-2">
-            <button onClick={handlePrint} className="bg-white text-[#3159a6] px-4 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 hover:bg-blue-50 transition-all shadow-sm">
+            <button 
+              onClick={handlePrint} 
+              className="bg-white text-[#3159a6] px-4 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 hover:bg-blue-50 transition-all shadow-sm active:scale-95"
+            >
               <Printer size={16} /> Print Receipt
             </button>
             <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition-all">
@@ -33,8 +41,8 @@ export const Receipt: React.FC<ReceiptProps> = ({ payment, invoice, onClose, log
           </div>
         </div>
 
-        {/* Scrollable Receipt Body */}
-        <div id="receipt-printable-area" className="p-8 sm:p-12 bg-white overflow-y-auto custom-scrollbar flex-grow print:overflow-visible print:p-0">
+        {/* This ID "invoice-printable-area" matches the global print styles in index.html */}
+        <div id="invoice-printable-area" className="p-8 sm:p-12 bg-white overflow-y-auto custom-scrollbar flex-grow print:overflow-visible print:p-0 print:block !important">
             <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
                 <div className="flex gap-6">
                     <div className="h-20 w-20 flex items-center justify-center border border-gray-100 rounded-2xl p-2 bg-white">
