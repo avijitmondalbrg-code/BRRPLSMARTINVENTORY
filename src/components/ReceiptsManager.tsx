@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Invoice, PaymentRecord, UserRole } from '../types';
 import { COMPANY_BANK_ACCOUNTS } from '../constants';
@@ -163,60 +164,83 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
       </div>
 
       {showCreateModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-                  <div className={`p-5 text-white flex justify-between items-center font-black uppercase tracking-widest ${editingReceipt ? 'bg-blue-600' : 'bg-primary'}`}>
-                    <h3>{editingReceipt ? 'Modify' : 'New'} Payment Receipt</h3>
-                    <button onClick={() => setShowCreateModal(false)}><X size={24}/></button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden animate-fade-in my-auto">
+                  <div className={`p-5 text-white flex justify-between items-center font-black uppercase tracking-widest flex-shrink-0 ${editingReceipt ? 'bg-blue-600' : 'bg-primary'}`}>
+                    <h3 className="ml-2">{editingReceipt ? 'Modify' : 'New'} Payment Receipt</h3>
+                    <button onClick={() => setShowCreateModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
                   </div>
-                  <div className="p-8 space-y-5">
-                      <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Target Invoice</label>
+                  
+                  <div className="p-8 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Invoice Selection *</label>
                         <select 
-                          className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-teal-500 outline-none transition-all font-bold text-gray-700 bg-gray-50" 
+                          className="w-full border-2 border-gray-100 p-4 rounded-xl focus:border-teal-500 outline-none transition-all font-bold text-gray-700 bg-white shadow-sm" 
                           value={selectedInvoiceId} 
                           onChange={e => { setSelectedInvoiceId(e.target.value); if(!editingReceipt) setAmount(invoices.find(i=>i.id===e.target.value)?.balanceDue || 0); }}
                           disabled={!!editingReceipt}
                         >
-                          <option value="">-- Select Invoice --</option>
+                          <option value="">-- Choose Patient Invoice --</option>
                           {invoices.map(inv => <option key={inv.id} value={inv.id}>{inv.id} • {inv.patientName} (Due: ₹{inv.balanceDue})</option>)}
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Payment Date</label>
-                          <input type="date" className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-teal-500 outline-none font-bold text-gray-700" value={date} onChange={e=>setDate(e.target.value)} />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Collection Date</label>
+                          <input type="date" className="w-full border-2 border-gray-100 p-3.5 rounded-xl focus:border-teal-500 outline-none font-bold text-gray-700 bg-white shadow-sm" value={date} onChange={e=>setDate(e.target.value)} />
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Method</label>
-                          <select className="w-full border-2 border-gray-100 p-3 rounded-xl outline-none focus:border-teal-500 font-bold text-gray-700 bg-gray-50" value={method} onChange={e => setMethod(e.target.value as any)}>
-                            <option value="Cash">Cash</option>
-                            <option value="UPI">UPI</option>
-                            <option value="Account Transfer">Bank Transfer</option>
-                            <option value="Cheque">Cheque</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="EMI">EMI</option>
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Payment Method</label>
+                          <select className="w-full border-2 border-gray-100 p-3.5 rounded-xl outline-none focus:border-teal-500 font-bold text-gray-700 bg-white shadow-sm" value={method} onChange={e => setMethod(e.target.value as any)}>
+                            <option value="Cash">Cash Ledger</option>
+                            <option value="UPI">UPI Digital</option>
+                            <option value="Account Transfer">Bank RTGS/IMPS</option>
+                            <option value="Cheque">Bank Cheque</option>
+                            <option value="Credit Card">Card Swipe</option>
+                            <option value="EMI">Consumer Finance</option>
                           </select>
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Received Bank</label>
-                        <select className="w-full border-2 border-gray-100 p-3 rounded-xl outline-none focus:border-teal-500 font-bold text-teal-700 bg-gray-50" value={bankDetails} onChange={e => setBankDetails(e.target.value)}>
-                          <option value="">-- No Bank (Cash) --</option>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Company Bank Node</label>
+                        <select className="w-full border-2 border-gray-100 p-3.5 rounded-xl outline-none focus:border-teal-500 font-bold text-teal-700 bg-white shadow-sm" value={bankDetails} onChange={e => setBankDetails(e.target.value)}>
+                          <option value="">-- No Bank (Direct Cash) --</option>
                           {COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Amount (INR)</label>
-                        <input type="number" className="w-full border-2 border-gray-100 p-4 rounded-xl font-black text-2xl text-teal-800 focus:border-teal-500 outline-none" value={amount || ''} onChange={e => setAmount(Number(e.target.value))} placeholder="0.00" />
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Amount to Record (INR) *</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-teal-600 text-xl">₹</span>
+                          <input 
+                            type="number" 
+                            className="w-full pl-10 border-2 border-gray-100 p-5 rounded-xl font-black text-3xl text-teal-800 focus:border-teal-500 outline-none bg-white shadow-inner" 
+                            value={amount || ''} 
+                            onChange={e => setAmount(Number(e.target.value))} 
+                            placeholder="0.00" 
+                          />
+                        </div>
                       </div>
+                      
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Entry Memo / Reference</label>
+                        <input 
+                          type="text" 
+                          className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-teal-500 outline-none font-medium text-gray-600 bg-white shadow-sm" 
+                          value={note} 
+                          onChange={e => setNote(e.target.value)} 
+                          placeholder="Transaction ID or internal note..." 
+                        />
+                      </div>
+                  </div>
 
-                      <button onClick={handleSaveReceipt} className={`w-full text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-[0.2em] mt-2 ${editingReceipt ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-900/20' : 'bg-green-600 hover:bg-green-700 shadow-green-900/20'}`}>
-                        {editingReceipt ? 'Update Receipt' : 'Save Receipt'}
-                      </button>
+                  <div className="p-6 bg-gray-50 border-t border-gray-100 flex-shrink-0">
+                    <button onClick={handleSaveReceipt} className={`w-full text-white font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-[0.3em] text-[10px] ${editingReceipt ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                      {editingReceipt ? 'Confirm Change' : 'Finalize Money Receipt'}
+                    </button>
                   </div>
               </div>
           </div>
