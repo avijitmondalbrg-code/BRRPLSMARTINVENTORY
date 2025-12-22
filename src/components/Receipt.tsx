@@ -23,8 +23,8 @@ export const Receipt: React.FC<ReceiptProps> = ({ payment, invoice, onClose, log
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 bg-opacity-75 z-[70] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm print:bg-white print:p-0 print:block print:static">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in print:shadow-none print:w-full print:max-w-none print:rounded-none print:max-h-none print:overflow-visible">
+    <div className="fixed inset-0 bg-black/80 bg-opacity-75 z-[70] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm print:bg-white print:p-0 print:block">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] overflow-hidden animate-fade-in print-no-shadow print:w-full print:max-w-none print:rounded-none print:max-h-none print:overflow-visible">
         {/* Header - Hidden on Print */}
         <div className="bg-[#3159a6] p-4 flex justify-between items-center text-white flex-shrink-0 print:hidden !important">
           <h3 className="font-bold uppercase tracking-widest text-xs ml-2">Digital Receipt Preview</h3>
