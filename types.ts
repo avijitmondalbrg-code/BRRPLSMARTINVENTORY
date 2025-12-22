@@ -190,6 +190,14 @@ export interface Lead {
   name: string;
   phone: string;
   email?: string;
+  // Fix: Added missing properties required by the CRM module
+  address?: string;
+  dob?: string;
+  comment?: string;
+  problem?: string;
+  referDoctor?: string;
+  haPotential?: 'Yes' | 'No';
+  entryBy?: string;
   source: string; // e.g. 'Walk-in', 'Facebook', 'Referral'
   status: LeadStatus;
   assignedTo?: string;

@@ -276,80 +276,110 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
 
       {/* Add Lead Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-0 overflow-hidden animate-fade-in my-8">
-                <div className="bg-primary p-5 flex justify-between items-center text-white">
-                    <h3 className="text-lg font-bold">Add New Inquiry Lead</h3>
-                    <button onClick={() => setShowAddModal(false)} className="text-white/80 hover:text-white"><XCircle/></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in my-auto border-4 border-white">
+                <div className="bg-primary p-6 flex justify-between items-center text-white flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <Plus className="h-5 w-5" />
+                        <h3 className="text-lg font-black uppercase tracking-widest">New Inquiry Record</h3>
+                    </div>
+                    <button onClick={() => setShowAddModal(false)} className="text-white/80 hover:text-white transition-transform hover:rotate-90"><XCircle size={28}/></button>
                 </div>
-                <form onSubmit={handleAddSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Full Name *</label>
-                            <input required className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gray-50/30">
+                    <form id="add-lead-form" onSubmit={handleAddSubmit} className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Full Name *</label>
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                    <input required className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Patient Name" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Phone No *</label>
+                                <div className="relative">
+                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                    <input required className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Active Number" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Date of Birth</label>
+                                <div className="relative">
+                                    <Baby className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                    <input type="date" className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.dob || ''} onChange={e => setFormData({...formData, dob: e.target.value})} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Ref. Dr. (Optional)</label>
+                                <div className="relative">
+                                    <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                    <input className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.referDoctor || ''} onChange={e => setFormData({...formData, referDoctor: e.target.value})} placeholder="Referrer name" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">HA Potential</label>
+                                <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.haPotential} onChange={e => setFormData({...formData, haPotential: e.target.value as any})}>
+                                    <option value="Yes">Yes (High Interest)</option>
+                                    <option value="No">No (Inquiry Only)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Entry By</label>
+                                <input className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.entryBy || ''} onChange={e => setFormData({...formData, entryBy: e.target.value})} placeholder="Your Name" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Phone No *</label>
-                            <input required className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Date of Birth (Optional)</label>
-                            <input type="date" className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.dob || ''} onChange={e => setFormData({...formData, dob: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Ref. Dr. (Optional)</label>
-                            <input className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.referDoctor || ''} onChange={e => setFormData({...formData, referDoctor: e.target.value})} placeholder="Referrer name" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">HA Potential</label>
-                            <select className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold bg-white" value={formData.haPotential} onChange={e => setFormData({...formData, haPotential: e.target.value as any})}>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Entry By</label>
-                            <input className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.entryBy || ''} onChange={e => setFormData({...formData, entryBy: e.target.value})} placeholder="Your Name" />
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Inquiry Source</label>
-                            <select className="w-full border-2 border-gray-100 rounded-xl p-3 bg-white font-bold" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}>
-                                <option>Walk-in</option>
-                                <option>Facebook Ad</option>
-                                <option>Google Ad</option>
-                                <option>Referral</option>
-                                <option>Camp</option>
-                            </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Inquiry Source</label>
+                                <select className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-white font-bold" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}>
+                                    <option>Walk-in</option>
+                                    <option>Facebook Ad</option>
+                                    <option>Google Ad</option>
+                                    <option>Referral</option>
+                                    <option>Camp</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Potential Sale Value</label>
+                                <div className="relative">
+                                    <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                    <input type="number" className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 font-black text-primary bg-white" value={formData.value || ''} onChange={e => setFormData({...formData, value: Number(e.target.value)})} placeholder="0.00"/>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Potential Sale Value</label>
-                            <input type="number" className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold" value={formData.value || ''} onChange={e => setFormData({...formData, value: Number(e.target.value)})} placeholder="0.00"/>
+
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Current Address</label>
+                            <div className="relative">
+                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                                <input className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-bold bg-white" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Area / City" />
+                            </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Address (Optional)</label>
-                        <input className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} />
-                    </div>
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Problem Description</label>
+                            <div className="relative">
+                                <AlertCircle className="absolute left-4 top-4 text-gray-300" size={18}/>
+                                <textarea className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-medium h-20 resize-none bg-white" value={formData.problem || ''} onChange={e => setFormData({...formData, problem: e.target.value})} placeholder="e.g. Tinnitus, Hearing loss in left ear..." />
+                            </div>
+                        </div>
 
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Problem Description (Optional)</label>
-                        <input className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-bold" value={formData.problem || ''} onChange={e => setFormData({...formData, problem: e.target.value})} placeholder="e.g. Tinnitus, Hearing loss in left ear" />
-                    </div>
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Detailed Observation / Comment</label>
+                            <div className="relative">
+                                <MessageSquare className="absolute left-4 top-4 text-gray-300" size={18}/>
+                                <textarea className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-medium h-28 resize-none bg-white" value={formData.comment || ''} onChange={e => setFormData({...formData, comment: e.target.value})} placeholder="Internal clinical or sales notes..." />
+                            </div>
+                        </div>
+                    </form>
+                </div>
 
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-1.5 ml-1">Comment / Observations</label>
-                        <textarea className="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-primary outline-none transition font-medium h-24 resize-none" value={formData.comment || ''} onChange={e => setFormData({...formData, comment: e.target.value})} placeholder="Internal notes about the inquiry..." />
-                    </div>
-
-                    <div className="flex gap-4 pt-2">
-                        <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 border-2 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition">Cancel</button>
-                        <button type="submit" className="flex-[2] bg-primary text-white py-3 rounded-xl hover:bg-teal-800 font-bold shadow-lg transition">Create Lead Record</button>
-                    </div>
-                </form>
+                <div className="p-8 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 border-2 border-gray-200 rounded-[2rem] font-black uppercase tracking-widest text-[10px] text-gray-400 hover:bg-white transition active:scale-95">Discard</button>
+                    <button type="submit" form="add-lead-form" className="flex-[2] bg-primary text-white py-4 rounded-[2rem] hover:bg-teal-800 font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl shadow-blue-900/30 transition-all active:scale-95">Save Inquiry Profile</button>
+                </div>
             </div>
         </div>
       )}
