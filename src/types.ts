@@ -50,6 +50,7 @@ export interface Patient {
   gstin?: string; // Patient's GSTIN (for B2B)
   addedDate?: string; // Date patient was added to system
   notes?: string; // Paragraph notes about the patient
+  dob?: string;
 }
 
 export interface PaymentRecord {
@@ -189,6 +190,13 @@ export interface Lead {
   name: string;
   phone: string;
   email?: string;
+  address?: string;
+  dob?: string;
+  comment?: string;
+  problem?: string;
+  referDoctor?: string;
+  haPotential?: 'Yes' | 'No';
+  entryBy?: string;
   source: string; // e.g. 'Walk-in', 'Facebook', 'Referral'
   status: LeadStatus;
   assignedTo?: string;
