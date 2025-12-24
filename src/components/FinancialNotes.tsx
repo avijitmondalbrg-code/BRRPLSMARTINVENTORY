@@ -104,11 +104,8 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         <div className="flex justify-between items-start border-b-4 border-slate-900 pb-10 mb-10">
             <div className="flex gap-8">
                 <div className="h-28 w-28 flex items-center justify-center bg-white rounded-3xl p-2 border-2 border-slate-50"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                    <p className="text-sm text-slate-600 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
-                    <p className="text-[11px] text-slate-800 mt-4 leading-relaxed max-w-sm font-semibold">{COMPANY_ADDRESS}</p>
-                    <p className="text-[11px] text-slate-900 font-black uppercase tracking-widest">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                <div className="min-h-[100px]">
+                    {/* Company details blanked as requested */}
                 </div>
             </div>
             <div className="text-right">

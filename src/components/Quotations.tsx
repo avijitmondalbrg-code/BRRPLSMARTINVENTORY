@@ -143,11 +143,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
                     <div className="flex gap-6">
                         <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div>
-                            <h1 className="text-2xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1>
-                            <p className="text-xs text-gray-700 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
-                            <p className="text-[10px] text-gray-800 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p>
-                            <p className="text-[10px] text-gray-800 mt-1 uppercase font-bold">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                        <div className="min-h-[100px]">
+                            {/* Company text blanked for letterhead */}
                         </div>
                     </div>
                     <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>

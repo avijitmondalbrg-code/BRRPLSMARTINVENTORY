@@ -48,14 +48,8 @@ export const Receipt: React.FC<ReceiptProps> = ({ payment, invoice, onClose, log
                     <div className="h-20 w-20 flex items-center justify-center border border-gray-100 rounded-2xl p-2 bg-white">
                       <img src={logo} alt="Logo" className="h-full w-full object-contain" />
                     </div>
-                    <div>
-                        <h1 className="text-xl font-black text-gray-800 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                        <p className="text-[10px] font-black text-gray-700 italic mt-2 tracking-tight">{COMPANY_TAGLINE}</p>
-                        <div className="text-[9px] text-gray-800 mt-3 leading-relaxed max-w-xs">
-                          <p>{COMPANY_ADDRESS}</p>
-                          <p className="font-bold mt-1 text-gray-900">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
-                          <p className="mt-1 uppercase font-bold text-gray-600">GSTIN: {CLINIC_GSTIN}</p>
-                        </div>
+                    <div className="min-h-[80px]">
+                        {/* Company text blanked for letterhead */}
                     </div>
                 </div>
                 <div className="text-right">

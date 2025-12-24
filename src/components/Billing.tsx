@@ -313,7 +313,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   return (
     <div className="max-w-5xl mx-auto pb-10">
-      {/* Rest of the multi-step form (patient, product, review steps) remains same as before but ensured robust UI */}
       <div className="mb-6 flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 hover:bg-gray-100 rounded-full text-gray-400 shadow-sm transition"><ArrowLeft size={24} /></button><h2 className="text-2xl font-black uppercase tracking-tighter text-gray-800">Invoice Architect</h2></div>
         <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl border">{['patient', 'product', 'payment', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${step === s ? 'bg-[#3159a6] text-white shadow-lg' : 'bg-transparent text-gray-400'}`}>{idx+1}. {s}</button>))}</div>
@@ -444,7 +443,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0">
             {/* Header, Items Table, Financials (Similar to Quotations Review but with Invoice Details) */}
             <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
-              <div className="flex items-center gap-6"><img src={logo} alt="Logo" className="h-24 w-auto object-contain" /><div><h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1><p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p><p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p></div></div>
+              <div className="flex items-center gap-6">
+                <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
+                <div className="min-h-[100px]">
+                  {/* Company details blanked as requested */}
+                </div>
+              </div>
               <div className="text-right flex flex-col items-end"><div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg"><h2 className="text-lg font-black uppercase tracking-widest">Tax Invoice</h2></div><p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateNextId()}</p><p className="text-[11px] font-black text-slate-700 uppercase mt-1">DATE: {new Date().toLocaleDateString('en-IN')}</p></div>
             </div>
             {/* Client Section */}
