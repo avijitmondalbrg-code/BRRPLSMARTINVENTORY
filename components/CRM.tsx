@@ -339,6 +339,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                                     <option>Google Ad</option>
                                     <option>Referral</option>
                                     <option>Camp</option>
+                                    <option>Hospital</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
