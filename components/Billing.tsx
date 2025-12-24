@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2 } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -105,7 +105,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
     
-    // Split inventory items from manual items
     const inventoryIds = inv.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
     const manItems = inv.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
     
@@ -144,10 +143,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           gstRate: tempManual.gst,
           discount: 0,
           taxableValue: tempManual.price,
-          cgstAmount: 0, // Will be recalculated based on state
+          cgstAmount: 0,
           sgstAmount: 0,
           igstAmount: 0,
-          totalAmount: 0 // Will be recalculated
+          totalAmount: 0
       };
       setManualItems([...manualItems, newItem]);
       setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
@@ -157,10 +156,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       setManualItems(manualItems.filter(i => i.hearingAidId !== id));
   };
 
-  // INTER-STATE DETECTION
   const isInterState = patient.state && patient.state !== 'West Bengal';
-
-  // COMBINED CALCULATION
   const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
   
   let runningTaxableTotal: number = 0;
@@ -169,28 +165,15 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   let runningIGST: number = 0;
   let totalSubtotal: number = 0;
 
-  // 1. Process Inventory Items
   const invInvoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
       const itemTaxable: number = Math.max(0, item.price - itemDisc);
       const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
-      
       const totalTax = itemTaxable * (gstRate / 100);
       let cgst = 0, sgst = 0, igst = 0;
-
-      if (isInterState) {
-          igst = totalTax;
-          runningIGST += igst;
-      } else {
-          cgst = totalTax / 2;
-          sgst = totalTax / 2;
-          runningCGST += cgst;
-          runningSGST += sgst;
-      }
-      
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
       runningTaxableTotal += itemTaxable; 
       totalSubtotal += item.price;
-
       return { 
           hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, 
           price: item.price, discount: itemDisc, gstRate, taxableValue: itemTaxable, 
@@ -199,31 +182,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       };
   });
 
-  // 2. Process Manual Items
   const processedManualItems: InvoiceItem[] = manualItems.map(item => {
       const totalTax = item.taxableValue * (item.gstRate / 100);
       let cgst = 0, sgst = 0, igst = 0;
-
-      if (isInterState) {
-          igst = totalTax;
-          runningIGST += igst;
-      } else {
-          cgst = totalTax / 2;
-          sgst = totalTax / 2;
-          runningCGST += cgst;
-          runningSGST += sgst;
-      }
-
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
       runningTaxableTotal += item.taxableValue;
       totalSubtotal += item.price;
-
-      return {
-          ...item,
-          cgstAmount: cgst,
-          sgstAmount: sgst,
-          igstAmount: igst,
-          totalAmount: item.taxableValue + totalTax
-      };
+      return { ...item, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: item.taxableValue + totalTax };
   });
 
   const allInvoiceItems = [...invInvoiceItems, ...processedManualItems];
@@ -278,7 +243,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       const newPayment: PaymentRecord = { id: `PAY-${Date.now()}`, date: payDate, amount: newPaymentAmount, method: payMethod, bankDetails: payBank || "" };
       const updatedPayments = [...(collectingInvoice.payments || []), newPayment];
       const totalPaid = updatedPayments.reduce((sum, p: PaymentRecord) => sum + p.amount, 0);
-      const balanceDue = Math.max(0, collectingInvoice.finalTotal - totalPaid);
+      const balanceDue = Math.max(0, Math.round(collectingInvoice.finalTotal) - totalPaid);
       const updatedInvoice: Invoice = { ...collectingInvoice, payments: updatedPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : 'Partial' };
       onUpdateInvoice(updatedInvoice);
       setShowCollectModal(false);
@@ -287,7 +252,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   };
 
   const openCollectModal = (inv: Invoice) => {
-      setViewMode('list'); 
       setCollectingInvoice(inv);
       setNewPaymentAmount(inv.balanceDue);
       setShowCollectModal(true);
@@ -296,7 +260,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   if (viewMode === 'list') {
       const filteredInvoices = (invoices || []).filter(inv => 
         inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        inv.patientName.toLowerCase().includes(searchTerm.toLowerCase())
+        inv.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.items.some(it => it.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        inv.items.some(it => it.model.toLowerCase().includes(searchTerm.toLowerCase()))
       ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return (
@@ -306,7 +272,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   <div className="flex gap-2 w-full sm:w-auto">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
-                        <input className="pl-10 pr-4 py-2 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-[#3159a6]" placeholder="Find invoice..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <input className="pl-10 pr-4 py-2 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-[#3159a6]" placeholder="Find by ID, Patient or Serial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                     </div>
                     <button onClick={handleStartNew} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition whitespace-nowrap"><Plus size={16} /> New Invoice</button>
                   </div>
@@ -315,7 +281,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-[#3159a6] text-white font-black border-b text-[10px] uppercase tracking-[0.2em]">
-                            <tr><th className="p-5">Invoice No</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5 text-right">Grand Total</th><th className="p-5 text-right">Outstanding</th><th className="p-5 text-center">Status</th><th className="p-5 text-center">Actions</th></tr>
+                            <tr><th className="p-5">Invoice No</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5">Device Units</th><th className="p-5 text-right">Grand Total</th><th className="p-5 text-right">Outstanding</th><th className="p-5 text-center">Status</th><th className="p-5 text-center">Actions</th></tr>
                         </thead>
                         <tbody className="divide-y text-sm">
                             {filteredInvoices.map(inv => (
@@ -323,6 +289,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <td className="p-5 font-black text-[#3159a6]">{inv.id}</td>
                                     <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
                                     <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{inv.patientName}</td>
+                                    <td className="p-5">
+                                        {inv.items.map((it, idx) => (
+                                            <div key={idx} className="mb-1 last:mb-0">
+                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand} {it.model}</p>
+                                                <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
+                                            </div>
+                                        ))}
+                                    </td>
                                     <td className="p-5 text-right font-black">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
                                     <td className="p-5 text-right font-black text-red-600">₹{(inv.balanceDue || 0).toLocaleString('en-IN')}</td>
                                     <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-red-50 text-red-700 border-red-100'}`}>{inv.paymentStatus}</span></td>
@@ -330,7 +304,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                         <div className="flex justify-center items-center gap-1">
                                             <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
                                             <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice"><Edit size={18}/></button>
-                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0}><Wallet size={18} className={inv.balanceDue <= 0 ? 'opacity-20' : ''}/></button>
+                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5}><Wallet size={18} className={inv.balanceDue <= 0.5 ? 'opacity-20' : ''}/></button>
                                             {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>)}
                                         </div>
                                     </td>
@@ -340,6 +314,61 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     </table>
                   </div>
               </div>
+
+              {/* Payment Collection Modal - Fixed & Added to List View */}
+              {showCollectModal && collectingInvoice && (
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fade-in">
+                      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
+                          <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+                              <h3 className="font-black uppercase tracking-widest text-xs ml-2">Record Outstanding Payment</h3>
+                              <button onClick={() => setShowCollectModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
+                          </div>
+                          <div className="p-10 space-y-6 bg-gray-50/50">
+                              <div className="bg-white p-4 rounded-2xl border-2 border-blue-50 shadow-sm">
+                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Target Account Reference</p>
+                                  <p className="font-black text-gray-800 text-lg">{collectingInvoice.id}</p>
+                                  <p className="text-xs font-bold text-blue-600 uppercase tracking-tight">{collectingInvoice.patientName}</p>
+                              </div>
+
+                              <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-1.5">
+                                          <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Payment Mode</label>
+                                          <select className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-700 outline-none focus:border-blue-500" value={payMethod} onChange={e=>setPayMethod(e.target.value as any)}>
+                                              <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option><option value="Cheque">Cheque</option><option value="EMI">Finance</option>
+                                          </select>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                          <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Date</label>
+                                          <input type="date" className="w-full border-2 border-gray-100 rounded-xl p-2.5 font-bold text-gray-700" value={payDate} onChange={e=>setPayDate(e.target.value)} />
+                                      </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Receiving Account</label>
+                                      <select className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-blue-800 outline-none" value={payBank} onChange={e=>setPayBank(e.target.value)}>
+                                          <option value="">-- No Bank (Cash Node) --</option>
+                                          {COMPANY_BANK_ACCOUNTS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+                                      </select>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Collection Amount (INR)</label>
+                                      <div className="relative">
+                                          <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" size={24} />
+                                          <input type="number" className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl text-3xl font-black text-gray-800 outline-none focus:border-blue-500" value={newPaymentAmount || ''} onChange={e=>setNewPaymentAmount(Number(e.target.value))} />
+                                      </div>
+                                      <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest text-right mt-1">Due: ₹{collectingInvoice.balanceDue.toLocaleString()}</p>
+                                  </div>
+                              </div>
+
+                              <button onClick={handleConfirmCollection} className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-blue-700 transition active:scale-95 text-[10px] flex items-center justify-center gap-2">
+                                  <CheckCircle2 size={16}/> Finalize Receipt Entry
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              )}
           </div>
       );
   }
