@@ -46,6 +46,21 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
   const handleSelectPatient = (p: Patient) => { setPatient(p); setPatientSearchTerm(''); };
 
+  const handleEditClick = (q: Quotation) => {
+    setEditingId(q.id);
+    setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+    setSelectedItemIds(q.items.map(i => i.hearingAidId));
+    setDiscountValue(q.discountValue);
+    setQuotationNotes(q.notes || '');
+    setWarranty(q.warranty || '2 Years Standard Warranty');
+    setStep('review');
+    setViewMode('edit');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
     const subtotal = inventory.filter(i => selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price, 0);
@@ -113,10 +128,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 <td className="p-4 font-medium">{q.patientName}</td>
                                 <td className="p-4 text-right font-bold">₹{q.finalTotal.toLocaleString()}</td>
                                 <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${q.status === 'Converted' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-800 border-yellow-200'}`}>{q.status}</span></td>
-                                <td className="p-4 flex justify-center gap-2">
-                                    <button onClick={() => { setEditingId(q.id); setPatient(q.patientDetails!); setSelectedItemIds(q.items.map(i=>i.hearingAidId)); setDiscountValue(q.discountValue); setQuotationNotes(q.notes || ''); setStep('review'); setViewMode('edit'); }} className="p-1 text-gray-500 hover:text-teal-600" title="Edit/View"><Edit size={18}/></button>
+                                <td className="p-4 flex justify-center items-center gap-2">
+                                    <button onClick={() => handleEditClick(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="View/Edit"><Edit size={18}/></button>
+                                    <button onClick={() => { handleEditClick(q); setTimeout(() => window.print(), 500); }} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Print"><Printer size={18}/></button>
                                     {userRole === 'admin' && (
-                                        <button onClick={() => { if(window.confirm(`Delete quotation ${q.id}?`)) onDelete(q.id); }} className="p-1 text-red-400 hover:text-red-600" title="Delete"><Trash2 size={18}/></button>
+                                        <button onClick={() => { if(window.confirm(`Delete quotation ${q.id}?`)) onDelete(q.id); }} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>
                                     )}
                                 </td>
                             </tr>
@@ -166,48 +182,60 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
             </div>
         )}
         {step === 'review' && (
-            <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0">
-                <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
-                    <div className="flex gap-6">
-                        <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div className="min-h-[100px]">
-                            {/* Company text blanked for letterhead */}
-                        </div>
-                    </div>
-                    <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
-                </div>
-                <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-600 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-800">{patient.phone}</p></div></div>
-                <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
-                    <thead className="bg-[#3159a6] text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
-                    <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-900 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
-                </table>
-                
-                <div className="flex flex-col sm:flex-row justify-between gap-8 mb-10">
-                    <div className="flex-grow">
-                        {quotationNotes && (
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
-                                <h4 className="text-[9px] font-black uppercase text-gray-600 mb-2 border-b border-slate-200 pb-1 tracking-widest">Quotation Notes / Custom Remarks:</h4>
-                                <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{quotationNotes}</p>
+            <div className="flex flex-col items-center bg-gray-100/50 p-4 sm:p-10 min-h-screen print:p-0 print:bg-white">
+                <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0 print:shadow-none print:border-0 w-full max-w-[900px]">
+                    <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
+                        <div className="flex gap-6">
+                            <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
+                            <div className="min-h-[100px]">
+                                 <h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
+                                <p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
+                                <p className="text-[10px] text-slate-900 mt-2 leading-tight max-w-md font-semibold">{COMPANY_ADDRESS}</p>
+                                <p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
                             </div>
-                        )}
+                        </div>
+                        <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
                     </div>
-                    <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-inner">
-                        <div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Estimated Net Total</span><span className="text-4xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</span></div>
-                        <p className="text-[9px] text-right text-gray-600 font-bold uppercase tracking-wider">Adjustment of ₹{discountValue.toLocaleString()} applied</p>
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-end mt-20">
-                    <div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-900 inline-block mb-3 tracking-widest text-gray-900">Standard Terms</p>
-                        <div className="text-[8.5px] text-gray-800 font-bold space-y-1 leading-tight uppercase">
-                            <p>1. This is a tentative estimate and valid for 15 days from date of issuance.</p>
-                            <p>2. Hearing aids are classification HSN 9021 40 90 (GST Exempt).</p>
-                            <p>3. Subject to Kolkata Jurisdiction.</p>
+                    <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-600 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-800">{patient.phone}</p></div></div>
+                    <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
+                        <thead className="bg-[#3159a6] text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
+                        <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-900 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
+                    </table>
+                    
+                    <div className="flex flex-col sm:flex-row justify-between gap-8 mb-10">
+                        <div className="flex-grow">
+                            {quotationNotes && (
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
+                                    <h4 className="text-[9px] font-black uppercase text-gray-600 mb-2 border-b border-slate-200 pb-1 tracking-widest">Quotation Notes / Custom Remarks:</h4>
+                                    <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{quotationNotes}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-inner">
+                            <div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Estimated Net Total</span><span className="text-4xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</span></div>
+                            <p className="text-[9px] text-right text-gray-600 font-bold uppercase tracking-wider">Adjustment of ₹{discountValue.toLocaleString()} applied</p>
                         </div>
                     </div>
-                    <div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Authorized Signatory</p></div>
+
+                    <div className="flex justify-between items-end mt-20">
+                        <div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-900 inline-block mb-3 tracking-widest text-gray-900">Standard Terms</p>
+                            <div className="text-[8.5px] text-gray-800 font-bold space-y-1 leading-tight uppercase">
+                                <p>1. This is an estimated price based on selected model and valid for 15 days from date of issuance.</p>
+                                <p>2. Hearing Aid will be delivered within 7 days of receipt of the confirmed order.</p>
+                                <p>3. Cheque payment is subject to the realization.</p>
+                                <p>4. Hearing aids are classified under HSN 9021 40 90 (GST Exempted).</p>
+                                <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                            </div>
+                        </div>
+                        <div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Authorized Signatory</p></div>
+                    </div>
                 </div>
-                <div className="mt-12 flex gap-4 print:hidden"><button onClick={() => setStep('product')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs text-gray-900">Edit Details</button><button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-4 px-12 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs"> <Save size={18}/> Save Quotation</button></div>
+                
+                <div className="mt-12 flex gap-4 w-full max-w-[900px] print:hidden">
+                    <button onClick={() => setStep('product')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs text-gray-900">Edit Details</button>
+                    <button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-4 px-8 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs transition-all active:scale-95"> <Save size={18}/> Save Quotation</button>
+                    <button onClick={handlePrint} className="p-4 bg-slate-900 text-white rounded-xl shadow-xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Print Now"><Printer size={22}/></button>
+                </div>
             </div>
         )}
     </div>
