@@ -215,7 +215,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 <input className="w-full border-2 border-gray-50 bg-gray-50 p-3 rounded-2xl outline-none font-medium text-sm focus:border-[#3159a6] focus:bg-white transition" placeholder="e.g. Booking for Phonak Audéo L90-R" value={formData.modelInterest} onChange={e => setFormData({...formData, modelInterest: e.target.value})} />
               </div>
 
-              <button type="submit" className="w-full bg-[#3159a6] text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all active:scale-95 text-[10px] mt-4">Confirm Financial Receipt</button>
+              <button type="submit" className="w-full bg-[#3159a6] text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all active:scale-95 text-[10px] mt-4">Confirm Payment Receipt</button>
             </form>
           </div>
         </div>
