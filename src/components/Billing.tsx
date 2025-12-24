@@ -537,12 +537,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
                         <div className="flex items-center gap-6">
                             <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
-                            <div>
-                                <h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                                <p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
-                                <p className="text-[10px] text-slate-900 mt-2 leading-tight max-w-md font-semibold">{COMPANY_ADDRESS}</p>
-                                <p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
-                            </div>
+                            
                         </div>
                         <div className="text-right flex flex-col items-end">
                             <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
@@ -570,8 +565,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <div>
                                 <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
                                 <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_ADDRESS}</p>
                                 <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: {COMPANY_PHONES}</p>
-                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL} | GSTIN: {CLINIC_GSTIN}</p>
                             </div>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200">
@@ -715,10 +711,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="w-[60%]">
                             <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
                             <div className="text-[10px] text-slate-800 font-bold space-y-1 leading-tight uppercase tracking-tight">
-                                <p>1. Certified Medical Hearing aids (HSN 90214090).</p>
-                                <p>2. Non-Refundable clinical goods. Warranty: {warranty}.</p>
-                                <p>3. UDYAM-WB-18-0032916 (Micro Enterprise Hub).</p>
-                                <p>4. Subject to Jurisdiction of Courts in Kolkata, West Bengal.</p>
+                            <p>1. Please keep this Invoice safe for future correspondence.</p>
+                            <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                            <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. Theseexemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June2017.</p>
+                            <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>    
+                            <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
                             </div>
                         </div>
                         <div className="text-center w-64">
