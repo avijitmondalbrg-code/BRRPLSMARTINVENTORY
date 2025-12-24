@@ -22,12 +22,13 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [step, setStep] = useState<'patient' | 'product' | 'review'>('patient');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [listSearchTerm, setListSearchTerm] = useState(''); // Dedicated state for listing search
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
-  const [quotationNotes, setQuotationNotes] = useState<string>(''); // Added notes state
+  const [quotationNotes, setQuotationNotes] = useState<string>(''); 
 
   const generateNextId = () => {
     const fy = getFinancialYear();
@@ -39,7 +40,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     return `${prefix}${nextNo.toString().padStart(3, '0')}`;
   };
 
-  const resetForm = () => { setStep('patient'); setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' }); setSelectedItemIds([]); setDiscountValue(0); setWarranty('2 Years Standard Warranty'); setQuotationNotes(''); setEditingId(null); setPatientSearchTerm(''); };
+  const resetForm = () => { setStep('patient'); setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' }); setSelectedItemIds([]); setDiscountValue(0); setWarranty('2 Years Standard Warranty'); setQuotationNotes(''); setEditingId(null); setPatientSearchTerm(''); setSearchTerm(''); };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
 
@@ -68,7 +69,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
       finalTotal: subtotal - discountValue, 
       date: new Date().toISOString().split('T')[0], 
       warranty, 
-      notes: quotationNotes, // Include notes
+      notes: quotationNotes,
       patientDetails: patient, 
       status: 'Draft' 
     };
@@ -77,21 +78,47 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   };
 
   if (viewMode === 'list') {
+      const filteredQuotations = quotations.filter(q => 
+        q.id.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
+        q.patientName.toLowerCase().includes(listSearchTerm.toLowerCase())
+      );
+
       return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center"><h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileQuestion className="text-primary" /> Quotations</h2><button onClick={handleStartNew} className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow transition"><Plus size={20} /> Create Quotation</button></div>
-            <div className="bg-white rounded-lg shadow overflow-hidden border">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileQuestion className="text-primary" /> Quotations</h2>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                        <input 
+                            className="pl-10 pr-4 py-2 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-primary" 
+                            placeholder="Find by ID or Patient..." 
+                            value={listSearchTerm} 
+                            onChange={e => setListSearchTerm(e.target.value)} 
+                        />
+                    </div>
+                    <button onClick={handleStartNew} className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition whitespace-nowrap"><Plus size={20} /> Create Quotation</button>
+                </div>
+            </div>
+            <div className="bg-white rounded-xl shadow overflow-hidden border">
                 <table className="w-full text-left">
                     <thead className="bg-gray-50 text-gray-600 font-bold border-b text-xs uppercase"><tr><th className="p-4">Quotation ID</th><th className="p-4">Date</th><th className="p-4">Patient</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">Status</th><th className="p-4 text-center">Actions</th></tr></thead>
                     <tbody className="divide-y text-sm">
-                        {quotations.map(q => (
+                        {filteredQuotations.length === 0 ? (
+                            <tr><td colSpan={6} className="p-8 text-center text-gray-400 italic">No quotations found</td></tr>
+                        ) : filteredQuotations.map(q => (
                             <tr key={q.id} className="hover:bg-gray-50">
                                 <td className="p-4 font-bold text-teal-700">{q.id}</td>
-                                <td className="p-4 text-gray-500">{q.date}</td>
+                                <td className="p-4 text-gray-500">{new Date(q.date).toLocaleDateString('en-IN')}</td>
                                 <td className="p-4 font-medium">{q.patientName}</td>
                                 <td className="p-4 text-right font-bold">₹{q.finalTotal.toLocaleString()}</td>
                                 <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${q.status === 'Converted' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-800 border-yellow-200'}`}>{q.status}</span></td>
-                                <td className="p-4 flex justify-center gap-2"><button onClick={() => { setEditingId(q.id); setPatient(q.patientDetails!); setSelectedItemIds(q.items.map(i=>i.hearingAidId)); setDiscountValue(q.discountValue); setQuotationNotes(q.notes || ''); setStep('review'); setViewMode('edit'); }} className="p-1 text-gray-500 hover:text-teal-600" title="Edit/View"><Edit size={18}/></button></td>
+                                <td className="p-4 flex justify-center gap-2">
+                                    <button onClick={() => { setEditingId(q.id); setPatient(q.patientDetails!); setSelectedItemIds(q.items.map(i=>i.hearingAidId)); setDiscountValue(q.discountValue); setQuotationNotes(q.notes || ''); setStep('review'); setViewMode('edit'); }} className="p-1 text-gray-500 hover:text-teal-600" title="Edit/View"><Edit size={18}/></button>
+                                    {userRole === 'admin' && (
+                                        <button onClick={() => { if(window.confirm(`Delete quotation ${q.id}?`)) onDelete(q.id); }} className="p-1 text-red-400 hover:text-red-600" title="Delete"><Trash2 size={18}/></button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -143,11 +170,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
                     <div className="flex gap-6">
                         <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                        <div>
-                            <h1 className="text-2xl font-black text-gray-900 uppercase leading-none">{COMPANY_NAME}</h1>
-                            <p className="text-xs text-gray-700 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
-                            <p className="text-[10px] text-gray-800 mt-3 leading-relaxed max-w-sm">{COMPANY_ADDRESS}</p>
-                            <p className="text-[10px] text-gray-800 mt-1 uppercase font-bold">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
+                        <div className="min-h-[100px]">
+                            {/* Company text blanked for letterhead */}
                         </div>
                     </div>
                     <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
