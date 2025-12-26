@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Invoice, PaymentRecord, UserRole } from '../types';
 import { COMPANY_BANK_ACCOUNTS } from '../constants';
-import { Search, Receipt as ReceiptIcon, Eye, Plus, X, Trash2, Edit } from 'lucide-react';
+import { Search, Receipt as ReceiptIcon, Eye, Plus, X, Trash2, Edit, Download, Calendar } from 'lucide-react';
 import { Receipt } from './Receipt';
 
 interface ReceiptsManagerProps {
@@ -22,6 +22,8 @@ interface FlatReceipt extends PaymentRecord {
 
 export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo, signature, onUpdateInvoice, onDeleteReceipt, userRole }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<FlatReceipt | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingReceipt, setEditingReceipt] = useState<FlatReceipt | null>(null);
@@ -36,19 +38,49 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
 
   const allReceipts: FlatReceipt[] = useMemo(() => {
     const receipts: FlatReceipt[] = [];
-    invoices.forEach(inv => {
-      inv.payments.forEach(pay => {
+    (invoices || []).forEach(inv => {
+      (inv.payments || []).forEach(pay => {
         receipts.push({ ...pay, invoiceId: inv.id, patientName: inv.patientName, invoice: inv });
       });
     });
     return receipts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices]);
 
-  const filteredReceipts = allReceipts.filter(r => 
-    r.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.invoiceId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReceipts = useMemo(() => {
+    return allReceipts.filter(r => {
+      const matchSearch = r.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          r.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          r.invoiceId.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStart = !startDate || r.date >= startDate;
+      const matchesEnd = !endDate || r.date <= endDate;
+      return matchSearch && matchesStart && matchesEnd;
+    });
+  }, [allReceipts, searchTerm, startDate, endDate]);
+
+  const exportToCSV = () => {
+    const headers = ['Receipt No', 'Date', 'Invoice Ref', 'Patient Name', 'Amount', 'Method', 'Bank Node', 'Memo'];
+    const rows = filteredReceipts.map(r => [
+      r.id,
+      r.date,
+      r.invoiceId,
+      `"${r.patientName}"`,
+      r.amount.toFixed(2),
+      r.method,
+      r.bankDetails || 'Direct',
+      `"${r.note || ''}"`
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `receipts_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const resetForm = () => {
     setSelectedInvoiceId('');
@@ -85,14 +117,12 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
       let updatedPayments: PaymentRecord[];
 
       if (editingReceipt) {
-        // Modification Logic
         updatedPayments = targetInvoice.payments.map(p => 
           p.id === editingReceipt.id 
             ? { ...p, amount, date, method, note: note || "", bankDetails: bankDetails || "" } 
             : p
         );
       } else {
-        // Creation Logic
         const newPayment: PaymentRecord = { 
           id: `PAY-${Date.now()}`, 
           date, 
@@ -121,12 +151,33 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><ReceiptIcon className="text-primary" /> Payment Receipts</h2>
-        {userRole === 'admin' && onUpdateInvoice && (
-            <button onClick={handleOpenCreate} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow hover:bg-teal-800 transition"><Plus size={20} /> Create Receipt</button>
-        )}
+        <div>
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><ReceiptIcon className="text-primary" /> Collection Registry</h2>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Payment & Receipt Ledger</p>
+        </div>
+        <div className="flex gap-2">
+            <button onClick={exportToCSV} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow hover:bg-green-700 transition uppercase text-[10px] tracking-widest"><Download size={18} /> Export CSV</button>
+            {userRole === 'admin' && onUpdateInvoice && (
+                <button onClick={handleOpenCreate} className="bg-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold shadow hover:bg-teal-800 transition uppercase text-[10px] tracking-widest"><Plus size={20} /> New Receipt</button>
+            )}
+        </div>
       </div>
-      <div className="bg-white p-4 rounded-lg shadow-sm border flex items-center gap-4"><Search className="text-gray-400" size={20} /><input type="text" placeholder="Search Receipts..." className="flex-1 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/></div>
+
+      <div className="bg-white p-4 rounded-xl shadow-sm border flex flex-col md:grid md:grid-cols-3 items-center gap-4">
+        <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input type="text" placeholder="Search by ID, Patient or Invoice..." className="w-full pl-10 pr-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-primary text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100 col-span-2 w-full">
+            <Calendar size={16} className="text-gray-400 ml-2"/>
+            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Received Date:</span>
+            <input type="date" className="bg-transparent text-xs font-bold outline-none" value={startDate} onChange={e=>setStartDate(e.target.value)} />
+            <span className="text-gray-300">-</span>
+            <input type="date" className="bg-transparent text-xs font-bold outline-none" value={endDate} onChange={e=>setEndDate(e.target.value)} />
+            {(startDate || endDate) && <button onClick={()=>{setStartDate(''); setEndDate('');}} className="text-red-500 p-1"><X size={14}/></button>}
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow overflow-hidden border">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -135,7 +186,7 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
               </thead>
               <tbody className="divide-y text-sm">
                   {filteredReceipts.length === 0 ? (
-                      <tr><td colSpan={6} className="p-12 text-center text-gray-400 italic">No receipts found matching your search.</td></tr>
+                      <tr><td colSpan={6} className="p-12 text-center text-gray-400 italic">No collection records found.</td></tr>
                   ) : filteredReceipts.map(receipt => (
                       <tr key={receipt.id} className="hover:bg-gray-50 transition">
                           <td className="p-4 font-mono text-xs text-teal-700 font-bold">{receipt.id}</td>

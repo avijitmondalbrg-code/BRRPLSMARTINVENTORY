@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { HearingAid, LOCATIONS, BRANDS, UserRole } from '../types';
-import { Plus, Search, Package, Layers, List, MapPin, CheckCircle, XCircle, Truck, Edit, Trash2, X, ChevronRight, Hash } from 'lucide-react';
+import { Plus, Search, Package, Layers, List, MapPin, CheckCircle, XCircle, Truck, Edit, Trash2, X, ChevronRight, Hash, Download } from 'lucide-react';
 
 interface InventoryProps {
   inventory: HearingAid[];
@@ -52,6 +52,31 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     return Object.values(groups).sort((a, b) => b.available - a.available);
   }, [filteredInventory]);
 
+  const exportToCSV = () => {
+    const headers = ['Brand', 'Model', 'Serial Number', 'HSN Code', 'Price', 'Location', 'Status', 'Added Date'];
+    const rows = filteredInventory.map(item => [
+      item.brand,
+      `"${item.model}"`,
+      item.serialNumber,
+      item.hsnCode || 'N/A',
+      item.price,
+      item.location,
+      item.status,
+      item.addedDate
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `inventory_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
     setIsBulkMode(false);
@@ -77,14 +102,12 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
     const currentHsn = newItem.hsnCode || '90214090';
 
     if (editingId) {
-      // Update logic
       onUpdate({
         ...newItem,
         id: editingId,
         hsnCode: currentHsn,
       } as HearingAid);
     } else if (isBulkMode) {
-      // Bulk add logic
       const serials = bulkSerials.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
       const newItems: HearingAid[] = serials.map(sn => ({
         ...newItem,
@@ -95,7 +118,6 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
       } as HearingAid));
       onAdd(newItems);
     } else {
-      // Single add logic
       onAdd({
         ...newItem,
         id: `HA-${Date.now()}`,
@@ -137,6 +159,9 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <List size={14} /> Details
             </button>
           </div>
+          <button onClick={exportToCSV} className="bg-green-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg hover:bg-green-700 transition font-black uppercase text-[10px] tracking-widest">
+            <Download size={16} /> Export CSV
+          </button>
           {userRole === 'admin' && (
             <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition font-black uppercase text-[10px] tracking-widest">
               <Plus size={16} /> New Entry
@@ -272,13 +297,13 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Brand</label>
-                  <select className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm bg-gray-50 font-bold focus:border-[#3159a6] outline-none transition" value={newItem.brand} onChange={e => setNewItem({...newItem, brand: e.target.value})}>
+                  <select className="w-full border-2 border-gray-100 rounded-2xl p-3 text-sm bg-gray-50 font-bold focus:border-[#3159a6] outline-none transition" value={newItem.brand} onChange={e => setNewItem({...newItem, brand: e.target.value})}>
                     {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Model Name</label>
-                  <input className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm font-bold focus:border-[#3159a6] outline-none" placeholder="e.g. Lumity L90" value={newItem.model} onChange={e => setNewItem({...newItem, model: e.target.value})} />
+                  <input className="w-full border-2 border-gray-100 rounded-2xl p-3 text-sm font-bold focus:border-[#3159a6] outline-none" placeholder="e.g. Lumity L90" value={newItem.model} onChange={e => setNewItem({...newItem, model: e.target.value})} />
                 </div>
               </div>
 
@@ -293,31 +318,31 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                 </div>
                 {isBulkMode ? (
                   <textarea 
-                    className="w-full border-2 border-gray-50 rounded-2xl p-4 text-sm font-mono focus:border-[#3159a6] outline-none h-32 bg-gray-50" 
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 text-sm font-mono focus:border-[#3159a6] outline-none h-32 bg-gray-50" 
                     placeholder="Enter serial numbers (one per line)..." 
                     value={bulkSerials} 
                     onChange={e => setBulkSerials(e.target.value)} 
                   />
                 ) : (
-                  <input className="w-full border-2 border-gray-50 rounded-2xl p-4 text-sm font-mono font-black uppercase tracking-widest focus:border-[#3159a6] outline-none bg-gray-50" placeholder="Unique S/N" value={newItem.serialNumber} onChange={e => setNewItem({...newItem, serialNumber: e.target.value})} />
+                  <input className="w-full border-2 border-gray-100 rounded-2xl p-4 text-sm font-mono font-black uppercase tracking-widest focus:border-[#3159a6] outline-none bg-gray-50" placeholder="Unique S/N" value={newItem.serialNumber} onChange={e => setNewItem({...newItem, serialNumber: e.target.value})} />
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Unit MRP (INR)</label>
-                  <input type="number" className="w-full border-2 border-gray-50 rounded-2xl p-3 text-lg font-black text-[#3159a6] outline-none" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} placeholder="0.00" />
+                  <input type="number" className="w-full border-2 border-gray-100 rounded-2xl p-3 text-lg font-black text-[#3159a6] outline-none" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} placeholder="0.00" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">HSN Code</label>
-                  <input className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm font-mono font-bold focus:border-[#3159a6] outline-none" value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} placeholder="90214090" />
+                  <input className="w-full border-2 border-gray-100 rounded-2xl p-3 text-sm font-mono font-bold focus:border-[#3159a6] outline-none" value={newItem.hsnCode} onChange={e => setNewItem({...newItem, hsnCode: e.target.value})} placeholder="90214090" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Store Location</label>
-                  <select className="w-full border-2 border-gray-50 rounded-2xl p-3 text-sm bg-gray-50 font-bold focus:border-[#3159a6] outline-none" value={newItem.location} onChange={e => setNewItem({...newItem, location: e.target.value})}>
+                  <select className="w-full border-2 border-gray-100 rounded-2xl p-3 text-sm bg-gray-50 font-bold focus:border-[#3159a6] outline-none" value={newItem.location} onChange={e => setNewItem({...newItem, location: e.target.value})}>
                     {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                   </select>
                 </div>

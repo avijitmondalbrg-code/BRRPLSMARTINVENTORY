@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, getFinancialYear } from '../constants';
-import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Sparkles, ShieldCheck, Edit, MessageSquare } from 'lucide-react';
+import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Sparkles, ShieldCheck, Edit, MessageSquare, Download, Calendar, X } from 'lucide-react';
 
 interface QuotationsProps {
   inventory: HearingAid[];
@@ -22,7 +22,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [step, setStep] = useState<'patient' | 'product' | 'review'>('patient');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [listSearchTerm, setListSearchTerm] = useState(''); // Dedicated state for listing search
+  const [listSearchTerm, setListSearchTerm] = useState('');
+  
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -57,9 +61,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setViewMode('edit');
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => { window.print(); };
 
   const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
@@ -92,29 +94,65 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setViewMode('list');
   };
 
-  if (viewMode === 'list') {
-      const filteredQuotations = quotations.filter(q => 
-        q.id.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
-        q.patientName.toLowerCase().includes(listSearchTerm.toLowerCase())
-      );
+  const filteredQuotations = useMemo(() => {
+    return quotations.filter(q => {
+      const matchSearch = q.id.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
+                          q.patientName.toLowerCase().includes(listSearchTerm.toLowerCase());
+      const matchesStart = !startDate || q.date >= startDate;
+      const matchesEnd = !endDate || q.date <= endDate;
+      return matchSearch && matchesStart && matchesEnd;
+    });
+  }, [quotations, listSearchTerm, startDate, endDate]);
 
+  const exportToCSV = () => {
+    const headers = ['Quotation ID', 'Date', 'Patient Name', 'Amount', 'Status', 'Items'];
+    const rows = filteredQuotations.map(q => [
+      q.id,
+      q.date,
+      `"${q.patientName}"`,
+      q.finalTotal.toFixed(2),
+      q.status,
+      `"${q.items.map(i => `${i.brand} ${i.model}`).join('; ')}"`
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `quotations_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (viewMode === 'list') {
       return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileQuestion className="text-primary" /> Quotations</h2>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileQuestion className="text-primary" /> Quotations Ledger</h2>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
-                        <input 
-                            className="pl-10 pr-4 py-2 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-primary" 
-                            placeholder="Find by ID or Patient..." 
-                            value={listSearchTerm} 
-                            onChange={e => setListSearchTerm(e.target.value)} 
-                        />
-                    </div>
-                    <button onClick={handleStartNew} className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition whitespace-nowrap"><Plus size={20} /> Create Quotation</button>
+                    <button onClick={exportToCSV} className="bg-green-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition uppercase text-[10px] tracking-widest"><Download size={18}/> Export CSV</button>
+                    <button onClick={handleStartNew} className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition whitespace-nowrap uppercase text-[10px] tracking-widest"><Plus size={20} /> Create Quotation</button>
                 </div>
             </div>
+
+            <div className="bg-white p-4 rounded-xl shadow-sm border flex flex-col md:grid md:grid-cols-3 items-center gap-4">
+                <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                    <input className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="Find by ID or Patient..." value={listSearchTerm} onChange={e => setListSearchTerm(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100 col-span-2 w-full">
+                    <Calendar size={16} className="text-gray-400 ml-2"/>
+                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Date Range:</span>
+                    <input type="date" className="bg-transparent text-xs font-bold outline-none" value={startDate} onChange={e=>setStartDate(e.target.value)} />
+                    <span className="text-gray-300">-</span>
+                    <input type="date" className="bg-transparent text-xs font-bold outline-none" value={endDate} onChange={e=>setEndDate(e.target.value)} />
+                    {(startDate || endDate) && <button onClick={()=>{setStartDate(''); setEndDate('');}} className="text-red-500 p-1"><X size={14}/></button>}
+                </div>
+            </div>
+
             <div className="bg-white rounded-xl shadow overflow-hidden border">
                 <table className="w-full text-left">
                     <thead className="bg-gray-50 text-gray-600 font-bold border-b text-xs uppercase"><tr><th className="p-4">Quotation ID</th><th className="p-4">Date</th><th className="p-4">Patient</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">Status</th><th className="p-4 text-center">Actions</th></tr></thead>
