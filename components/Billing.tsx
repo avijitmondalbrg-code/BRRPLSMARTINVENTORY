@@ -40,7 +40,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Date range for list filtering
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
@@ -488,27 +487,118 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       )}
 
       {step === 'review' && (
-        <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen">
-          <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0">
-            <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
-              <div className="flex items-center gap-6">
-                <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
-              </div>
-              <div className="text-right flex flex-col items-end"><div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg"><h2 className="text-lg font-black uppercase tracking-widest">Tax Invoice</h2></div><p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateNextId()}</p><p className="text-[11px] font-black text-slate-700 uppercase mt-1">DATE: {new Date().toLocaleDateString('en-IN')}</p></div>
+        <div className="flex flex-col items-center bg-gray-100/50 p-4 sm:p-10 min-h-screen print:p-0 print:bg-white">
+          <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0 print:shadow-none print:border-0 w-full max-w-[900px]">
+            {/* Standard Hospital/Clinic Header */}
+            <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
+                <div className="flex gap-6">
+                    <div className="h-24 w-24 flex items-center justify-center border border-gray-100 rounded-2xl p-2 bg-white">
+                      <img src={logo} alt="Logo" className="h-full w-full object-contain" />
+                    </div>
+                    <div className="min-h-[100px]">
+                        <h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
+                        <p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
+                        <p className="text-[10px] text-slate-900 mt-2 leading-tight max-w-md font-semibold">{COMPANY_ADDRESS}</p>
+                        <p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
+                    </div>
+                </div>
+                <div className="text-right flex flex-col items-end">
+                  <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Tax Invoice</h2></div>
+                  <p className="text-sm font-black text-gray-900"># {editingInvoiceId || generateNextId()}</p>
+                  <p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p>
+                </div>
             </div>
-            <div className="grid grid-cols-2 gap-8 mb-6"><div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100"><h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4><p className="font-black text-xl text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p><p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.state}</p><p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed">{patient.address || 'No Address Provided'}</p></div><div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100"><h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4><p className="font-black text-[12px] text-slate-900 uppercase mb-1">{COMPANY_NAME}</p><p className="text-[10px] text-slate-800 font-bold uppercase">{COMPANY_EMAIL}</p><p className="text-[10px] text-slate-800 font-bold uppercase">{COMPANY_PHONES}</p></div></div>
-            <table className="w-full border-collapse border-4 border-slate-900 text-[12px] mb-6">
-              <thead className="bg-[#3159a6] text-white uppercase font-black"><tr><th className="p-3 text-left border-r-2 border-white/20 w-[40%]">Description of Goods</th><th className="p-3 text-center border-r-2 border-white/20 w-[15%]">HSN</th><th className="p-3 text-right border-r-2 border-white/20 w-[15%]">Price</th><th className="p-3 text-center border-r-2 border-white/20 w-[10%]">GST %</th><th className="p-3 text-right w-[20%]">Total</th></tr></thead>
+
+            {/* Client Info Grid */}
+            <div className="grid grid-cols-2 gap-8 mb-10 text-sm">
+                <div className="bg-slate-50 p-5 rounded-2xl border-2 border-slate-100">
+                    <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Patient Details</h4>
+                    <p className="font-black text-xl text-slate-900 uppercase tracking-tight">{patient.name}</p>
+                    <p className="font-bold text-slate-800 mt-1">{patient.phone}</p>
+                    <p className="text-xs text-slate-700 uppercase mt-2 font-semibold leading-tight">{patient.address}</p>
+                    <p className="text-[10px] text-[#3159a6] font-black mt-2 uppercase">Destination: {patient.state}</p>
+                </div>
+                <div className="text-right flex flex-col justify-end space-y-1">
+                   <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Place of Supply</p>
+                   <p className="font-black text-gray-900">{isInterState ? 'Inter-State (IGST)' : 'Intra-State (CGST/SGST)'}</p>
+                   {patient.gstin && <p className="text-[10px] font-black text-gray-900 uppercase">Patient GST: {patient.gstin}</p>}
+                </div>
+            </div>
+
+            {/* Items Table */}
+            <table className="w-full border-collapse border-4 border-slate-900 text-[12px] mb-8">
+              <thead className="bg-[#3159a6] text-white uppercase font-black tracking-widest">
+                <tr>
+                  <th className="p-3 text-left border-r-2 border-white/20 w-[45%]">Description of Goods</th>
+                  <th className="p-3 text-center border-r-2 border-white/20">HSN</th>
+                  <th className="p-3 text-right border-r-2 border-white/20">Value</th>
+                  <th className="p-3 text-center border-r-2 border-white/20">GST %</th>
+                  <th className="p-3 text-right">Total</th>
+                </tr>
+              </thead>
               <tbody className="font-bold text-slate-900">
                 {allItems.map((item, idx) => (
-                  <tr key={idx} className="border-b-2 border-slate-400"><td className="p-2 border-r-2 border-slate-900"><p className="font-black text-slate-900 uppercase">{item.brand} {item.model}</p><p className="text-[9px] text-[#3159a6] font-black">S/N: {item.serialNumber}</p></td><td className="p-2 text-center border-r-2 border-slate-900 font-mono">{item.hsnCode}</td><td className="p-2 text-right border-r-2 border-slate-900">₹{item.taxableValue.toLocaleString()}</td><td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td><td className="p-2 text-right font-black bg-slate-50/50">₹{item.totalAmount.toLocaleString()}</td></tr>
+                  <tr key={idx} className="border-b-2 border-slate-900">
+                    <td className="p-2 border-r-2 border-slate-900">
+                      <p className="font-black text-slate-900 uppercase">{item.brand} {item.model}</p>
+                      <p className="text-[9px] text-[#3159a6] font-black mt-1">SERIAL: {item.serialNumber}</p>
+                    </td>
+                    <td className="p-2 text-center border-r-2 border-slate-900 font-mono">{item.hsnCode}</td>
+                    <td className="p-2 text-right border-r-2 border-slate-900">₹{item.taxableValue.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                    <td className="p-2 text-right font-black bg-slate-50/30">₹{item.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
-            <div className="bg-[#3159a6] text-white p-3 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 text-center shadow-lg">Grand Total in Words: {numberToWords(finalTotal)}</div>
-            <div className="mt-8 flex justify-between items-end"><div className="w-[60%]"><p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms</p><div className="text-[10px] text-slate-800 font-bold space-y-1 uppercase tracking-tight"><p>1. Certified Medical Hearing aids (HSN 90214090).</p><p>2. Non-Refundable clinical goods. Warranty: {warranty}.</p></div></div><div className="text-center w-64">{signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>}<p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p></div></div>
+
+            {/* Totals Section */}
+            <div className="flex flex-col sm:flex-row justify-between gap-8 mb-10">
+                <div className="flex-grow">
+                   <div className="bg-slate-900 text-white p-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
+                      Amount in Words: {numberToWords(finalTotal)}
+                   </div>
+                   {invoiceNotes && (
+                      <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                         <p className="text-[9px] font-black uppercase text-slate-500 mb-1">Clinical Remarks:</p>
+                         <p className="text-xs text-slate-700 italic">"{invoiceNotes}"</p>
+                      </div>
+                   )}
+                </div>
+                <div className="w-full sm:w-1/3 space-y-2 bg-slate-50 p-6 rounded-2xl border-2 border-slate-900 shadow-inner">
+                   <div className="flex justify-between text-xs font-bold uppercase"><span>Subtotal</span><span>₹{runningTaxableTotal.toLocaleString('en-IN')}</span></div>
+                   <div className="flex justify-between text-xs font-bold uppercase"><span>GST Total</span><span>₹{(runningCGST + runningSGST + runningIGST).toLocaleString('en-IN')}</span></div>
+                   {totalAdjustment > 0 && <div className="flex justify-between text-xs font-bold uppercase text-red-600"><span>Adjustment</span><span>-₹{totalAdjustment.toLocaleString('en-IN')}</span></div>}
+                   <div className="flex justify-between items-center text-slate-900 pt-2 border-t-2 border-slate-900">
+                      <span className="text-sm font-black uppercase tracking-widest">Net Total</span>
+                      <span className="text-3xl font-black">₹{Math.round(finalTotal).toLocaleString('en-IN')}</span>
+                   </div>
+                </div>
+            </div>
+
+            {/* Legal Terms & Signature */}
+            <div className="flex justify-between items-end mt-20">
+                <div className="w-[60%]">
+                    <p className="font-black text-[11px] uppercase border-b-2 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Terms of Service</p>
+                    <div className="text-[9px] text-slate-800 font-bold space-y-1 uppercase leading-tight">
+                        <p>1. Certified Medical Grade Hearing Instruments (HSN 9021 40 90).</p>
+                        <p>2. Goods once sold are non-refundable for clinical and hygiene reasons.</p>
+                        <p>3. Comprehensive Warranty: {warranty}.</p>
+                        <p>4. All disputes are subject to Kolkata, WB Jurisdiction.</p>
+                    </div>
+                </div>
+                <div className="text-center w-64">
+                    {signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply transition-transform hover:scale-110" /> : <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>}
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
+                </div>
+            </div>
           </div>
-          <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden"><button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase text-xs transition-all">Go Back</button><button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"><Save size={22}/> Save Database Record</button><button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90"><Printer size={28}/></button></div>
+          
+          <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
+            <button onClick={() => setStep('payment')} className="flex-1 py-5 border-2 border-slate-800 rounded-3xl font-black uppercase text-xs hover:bg-white transition-all">Back to Settlement</button>
+            <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"><Save size={22}/> Save & Finalize</button>
+            <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90"><Printer size={28}/></button>
+          </div>
         </div>
       )}
     </div>
