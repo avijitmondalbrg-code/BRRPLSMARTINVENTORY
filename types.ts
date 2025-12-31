@@ -232,6 +232,7 @@ export const BRANDS = [
   'Unitron',
   'Alps',
   'Widex',
+  'Microtone',
   'Battery 13',
   'Battery 675',
   'Battery 312',
