@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { HearingAid, LOCATIONS, StockTransfer as StockTransferType } from '../types';
-import { ArrowRightLeft, MapPin, Truck, History, ArrowRight, Search, User, UserCheck, Box, StickyNote, Calendar, X, Filter } from 'lucide-react';
+import { ArrowRightLeft, MapPin, Truck, History, ArrowRight, Search, User, UserCheck, Box, StickyNote, Calendar, X, Filter, CheckSquare, Square } from 'lucide-react';
 
 interface StockTransferProps {
   inventory: HearingAid[];
@@ -9,7 +10,8 @@ interface StockTransferProps {
 }
 
 export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transferHistory, onTransfer }) => {
-  const [selectedItemId, setSelectedItemId] = useState('');
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [targetLocation, setTargetLocation] = useState(LOCATIONS[1]);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -43,27 +45,38 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
     return matchesSearch && matchesStartDate && matchesEndDate;
   });
 
-  const selectedItem = inventory.find(i => i.id === selectedItemId);
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
 
   const handleTransfer = () => {
-    if (!selectedItemId || !targetLocation) return;
-    if (selectedItem?.location === targetLocation) {
-      alert("Source and destination cannot be same.");
+    if (selectedItemIds.length === 0 || !targetLocation) return;
+    
+    // Validate if any item is already at destination (though logic prevents this usually)
+    const hasSameLocation = selectedItemIds.some(id => inventory.find(i => i.id === id)?.location === targetLocation);
+    if (hasSameLocation) {
+      alert("One or more items are already at the target location.");
       return;
     }
+
     if (!sender || !transporter || !receiver) {
         alert("Please fill in Sender, Transporter, and Receiver fields.");
         return;
     }
     
-    onTransfer(selectedItemId, targetLocation, sender, transporter, receiver, note);
+    // Execute transfer for each selected item
+    selectedItemIds.forEach(id => {
+      onTransfer(id, targetLocation, sender, transporter, receiver, note);
+    });
     
-    setSelectedItemId('');
+    setSelectedItemIds([]);
     setSender('');
     setTransporter('');
     setReceiver('');
     setNote('');
-    alert("Stock transferred successfully! Item location updated.");
+    alert(`${selectedItemIds.length} unit(s) transferred successfully! Locations updated.`);
   };
 
   return (
@@ -74,33 +87,69 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
       </h2>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b bg-gray-50">
+        <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
             <h3 className="font-semibold text-gray-700">New Transfer Request</h3>
+            <button 
+              onClick={() => { setIsBulkMode(!isBulkMode); setSelectedItemIds([]); }}
+              className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border-2 transition-all ${isBulkMode ? 'bg-[#3159a6] text-white border-[#3159a6]' : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200'}`}
+            >
+              {isBulkMode ? 'Bulk Mode: ON' : 'Switch to Bulk'}
+            </button>
         </div>
         <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center bg-gray-50/50 p-6 rounded-2xl border">
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-gray-500 font-black uppercase text-[10px] tracking-wider ml-1">
-                    <MapPin size={14} /> Item Selection
+                    <div className="flex justify-between items-center px-1">
+                      <div className="flex items-center gap-2 text-gray-500 font-black uppercase text-[10px] tracking-wider">
+                        <MapPin size={14} /> Item Selection
+                      </div>
+                      {isBulkMode && <span className="text-[10px] font-bold text-[#3159a6]">{selectedItemIds.length} selected</span>}
                     </div>
                     
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                        <input type="text" placeholder="Search S/N..." className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setSelectedItemId(''); }} />
+                        <input type="text" placeholder="Search S/N..." className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
 
-                    <select className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 outline-none bg-white text-sm" value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)} >
-                    <option value="">Select Item...</option>
-                    {filteredItems.map(item => (
-                        <option key={item.id} value={item.id}> {item.brand} {item.model} ({item.location}) - {item.serialNumber} </option>
-                    ))}
-                    </select>
+                    {!isBulkMode ? (
+                      <select 
+                        className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 outline-none bg-white text-sm" 
+                        value={selectedItemIds[0] || ''} 
+                        onChange={(e) => setSelectedItemIds(e.target.value ? [e.target.value] : [])} 
+                      >
+                        <option value="">Select Single Item...</option>
+                        {filteredItems.map(item => (
+                            <option key={item.id} value={item.id}> {item.brand} {item.model} ({item.location}) - {item.serialNumber} </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="w-full border border-gray-300 rounded-lg bg-white max-h-40 overflow-y-auto custom-scrollbar shadow-inner">
+                        {filteredItems.length === 0 ? (
+                          <p className="p-4 text-center text-xs text-gray-400">No items found</p>
+                        ) : (
+                          filteredItems.map(item => (
+                            <label key={item.id} className="flex items-center gap-3 p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 transition-colors group">
+                              <div 
+                                onClick={(e) => { e.preventDefault(); toggleItemSelection(item.id); }}
+                                className={`transition-colors ${selectedItemIds.includes(item.id) ? 'text-[#3159a6]' : 'text-gray-300'}`}
+                              >
+                                {selectedItemIds.includes(item.id) ? <CheckSquare size={18}/> : <Square size={18}/>}
+                              </div>
+                              <div className="flex-1 overflow-hidden" onClick={() => toggleItemSelection(item.id)}>
+                                <p className="font-bold text-xs text-gray-700 truncate uppercase">{item.brand} {item.model}</p>
+                                <p className="text-[9px] text-teal-600 font-mono tracking-widest">{item.serialNumber} • {item.location}</p>
+                              </div>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    )}
 
-                    {selectedItem && (
-                    <div className="p-3 bg-white rounded-lg text-sm border shadow-sm animate-fade-in">
-                        <p className="font-black text-gray-700">{selectedItem.brand} {selectedItem.model}</p>
-                        <p className="text-xs text-gray-400">Loc: <span className="text-teal-600 font-bold">{selectedItem.location}</span></p>
-                    </div>
+                    {!isBulkMode && selectedItemIds.length > 0 && (
+                      <div className="p-3 bg-white rounded-lg text-sm border shadow-sm animate-fade-in border-blue-100">
+                        <p className="font-black text-gray-700">{inventory.find(i=>i.id===selectedItemIds[0])?.brand} {inventory.find(i=>i.id===selectedItemIds[0])?.model}</p>
+                        <p className="text-xs text-gray-400">Loc: <span className="text-teal-600 font-bold">{inventory.find(i=>i.id===selectedItemIds[0])?.location}</span></p>
+                      </div>
                     )}
                 </div>
 
@@ -116,7 +165,7 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                     </div>
                     <select className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 outline-none bg-white font-bold text-teal-800" value={targetLocation} onChange={(e) => setTargetLocation(e.target.value)} >
                     {LOCATIONS.map(loc => (
-                        <option key={loc} value={loc} disabled={selectedItem?.location === loc}> {loc} </option>
+                        <option key={loc} value={loc}> {loc} </option>
                     ))}
                     </select>
                 </div>
@@ -152,8 +201,12 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
         </div>
         
         <div className="bg-gray-50 p-6 flex justify-end border-t">
-          <button onClick={handleTransfer} disabled={!selectedItemId} className="bg-primary text-white px-10 py-4 rounded-2xl hover:bg-teal-800 transition shadow-xl shadow-teal-900/20 disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-2" >
-            <Truck size={18} /> Confirm Stock Move
+          <button 
+            onClick={handleTransfer} 
+            disabled={selectedItemIds.length === 0} 
+            className="bg-primary text-white px-10 py-4 rounded-2xl hover:bg-teal-800 transition shadow-xl shadow-teal-900/20 disabled:opacity-50 disabled:cursor-not-allowed font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-2" 
+          >
+            <Truck size={18} /> {isBulkMode ? `Confirm ${selectedItemIds.length} Items Move` : 'Confirm Stock Move'}
           </button>
         </div>
       </div>
