@@ -53,19 +53,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [showPatientResults, setShowPatientResults] = useState(false);
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
   
-  // States for billing items
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
-  
-  // Temp state for new manual item input
   const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
-
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
   const [totalAdjustment, setTotalAdjustment] = useState<number>(0); 
   const [invoiceNotes, setInvoiceNotes] = useState<string>(''); 
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
-  
   const [existingPayments, setExistingPayments] = useState<PaymentRecord[]>([]);
   const [initialPayment, setInitialPayment] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
@@ -73,7 +68,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const generateNextId = () => {
     const fy = getFinancialYear();
-    const prefix = `BRRPL-HA-${fy}-`;
+    const prefix = `BRRPL-IM-HA-${fy}-`;
     const fyInvoices = (invoices || []).filter(inv => inv.id.startsWith(prefix));
     const maxSeq = fyInvoices.length === 0 ? 0 : Math.max(...fyInvoices.map(inv => parseInt(inv.id.split('-').pop() || '0', 10)));
     return `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
@@ -104,17 +99,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const handleEditInvoice = (inv: Invoice, startStep: 'patient' | 'review' = 'review') => {
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
-    
     const inventoryIds = inv.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
     const manItems = inv.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
-    
     setSelectedItemIds(inventoryIds);
     setManualItems(manItems);
-    
     const discounts: Record<string, number> = {};
     inv.items.forEach(i => { if(i.hearingAidId) discounts[i.hearingAidId] = i.discount || 0; });
     setItemDiscounts(discounts);
-    
     setTotalAdjustment(inv.discountValue || 0);
     setInvoiceNotes(inv.notes || '');
     setWarranty(inv.warranty || '2 Years Standard Warranty');
@@ -315,7 +306,6 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   </div>
               </div>
 
-              {/* Payment Collection Modal - Fixed & Added to List View */}
               {showCollectModal && collectingInvoice && (
                   <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fade-in">
                       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
@@ -531,13 +521,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
         )}
 
         {step === 'review' && (
-            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen">
-                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0">
+            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen print:bg-white print:p-0 print:block">
+                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0 print:m-0">
                     
                     <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
                         <div className="flex items-center gap-6">
                             <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
-                            
                         </div>
                         <div className="text-right flex flex-col items-end">
                             <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
@@ -555,8 +544,9 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.state}</p>
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
-                            <div className="mt-4 pt-3 border-t-2 border-slate-200 flex gap-6">
+                            <div className="mt-4 pt-3 border-t-2 border-slate-200 flex flex-wrap gap-x-6 gap-y-2">
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Referred By</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-[#3159a6] uppercase">{patient.audiologist || 'Internal'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
                             </div>
                         </div>
@@ -707,25 +697,32 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         Grand Total in Words: {numberToWords(finalTotal)}
                     </div>
 
-                    <div className="flex justify-between items-end mt-auto pt-10">
-                        <div className="w-[60%]">
-                            <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
-                            <div className="text-[10px] text-slate-800 font-bold space-y-1 leading-tight uppercase tracking-tight">
-                            <p>1. Please keep this Invoice safe for future correspondence.</p>
-                            <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
-                            <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. Theseexemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June2017.</p>
-                            <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>    
-                            <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                    {/* Footer Section: Managed for better printing visibility */}
+                    <div className="mt-auto pt-10">
+                        <div className="flex justify-between items-end">
+                            <div className="w-[60%]">
+                                <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
+                                <div className="text-[10px] text-slate-800 font-bold space-y-1 leading-tight uppercase tracking-tight">
+                                    <p>1. Please keep this Invoice safe for future correspondence.</p>
+                                    <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                                    <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. These exemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June 2017.</p>
+                                    <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>    
+                                    <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                                </div>
+                            </div>
+                            <div className="text-center w-64">
+                                {signature ? (
+                                    <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply transition-all hover:scale-110" />
+                                ) : (
+                                    <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>
+                                )}
+                                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
                             </div>
                         </div>
-                        <div className="text-center w-64">
-                            {signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply transition-all hover:scale-110" /> : <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>}
-                            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
-                        </div>
-                    </div>
 
-                    <div className="mt-12 text-center opacity-30 pointer-events-none pb-4">
-                        <p className="text-[9px] font-black uppercase tracking-[0.7em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
+                        <div className="mt-12 text-center opacity-30 pointer-events-none pb-4 print:opacity-10">
+                            <p className="text-[9px] font-black uppercase tracking-[0.7em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
+                        </div>
                     </div>
                 </div>
 
