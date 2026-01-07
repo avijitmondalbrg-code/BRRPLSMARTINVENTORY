@@ -70,7 +70,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
       problem: formData.problem,
       referDoctor: formData.referDoctor,
       haPotential: formData.haPotential as 'Yes' | 'No',
-      entryBy: formData.entryBy,
+      entryBy: formData.entryBy || userRole,
       source: formData.source || 'Walk-in',
       status: 'New',
       createdAt: new Date().toISOString().split('T')[0],
@@ -198,19 +198,14 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                     onChange={(e) => setSearchTerm(e.target.value)}
                  />
             </div>
-            {userRole === 'admin' ? (
-                <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow transition"
-                >
-                <Plus size={20} />
-                Add Lead
-                </button>
-            ) : (
-                <div className="flex items-center gap-2 text-gray-400 text-sm bg-gray-100 px-3 py-1.5 rounded-full border">
-                    <Lock size={14} /> Read-Only Mode
-                </div>
-            )}
+            {/* UPDATED: User can now add leads */}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow transition font-bold"
+            >
+              <Plus size={20} />
+              Add Lead
+            </button>
         </div>
       </div>
 
@@ -484,21 +479,18 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                 <div className="p-6 border-b bg-gray-50 flex items-center justify-between">
                      <div>
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Status Stage</label>
-                        {userRole === 'admin' ? (
-                            <select 
-                                className="bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2 font-medium"
-                                value={selectedLead.status}
-                                onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-                            >
-                                {STATUS_COLUMNS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                            </select>
-                        ) : (
-                            <div className="text-sm font-medium text-gray-800 px-3 py-2 bg-gray-200 rounded-lg">{selectedLead.status}</div>
-                        )}
+                        {/* Status change now allowed for both roles since user can manage leads */}
+                        <select 
+                            className="bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2 font-medium"
+                            value={selectedLead.status}
+                            onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
+                        >
+                            {STATUS_COLUMNS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                        </select>
                      </div>
                      <div className="flex gap-2">
                         <button onClick={openMessageModal} className="bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><Send size={16} /> Msg</button>
-                        {selectedLead.status !== 'Won' && userRole === 'admin' && (
+                        {selectedLead.status !== 'Won' && (
                             <button onClick={() => handleStatusChange('Won')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><CheckCircle size={16} /> Won</button>
                         )}
                      </div>
@@ -590,29 +582,28 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                             ))}
                         </div>
 
-                        {userRole === 'admin' && (
-                            <div className="bg-blue-50 p-5 rounded-2xl border-2 border-blue-100 mt-6 shadow-sm">
-                                <h5 className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-3">Log Live Interaction</h5>
-                                <div className="flex gap-2 mb-3">
-                                    {['Call', 'Visit', 'WhatsApp', 'Note'].map(type => (
-                                        <button 
-                                            key={type}
-                                            onClick={() => setNewActivity({...newActivity, type: type as any})}
-                                            className={`text-[10px] font-black uppercase px-4 py-1.5 rounded-full border transition-all ${newActivity.type === type ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
-                                        >
-                                            {type}
-                                        </button>
-                                    ))}
-                                </div>
-                                <textarea 
-                                    className="w-full border-2 border-blue-100 rounded-xl p-3 text-sm focus:border-blue-600 outline-none transition bg-white/50 h-20 resize-none font-medium"
-                                    placeholder="Enter details of your interaction..."
-                                    value={newActivity.content}
-                                    onChange={e => setNewActivity({...newActivity, content: e.target.value})}
-                                />
-                                <button onClick={handleAddActivity} className="w-full bg-blue-600 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest mt-3 hover:bg-blue-700 shadow-lg active:scale-95 transition-all">Save Activity Log</button>
+                        {/* Interaction logging now open to all authenticated roles */}
+                        <div className="bg-blue-50 p-5 rounded-2xl border-2 border-blue-100 mt-6 shadow-sm">
+                            <h5 className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-3">Log Interaction</h5>
+                            <div className="flex gap-2 mb-3">
+                                {['Call', 'Visit', 'WhatsApp', 'Note'].map(type => (
+                                    <button 
+                                        key={type}
+                                        onClick={() => setNewActivity({...newActivity, type: type as any})}
+                                        className={`text-[10px] font-black uppercase px-4 py-1.5 rounded-full border transition-all ${newActivity.type === type ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
                             </div>
-                        )}
+                            <textarea 
+                                className="w-full border-2 border-blue-100 rounded-xl p-3 text-sm focus:border-blue-600 outline-none transition bg-white/50 h-20 resize-none font-medium"
+                                placeholder="Enter details of your interaction..."
+                                value={newActivity.content}
+                                onChange={e => setNewActivity({...newActivity, content: e.target.value})}
+                            />
+                            <button onClick={handleAddActivity} className="w-full bg-blue-600 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest mt-3 hover:bg-blue-700 shadow-lg active:scale-95 transition-all">Save Activity Log</button>
+                        </div>
                     </div>
                 </div>
              </div>
