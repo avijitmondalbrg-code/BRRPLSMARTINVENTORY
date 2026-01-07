@@ -333,8 +333,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                               <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option>
                                               <option value="Cheque">Cheque</option>
                                               <option value="EMI">Finance</option>
-                                              <option value="EMI">Credit Card</option>
-                                              <option value="EMI">Debit Card</option>
+                                              <option value="Credit Card">Credit Card</option>
+                                              <option value="Debit Card">Debit Card</option>
                                           </select>
                                       </div>
                                       <div className="space-y-1.5">
