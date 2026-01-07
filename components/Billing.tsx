@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2 } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -41,6 +41,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Print Customization State
+  const [printScale, setPrintScale] = useState(100);
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [printPaperSize, setPrintPaperSize] = useState<'A4' | 'Letter' | 'Legal'>('A4');
+
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [collectingInvoice, setCollectingInvoice] = useState<Invoice | null>(null);
   const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0);
@@ -522,7 +527,56 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
         {step === 'review' && (
             <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen print:bg-white print:p-0 print:block">
-                <div id="invoice-printable-area" className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0 print:m-0">
+                {/* Print Control Panel - Hidden on Print */}
+                <div className="bg-white p-6 rounded-3xl shadow-xl mb-8 flex flex-wrap items-center gap-8 border border-gray-100 print:hidden w-full max-w-[900px]">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 rounded-lg text-primary"><Settings2 size={18}/></div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-gray-500">PDF Print Configuration</h4>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Scale</label>
+                        <input 
+                            type="range" min="60" max="100" value={printScale} 
+                            onChange={(e) => setPrintScale(Number(e.target.value))}
+                            className="w-32 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" 
+                        />
+                        <span className="text-xs font-black text-primary w-8">{printScale}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Layout</label>
+                        <select 
+                            className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                            value={printOrientation} onChange={(e) => setPrintOrientation(e.target.value as any)}
+                        >
+                            <option value="portrait">Portrait</option>
+                            <option value="landscape">Landscape</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Size</label>
+                        <select 
+                            className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                            value={printPaperSize} onChange={(e) => setPrintPaperSize(e.target.value as any)}
+                        >
+                            <option value="A4">A4 Paper</option>
+                            <option value="Letter">Letter</option>
+                            <option value="Legal">Legal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div 
+                    id="invoice-printable-area" 
+                    style={{ 
+                        '--print-scale': `${printScale / 100}`,
+                        '--print-orientation': printOrientation,
+                        '--print-size': printPaperSize === 'A4' ? '210mm 297mm' : printPaperSize === 'Letter' ? '216mm 279mm' : '216mm 356mm'
+                    } as React.CSSProperties}
+                    className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0 print:m-0"
+                >
                     
                     <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
                         <div className="flex items-center gap-6">
@@ -729,7 +783,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                 <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
                     <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Go Back</button>
                     <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"> <Save size={22}/> Save Database Record</button>
-                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90"><Printer size={28}/></button>
+                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Save as PDF"><Download size={28}/></button>
                 </div>
             </div>
         )}
