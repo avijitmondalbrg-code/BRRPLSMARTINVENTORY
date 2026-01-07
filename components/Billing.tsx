@@ -330,7 +330,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                       <div className="space-y-1.5">
                                           <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Payment Mode</label>
                                           <select className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-700 outline-none focus:border-blue-500" value={payMethod} onChange={e=>setPayMethod(e.target.value as any)}>
-                                              <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option><option value="Cheque">Cheque</option><option value="EMI">Finance</option>
+                                              <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option>
+                                              <option value="Cheque">Cheque</option>
+                                              <option value="EMI">Finance</option>
+                                              <option value="EMI">Credit Card</option>
+                                              <option value="EMI">Debit Card</option>
                                           </select>
                                       </div>
                                       <div className="space-y-1.5">
