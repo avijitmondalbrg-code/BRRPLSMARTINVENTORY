@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, getFinancialYear } from '../constants';
-import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Sparkles, ShieldCheck, Edit, MessageSquare, Download, Calendar, X } from 'lucide-react';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
+import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Edit, MessageSquare, Download, Calendar, X, UserCheck, Stethoscope } from 'lucide-react';
 
 interface QuotationsProps {
   inventory: HearingAid[];
@@ -21,16 +21,16 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'review'>('patient');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [listSearchTerm, setListSearchTerm] = useState('');
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
-  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' });
+  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   const [quotationNotes, setQuotationNotes] = useState<string>(''); 
 
@@ -44,46 +44,96 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     return `${prefix}${nextNo.toString().padStart(3, '0')}`;
   };
 
-  const resetForm = () => { setStep('patient'); setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '' }); setSelectedItemIds([]); setDiscountValue(0); setWarranty('2 Years Standard Warranty'); setQuotationNotes(''); setEditingId(null); setPatientSearchTerm(''); setSearchTerm(''); };
+  const resetForm = () => { 
+    setStep('patient'); 
+    setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' }); 
+    setSelectedItemIds([]); 
+    setDiscountValue(0); 
+    setGstOverrides({});
+    setWarranty('2 Years Standard Warranty'); 
+    setQuotationNotes(''); 
+    setEditingId(null); 
+    setPatientSearchTerm(''); 
+  };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
 
-  const handleSelectPatient = (p: Patient) => { setPatient(p); setPatientSearchTerm(''); };
+  const handleSelectPatient = (p: Patient) => { 
+    setPatient({ ...p, state: p.state || 'West Bengal' }); 
+    setPatientSearchTerm(p.name); 
+  };
 
   const handleEditClick = (q: Quotation) => {
     setEditingId(q.id);
-    setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+    setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' });
     setSelectedItemIds(q.items.map(i => i.hearingAidId));
     setDiscountValue(q.discountValue);
     setQuotationNotes(q.notes || '');
     setWarranty(q.warranty || '2 Years Standard Warranty');
+    
+    const overrides: Record<string, number> = {};
+    q.items.forEach(item => {
+      overrides[item.hearingAidId] = item.gstRate;
+    });
+    setGstOverrides(overrides);
+    
     setStep('review');
     setViewMode('edit');
   };
 
-  const handlePrint = () => { window.print(); };
+  const isInterState = patient.state && patient.state !== 'West Bengal';
+  
+  const processedItems: InvoiceItem[] = useMemo(() => {
+    return selectedItemIds.map(id => {
+      const item = inventory.find(i => i.id === id);
+      if (!item) return null;
+      const gstRate = gstOverrides[id] !== undefined ? gstOverrides[id] : (item.gstRate || 0);
+      const taxableValue = item.price;
+      const totalTax = taxableValue * (gstRate / 100);
+      
+      let cgst = 0, sgst = 0, igst = 0;
+      if (isInterState) {
+        igst = totalTax;
+      } else {
+        cgst = totalTax / 2;
+        sgst = totalTax / 2;
+      }
+
+      return {
+        hearingAidId: item.id,
+        brand: item.brand,
+        model: item.model,
+        serialNumber: item.serialNumber,
+        price: item.price,
+        hsnCode: item.hsnCode || '90214090',
+        gstRate,
+        discount: 0,
+        taxableValue,
+        cgstAmount: cgst,
+        sgstAmount: sgst,
+        igstAmount: igst,
+        totalAmount: taxableValue + totalTax
+      };
+    }).filter(i => i !== null) as InvoiceItem[];
+  }, [selectedItemIds, inventory, gstOverrides, isInterState]);
+
+  const subtotal = processedItems.reduce((sum, i) => sum + i.taxableValue, 0);
+  const totalTax = processedItems.reduce((sum, i) => sum + (i.cgstAmount + i.sgstAmount + i.igstAmount), 0);
+  const finalTotal = Math.max(0, (subtotal + totalTax) - discountValue);
 
   const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
-    const subtotal = inventory.filter(i => selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price, 0);
     const quotationData: Quotation = { 
       id: finalId, 
       patientId: patient.id || `P-${Date.now()}`, 
       patientName: patient.name, 
-      items: selectedItemIds.map(id => { 
-        const item = inventory.find(i=>i.id===id)!; 
-        return { 
-          hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, 
-          price: item.price, discount: 0, gstRate: 0, taxableValue: item.price, 
-          cgstAmount: 0, sgstAmount: 0, igstAmount: 0, totalAmount: item.price 
-        }; 
-      }), 
+      items: processedItems, 
       subtotal, 
       discountType: 'flat', 
       discountValue, 
-      totalTaxableValue: subtotal - discountValue, 
-      totalTax: 0, 
-      finalTotal: subtotal - discountValue, 
+      totalTaxableValue: subtotal, 
+      totalTax, 
+      finalTotal, 
       date: new Date().toISOString().split('T')[0], 
       warranty, 
       notes: quotationNotes,
@@ -104,28 +154,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     });
   }, [quotations, listSearchTerm, startDate, endDate]);
 
-  const exportToCSV = () => {
-    const headers = ['Quotation ID', 'Date', 'Patient Name', 'Amount', 'Status', 'Items'];
-    const rows = filteredQuotations.map(q => [
-      q.id,
-      q.date,
-      `"${q.patientName}"`,
-      q.finalTotal.toFixed(2),
-      q.status,
-      `"${q.items.map(i => `${i.brand} ${i.model}`).join('; ')}"`
-    ]);
-    
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `quotations_report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const sbiAccount = COMPANY_BANK_ACCOUNTS.find(b => b.name.includes('SBI')) || COMPANY_BANK_ACCOUNTS[0];
 
   if (viewMode === 'list') {
       return (
@@ -133,8 +162,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileQuestion className="text-primary" /> Quotations Ledger</h2>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <button onClick={exportToCSV} className="bg-green-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition uppercase text-[10px] tracking-widest"><Download size={18}/> Export CSV</button>
-                    <button onClick={handleStartNew} className="bg-primary hover:bg-teal-800 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow transition whitespace-nowrap uppercase text-[10px] tracking-widest"><Plus size={20} /> Create Quotation</button>
+                    <button onClick={handleStartNew} className="bg-primary hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl transition whitespace-nowrap"><Plus size={16} /> New Quotation</button>
                 </div>
             </div>
 
@@ -153,25 +181,27 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow overflow-hidden border">
+            <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-gray-600 font-bold border-b text-xs uppercase"><tr><th className="p-4">Quotation ID</th><th className="p-4">Date</th><th className="p-4">Patient</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">Status</th><th className="p-4 text-center">Actions</th></tr></thead>
+                    <thead className="bg-[#3159a6] text-white font-black border-b text-[10px] uppercase tracking-[0.2em]"><tr><th className="p-5">Quotation No</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5 text-right">Estimate Total</th><th className="p-5 text-center">Status</th><th className="p-5 text-center">Actions</th></tr></thead>
                     <tbody className="divide-y text-sm">
                         {filteredQuotations.length === 0 ? (
-                            <tr><td colSpan={6} className="p-8 text-center text-gray-400 italic">No quotations found</td></tr>
+                            <tr><td colSpan={6} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest text-[10px]">No quotations matching filters</td></tr>
                         ) : filteredQuotations.map(q => (
-                            <tr key={q.id} className="hover:bg-gray-50">
-                                <td className="p-4 font-bold text-teal-700">{q.id}</td>
-                                <td className="p-4 text-gray-500">{new Date(q.date).toLocaleDateString('en-IN')}</td>
-                                <td className="p-4 font-medium">{q.patientName}</td>
-                                <td className="p-4 text-right font-bold">₹{q.finalTotal.toLocaleString()}</td>
-                                <td className="p-4 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${q.status === 'Converted' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-800 border-yellow-200'}`}>{q.status}</span></td>
-                                <td className="p-4 flex justify-center items-center gap-2">
-                                    <button onClick={() => handleEditClick(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="View/Edit"><Edit size={18}/></button>
-                                    <button onClick={() => { handleEditClick(q); setTimeout(() => window.print(), 500); }} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition" title="Print"><Printer size={18}/></button>
-                                    {userRole === 'admin' && (
-                                        <button onClick={() => { if(window.confirm(`Delete quotation ${q.id}?`)) onDelete(q.id); }} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>
-                                    )}
+                            <tr key={q.id} className="hover:bg-blue-50/30 transition">
+                                <td className="p-5 font-black text-primary uppercase">{q.id}</td>
+                                <td className="p-5 text-gray-500 font-bold">{new Date(q.date).toLocaleDateString('en-IN')}</td>
+                                <td className="p-5 font-black text-gray-800 uppercase tracking-tight">{q.patientName}</td>
+                                <td className="p-5 text-right font-black">₹{q.finalTotal.toLocaleString()}</td>
+                                <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${q.status === 'Converted' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-yellow-50 text-yellow-800 border-yellow-100'}`}>{q.status}</span></td>
+                                <td className="p-5 text-center">
+                                    <div className="flex justify-center items-center gap-1">
+                                        <button onClick={() => handleEditClick(q)} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition" title="View/Edit"><Edit size={18}/></button>
+                                        <button onClick={() => { handleEditClick(q); setTimeout(() => window.print(), 500); }} className="p-2 text-teal-600 hover:bg-teal-50 rounded-xl transition" title="Print"><Printer size={18}/></button>
+                                        {userRole === 'admin' && (
+                                            <button onClick={() => { if(window.confirm(`Delete quotation ${q.id}?`)) onDelete(q.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition" title="Delete"><Trash2 size={18}/></button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -183,96 +213,222 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto pb-10">
         <div className="mb-6 flex items-center justify-between print:hidden">
-            <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-200 rounded-full text-gray-600"><ArrowLeft size={24} /></button><h2 className="text-2xl font-bold">Quotation Builder</h2></div>
-            <div className="flex gap-2">{['patient', 'product', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${step === s ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>{idx+1}. {s.toUpperCase()}</button>))}</div>
+            <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 hover:bg-gray-100 rounded-full text-gray-400 shadow-sm transition"><ArrowLeft size={24} /></button><h2 className="text-2xl font-black uppercase tracking-tighter text-gray-800">Quotation Architect</h2></div>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl border">{['patient', 'product', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${step === s ? 'bg-primary text-white shadow-lg' : 'bg-transparent text-gray-400'}`}>{idx+1}. {s}</button>))}</div>
         </div>
+        
         {step === 'patient' && (
-            <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
-                <h3 className="text-lg font-bold mb-6 border-b pb-2 flex items-center gap-2">1. Patient Selection</h3>
-                <div className="mb-8 relative"><label className="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-widest">Search Existing Patient</label><div className="relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" /><input type="text" placeholder="Type Name or Phone Number..." className="w-full pl-10 pr-4 py-3 border-2 border-gray-100 rounded-xl outline-none focus:border-primary transition-all shadow-sm" value={patientSearchTerm} onChange={(e) => setPatientSearchTerm(e.target.value)} /></div>{patientSearchTerm && (<div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-64 overflow-y-auto"><div className="p-2">{patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-5 py-3 hover:bg-teal-50 border-b last:border-0 flex justify-between items-center transition-colors group"><div><p className="font-bold">{p.name}</p><p className="text-xs text-gray-500">{p.phone}</p></div><span className="text-teal-600 text-[10px] font-black uppercase">Select</span></button>))}</div></div>)}</div>
-                <div className="bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-200 space-y-6">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient Identity Information</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-gray-500 mb-1">PATIENT NAME *</label><input required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div><div><label className="block text-xs font-bold text-gray-500 mb-1">PHONE NUMBER *</label><input required className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div><div className="md:col-span-2"><label className="block text-xs font-bold text-gray-500 mb-1">RESIDENTIAL ADDRESS</label><input className="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-teal-500" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div></div>
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
+                <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 1: Client & Clinic Metadata</h3>
+                <div className="mb-10 relative">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest ml-1">Recall Registered Patient</label>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input type="text" placeholder="Start typing name or phone..." className="w-full pl-12 pr-4 py-5 border-2 border-gray-50 bg-gray-50/50 rounded-2xl outline-none focus:border-primary focus:bg-white transition-all shadow-sm font-bold text-lg" value={patientSearchTerm} onFocus={() => setPatientSearchTerm('')} onChange={(e) => setPatientSearchTerm(e.target.value)} />
+                  </div>
+                  {patientSearchTerm && (
+                    <div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2">
+                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
+                        <button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group">
+                          <div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone} • {p.address}</p></div>
+                          <span className="text-primary text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-primary group-hover:text-white transition-all">Select</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-8 flex justify-end"><button onClick={() => setStep('product')} disabled={!patient.name} className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800 transition-all">Next Step: Select Product &rarr;</button></div>
+                
+                <div className="bg-blue-50/30 p-8 rounded-[2rem] border-2 border-dashed border-blue-100 space-y-8">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Clinical Information</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><UserCheck size={12}/> Ref. Dr.</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="Referring Doctor" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Consulting Audiologist" /></div>
+                      <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address *</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} placeholder="House/Flat No, Area, City" /></div>
+                    </div>
+                </div>
+                <div className="mt-12 flex justify-end"><button onClick={() => setStep('product')} disabled={!patient.name || !patient.address} className="bg-primary text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs disabled:opacity-50">Proceed to Device Estimate &rarr;</button></div>
             </div>
         )}
+        
         {step === 'product' && (
-            <div className="bg-white rounded-xl shadow border p-8 animate-fade-in print:hidden">
-                <h3 className="text-lg font-bold mb-6 border-b pb-2">2. Select Device Estimate</h3>
-                <div className="relative mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /><input type="text" placeholder="Search Devices..." className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/></div>
-                <div className="max-h-64 overflow-y-auto border rounded-xl mb-6 shadow-inner"><table className="w-full text-left text-xs"><thead className="bg-gray-50 sticky top-0 uppercase font-bold text-gray-400"><tr><th className="p-4 w-10"></th><th className="p-4">Brand/Model</th><th className="p-4">Serial No</th><th className="p-4 text-right">Price</th></tr></thead><tbody className="divide-y">{inventory.filter(i => { const match = i.brand.toLowerCase().includes(searchTerm.toLowerCase()) || i.model.toLowerCase().includes(searchTerm.toLowerCase()); return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match; }).map(item => (<tr key={item.id} className={selectedItemIds.includes(item.id) ? 'bg-teal-50' : 'hover:bg-gray-50'}><td className="p-4"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-teal-600" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td><td className="p-4 font-bold">{item.brand} {item.model}</td><td className="p-4 font-mono">{item.serialNumber}</td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>))}</tbody></table></div>
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
+                <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 2: Product & Tax Configuration</h3>
+                <div className="max-h-80 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-8 shadow-inner custom-scrollbar overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-primary text-white sticky top-0 uppercase font-black text-[10px] tracking-widest">
+                            <tr><th className="p-5 w-14"></th><th className="p-5">Device Description</th><th className="p-5">Serial No</th><th className="p-5 text-center">GST %</th><th className="p-5 text-right">MRP (Base)</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {inventory.filter(i => (i.status === 'Available' || selectedItemIds.includes(i.id))).map(item => (
+                                <tr key={item.id} className={`${selectedItemIds.includes(item.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'} transition`}>
+                                    <td className="p-5 text-center"><input type="checkbox" className="h-5 w-5 rounded-lg border-2 border-gray-200 text-primary focus:ring-primary transition" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
+                                    <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{item.brand} {item.model}</td>
+                                    <td className="p-5 font-mono text-gray-400 font-bold">{item.serialNumber}</td>
+                                    <td className="p-5 text-center">
+                                        {selectedItemIds.includes(item.id) && (
+                                            <select className="border-2 border-blue-100 rounded-xl p-1.5 font-bold text-primary bg-white outline-none" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> 
+                                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                                            </select>
+                                        )}
+                                    </td>
+                                    <td className="p-5 text-right font-black text-gray-900 text-lg">₹{item.price.toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="space-y-4">
-                        <div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Adjustment / Global Discount (INR)</label><input type="number" value={discountValue || ''} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 p-2 rounded-lg font-bold text-lg outline-none focus:border-teal-500" placeholder="0.00" /></div>
-                        <div className="p-4 bg-gray-50 rounded-xl border"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 p-2 rounded-lg font-medium outline-none focus:border-teal-500" /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-6">
+                        <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
+                            <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Special Consideration (Flat Discount)</label>
+                            <input type="number" value={discountValue || ''} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-primary outline-none shadow-sm" placeholder="0.00" />
+                        </div>
+                        <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
+                            <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Coverage</label>
+                            <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" />
+                        </div>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-xl border flex flex-col">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1"><MessageSquare size={12}/> Detailed Quotation Notes</label>
-                        <textarea value={quotationNotes} onChange={e => setQuotationNotes(e.target.value)} className="w-full border-2 p-2 rounded-lg text-xs flex-1 min-h-[100px] resize-none outline-none focus:border-teal-500" placeholder="Add custom notes, pricing validity, special offers or clinical remarks..." />
+                    <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50 flex flex-col">
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1 ml-1"><MessageSquare size={12}/> Custom Quotation Remarks</label>
+                        <textarea value={quotationNotes} onChange={e => setQuotationNotes(e.target.value)} className="w-full border-2 border-white bg-white p-4 rounded-2xl text-xs flex-1 min-h-[150px] resize-none outline-none shadow-sm font-medium" placeholder="Clinical notes, payment terms, or validity details..." />
                     </div>
                 </div>
 
-                <div className="mt-8 flex justify-between items-center"><div className="text-teal-900"><p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Estimated Total</p><p className="text-3xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</p></div><button onClick={() => setStep('review')} className="bg-primary text-white px-10 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-800 transition">Preview Quotation &rarr;</button></div>
+                <div className="mt-8 flex justify-between items-center bg-gray-50 p-8 rounded-3xl border-2 border-blue-50 shadow-inner">
+                    <div><p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Estimated Net Total</p><p className="text-4xl font-black text-gray-900 tracking-tighter">₹{finalTotal.toLocaleString()}</p></div>
+                    <button onClick={() => setStep('review')} className="bg-primary text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs">Preview Professional Quote &rarr;</button>
+                </div>
             </div>
         )}
+
         {step === 'review' && (
-            <div className="flex flex-col items-center bg-gray-100/50 p-4 sm:p-10 min-h-screen print:p-0 print:bg-white">
-                <div id="invoice-printable-area" className="bg-white rounded shadow-2xl p-12 border relative overflow-hidden animate-fade-in print:p-0 print:shadow-none print:border-0 w-full max-w-[900px]">
-                    <div className="flex justify-between items-start border-b-2 border-gray-800 pb-8 mb-8">
-                        <div className="flex gap-6">
-                            <div className="h-24 w-24 flex items-center justify-center"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
-                            <div className="min-h-[100px]">
-                                 <h1 className="text-2xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                                <p className="text-[11px] text-slate-800 font-bold tracking-tight italic mt-1">{COMPANY_TAGLINE}</p>
-                                <p className="text-[10px] text-slate-900 mt-2 leading-tight max-w-md font-semibold">{COMPANY_ADDRESS}</p>
-                                <p className="text-[11px] text-slate-900 font-black mt-1 uppercase tracking-widest">GSTIN: {CLINIC_GSTIN}</p>
+            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen print:p-0 print:bg-white">
+                <div id="invoice-printable-area" className="bg-white rounded-[2.5rem] shadow-2xl p-16 border-4 border-white relative overflow-hidden animate-fade-in print:p-8 print:border-0 print:shadow-none print:rounded-none w-full max-w-[900px]">
+                    <div className="flex justify-between items-start border-b-4 border-slate-900 pb-10 mb-10">
+                        <div className="flex gap-8">
+                            <div className="h-28 w-28 flex items-center justify-center bg-white rounded-3xl p-2 border-2 border-slate-50"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
+                            <div>
+                                 <h1 className="text-3xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
+                                <p className="text-sm text-slate-600 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                                <p className="text-[11px] text-slate-800 mt-4 leading-relaxed max-w-sm font-semibold">{COMPANY_ADDRESS}</p>
+                                <p className="text-[11px] text-slate-900 font-black uppercase tracking-widest">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
                             </div>
                         </div>
-                        <div className="text-right"><div className="bg-[#3159a6] text-white px-6 py-1 inline-block mb-3 rounded-lg"><h2 className="text-xl font-black uppercase tracking-widest">Quotation</h2></div><p className="text-sm font-black text-gray-900"># {editingId || generateNextId()}</p><p className="text-xs font-bold text-gray-600">Date: {new Date().toLocaleDateString('en-IN')}</p></div>
+                        <div className="text-right">
+                          <div className="bg-primary text-white px-8 py-2 inline-block mb-4 rounded-xl shadow-lg">
+                            <h2 className="text-lg font-black uppercase tracking-widest">Quotation</h2>
+                          </div>
+                          <p className="text-xl font-black text-slate-900"># {editingId || generateNextId()}</p>
+                          <p className="text-xs font-black text-slate-500 uppercase tracking-widest mt-1">Date: {new Date().toLocaleDateString('en-IN')}</p>
+                        </div>
                     </div>
-                    <div className="mb-10 text-sm"><div className="bg-gray-50 p-4 rounded-xl border w-64"><h4 className="text-[10px] font-black uppercase text-gray-600 mb-2 border-b">Attention:</h4><p className="font-black text-lg text-gray-900">{patient.name}</p><p className="font-bold text-gray-800">{patient.phone}</p></div></div>
-                    <table className="w-full border-collapse border border-gray-300 text-sm mb-10 shadow-sm">
-                        <thead className="bg-[#3159a6] text-white uppercase text-[10px] font-black tracking-widest"><tr><th className="p-4 text-left">Proposed Device Description</th><th className="p-4 text-right">Estimate Price</th></tr></thead>
-                        <tbody>{selectedItemIds.map(id => { const item = inventory.find(i=>i.id===id)!; return (<tr key={id} className="border-b border-gray-200"><td className="p-4"><p className="font-black text-gray-900 uppercase">{item.brand} {item.model}</p></td><td className="p-4 text-right font-black text-gray-900">₹{item.price.toLocaleString()}</td></tr>); })}</tbody>
-                    </table>
                     
-                    <div className="flex flex-col sm:flex-row justify-between gap-8 mb-10">
-                        <div className="flex-grow">
+                    <div className="grid grid-cols-2 gap-10 mb-10">
+                        <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100">
+                            <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 border-b-2 border-slate-200 pb-1 tracking-widest">Attention Patient:</h4>
+                            <p className="font-black text-2xl text-slate-900 uppercase tracking-tight mb-1">{patient.name}</p>
+                            <p className="font-bold text-slate-600 text-sm mb-3">{patient.phone}</p>
+                            <p className="text-xs text-slate-700 font-bold uppercase leading-relaxed min-h-[40px] italic">"{patient.address}"</p>
+                        </div>
+                        <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 flex flex-col justify-center">
+                            <div className="space-y-4">
+                                <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Referring Professional</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self Inquiry'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Consulting Audiologist</p><p className="text-xs font-black text-primary uppercase">{patient.audiologist || 'Internal Dept'}</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-10 overflow-hidden rounded-3xl border-4 border-slate-900">
+                        <table className="w-full border-collapse text-[12px]">
+                            <thead className="bg-primary text-white uppercase font-black tracking-tight">
+                                <tr>
+                                    <th className="p-4 text-left border-r-2 border-white/20">Description of Goods</th>
+                                    <th className="p-4 text-center border-r-2 border-white/20">HSN</th>
+                                    <th className="p-4 text-right border-r-2 border-white/20">Taxable Value</th>
+                                    <th className="p-4 text-center border-r-2 border-white/20">GST %</th>
+                                    <th className="p-4 text-right">Estimated Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="font-bold text-slate-900">
+                                {processedItems.map(item => (
+                                    <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-0">
+                                        <td className="p-4 border-r-2 border-slate-900">
+                                            <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand} {item.model}</p>
+                                            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">Estimate Ref: {item.serialNumber}</p>
+                                        </td>
+                                        <td className="p-4 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
+                                        <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
+                                        <td className="p-4 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                        <td className="p-4 text-right font-black bg-slate-50">₹{item.totalAmount.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-10 items-start mb-10">
+                        <div className="space-y-6">
                             {quotationNotes && (
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
-                                    <h4 className="text-[9px] font-black uppercase text-gray-600 mb-2 border-b border-slate-200 pb-1 tracking-widest">Quotation Notes / Custom Remarks:</h4>
-                                    <p className="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{quotationNotes}</p>
+                                <div className="bg-blue-50/50 p-6 rounded-3xl border-2 border-dashed border-blue-200">
+                                    <h4 className="text-[10px] font-black uppercase text-primary mb-2 border-b border-blue-100 pb-1 tracking-widest">Estimate Remarks:</h4>
+                                    <p className="text-xs text-slate-800 italic leading-relaxed font-semibold uppercase">"{quotationNotes}"</p>
                                 </div>
                             )}
+                            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
+                                <h4 className="text-[10px] font-black uppercase text-primary mb-3 border-b border-slate-200 pb-1 tracking-[0.2em]">Bank Settlement Node (SBI):</h4>
+                                <div className="grid grid-cols-2 text-[10px] uppercase font-black text-slate-800 gap-y-1">
+                                    <p>A/C Name:</p><p className="text-right">BENGAL REHABILITATION</p>
+                                    <p>SBI A/C No:</p><p className="text-right text-slate-900">{sbiAccount.accountNumber}</p>
+                                    <p>IFSC Code:</p><p className="text-right text-slate-900">{sbiAccount.ifsc}</p>
+                                    <p>Branch:</p><p className="text-right">{sbiAccount.branch}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="w-full sm:w-1/2 space-y-2 bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-inner">
-                            <div className="flex justify-between items-center text-teal-900"><span className="text-sm font-black uppercase tracking-widest">Estimated Net Total</span><span className="text-4xl font-black">₹{(inventory.filter(i=>selectedItemIds.includes(i.id)).reduce((s,i)=>s+i.price,0) - discountValue).toLocaleString()}</span></div>
-                            <p className="text-[9px] text-right text-gray-600 font-bold uppercase tracking-wider">Adjustment of ₹{discountValue.toLocaleString()} applied</p>
+                        <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none -rotate-12 translate-y-12 scale-150"></div>
+                            <div className="space-y-3 relative z-10">
+                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Taxes ({isInterState ? 'IGST' : 'CGST+SGST'})</span><span>₹{totalTax.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[10px] font-black uppercase text-red-400 tracking-widest"><span>Special Consideration</span><span>-₹{discountValue.toLocaleString()}</span></div>
+                                <div className="h-0.5 bg-white/20 my-4"></div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Final Estimate</span>
+                                    <span className="text-4xl font-black tracking-tighter">₹{Math.round(finalTotal).toLocaleString()}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex justify-between items-end mt-20">
-                        <div className="w-3/4"><p className="font-black text-[10px] uppercase border-b-2 border-gray-900 inline-block mb-3 tracking-widest text-gray-900">Standard Terms</p>
-                            <div className="text-[8.5px] text-gray-800 font-bold space-y-1 leading-tight uppercase">
-                                <p>1. This is an estimated price based on selected model and valid for 15 days from date of issuance.</p>
-                                <p>2. Hearing Aid will be delivered within 7 days of receipt of the confirmed order.</p>
-                                <p>3. Cheque payment is subject to the realization.</p>
-                                <p>4. Hearing aids are classified under HSN 9021 40 90 (GST Exempted).</p>
-                                <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                        <div className="w-2/3"><p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-4 tracking-widest text-slate-900">Validity & Terms</p>
+                            <div className="text-[9px] text-slate-800 font-bold space-y-2 leading-tight uppercase tracking-tight">
+                                <p>1. Estimate Valid for 15 days from Date of Issue.</p>
+                                <p>2. Hearing Aids are classification under HSN 9021 (GST Exempted).</p>
+                                <p>3. Fitting & Follow-up services included for 6 months.</p>
+                                <p>4. Advance paid is adjustable against final invoice but non-refundable.</p>
+                                <p>5. Judicial Jurisdiction: Kolkata Courts only.</p>
                             </div>
                         </div>
-                        <div className="text-center">{signature ? <img src={signature} className="h-16 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-40 border-b-2 border-dashed border-gray-300 mb-2"></div>}<p className="text-[10px] font-black uppercase tracking-widest text-gray-900">Authorized Signatory</p></div>
+                        <div className="text-center w-60">
+                            {signature ? <img src={signature} className="h-20 mb-3 mx-auto mix-blend-multiply transition-all hover:scale-110" /> : <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-4"></div>}
+                            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-3">Authorized Signatory</p>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-16 text-center opacity-20 pointer-events-none print:opacity-5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.8em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
                     </div>
                 </div>
                 
-                <div className="mt-12 flex gap-4 w-full max-w-[900px] print:hidden">
-                    <button onClick={() => setStep('product')} className="flex-1 py-4 border-2 border-gray-800 rounded-xl font-black uppercase tracking-widest hover:bg-gray-100 text-xs text-gray-900">Edit Details</button>
-                    <button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-4 px-8 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-teal-800 flex items-center justify-center gap-3 text-xs transition-all active:scale-95"> <Save size={18}/> Save Quotation</button>
-                    <button onClick={handlePrint} className="p-4 bg-slate-900 text-white rounded-xl shadow-xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Print Now"><Printer size={22}/></button>
+                <div className="mt-12 flex gap-6 w-full max-w-[900px] print:hidden">
+                    <button onClick={() => setStep('product')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Edit Metadata</button>
+                    <button onClick={handleSaveQuotation} className="flex-[2] bg-primary text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"> <Save size={22}/> Archive Estimate</button>
+                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Download PDF"><Download size={28}/></button>
                 </div>
             </div>
         )}
