@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Edit, MessageSquare, Download, Calendar, X, UserCheck, Stethoscope } from 'lucide-react';
+import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Edit, MessageSquare, Download, Calendar, X, UserCheck, Stethoscope, Wrench, PackagePlus } from 'lucide-react';
 
 interface QuotationsProps {
   inventory: HearingAid[];
@@ -29,6 +29,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
+  const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
@@ -49,6 +51,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setStep('patient'); 
     setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' }); 
     setSelectedItemIds([]); 
+    setManualItems([]);
     setDiscountValue(0); 
     setGstOverrides({});
     setQuoteDate(new Date().toISOString().split('T')[0]);
@@ -56,6 +59,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setQuotationNotes(''); 
     setEditingId(null); 
     setPatientSearchTerm(''); 
+    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -68,7 +72,12 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const handleEditClick = (q: Quotation) => {
     setEditingId(q.id);
     setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
-    setSelectedItemIds(q.items.map(i => i.hearingAidId));
+    
+    const inventoryIds = q.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
+    const manItems = q.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
+    
+    setSelectedItemIds(inventoryIds);
+    setManualItems(manItems);
     setDiscountValue(q.discountValue);
     setQuotationNotes(q.notes || '');
     setQuoteDate(q.date);
@@ -84,10 +93,35 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setViewMode('edit');
   };
 
+  const handleAddManualItem = () => {
+    if (!tempManual.model || tempManual.price <= 0) return;
+    const newItem: InvoiceItem = {
+        hearingAidId: `MAN-${Date.now()}`,
+        brand: tempManual.brand,
+        model: tempManual.model,
+        serialNumber: 'N/A',
+        price: tempManual.price,
+        hsnCode: tempManual.hsn,
+        gstRate: tempManual.gst,
+        discount: 0,
+        taxableValue: tempManual.price,
+        cgstAmount: 0,
+        sgstAmount: 0,
+        igstAmount: 0,
+        totalAmount: 0
+    };
+    setManualItems([...manualItems, newItem]);
+    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+  };
+
+  const handleRemoveManualItem = (id: string) => {
+    setManualItems(manualItems.filter(i => i.hearingAidId !== id));
+  };
+
   const isInterState = patient.state && patient.state !== 'West Bengal';
   
   const processedItems: InvoiceItem[] = useMemo(() => {
-    return selectedItemIds.map(id => {
+    const invItems = selectedItemIds.map(id => {
       const item = inventory.find(i => i.id === id);
       if (!item) return null;
       const gstRate = gstOverrides[id] !== undefined ? gstOverrides[id] : (item.gstRate || 0);
@@ -95,30 +129,24 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
       const totalTax = taxableValue * (gstRate / 100);
       
       let cgst = 0, sgst = 0, igst = 0;
-      if (isInterState) {
-        igst = totalTax;
-      } else {
-        cgst = totalTax / 2;
-        sgst = totalTax / 2;
-      }
+      if (isInterState) igst = totalTax; else { cgst = totalTax / 2; sgst = totalTax / 2; }
 
       return {
-        hearingAidId: item.id,
-        brand: item.brand,
-        model: item.model,
-        serialNumber: item.serialNumber,
-        price: item.price,
-        hsnCode: item.hsnCode || '90214090',
-        gstRate,
-        discount: 0,
-        taxableValue,
-        cgstAmount: cgst,
-        sgstAmount: sgst,
-        igstAmount: igst,
-        totalAmount: taxableValue + totalTax
+        hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber,
+        price: item.price, hsnCode: item.hsnCode || '90214090', gstRate, discount: 0,
+        taxableValue, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: taxableValue + totalTax
       };
     }).filter(i => i !== null) as InvoiceItem[];
-  }, [selectedItemIds, inventory, gstOverrides, isInterState]);
+
+    const manProcessed = manualItems.map(item => {
+        const totalTax = item.taxableValue * (item.gstRate / 100);
+        let cgst = 0, sgst = 0, igst = 0;
+        if (isInterState) igst = totalTax; else { cgst = totalTax / 2; sgst = totalTax / 2; }
+        return { ...item, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: item.taxableValue + totalTax };
+    });
+
+    return [...invItems, ...manProcessed];
+  }, [selectedItemIds, inventory, gstOverrides, isInterState, manualItems]);
 
   const subtotal = processedItems.reduce((sum, i) => sum + i.taxableValue, 0);
   const totalTax = processedItems.reduce((sum, i) => sum + (i.cgstAmount + i.sgstAmount + i.igstAmount), 0);
@@ -260,6 +288,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
         {step === 'product' && (
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
                 <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 2: Product & Tax Configuration</h3>
+                
                 <div className="max-h-80 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-8 shadow-inner custom-scrollbar overflow-hidden">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-primary text-white sticky top-0 uppercase font-black text-[10px] tracking-widest">
@@ -284,6 +313,48 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         </tbody>
                     </table>
                 </div>
+
+                {/* Service/Manual Entry Section */}
+                <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-dashed border-slate-200 mb-8">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
+                        <Wrench size={14}/> Manual Service / Non-Inventory Entry
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                        <div className="md:col-span-2">
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-primary" placeholder="Service (e.g. Repair / Ear Mold)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
+                        </div>
+                        <div>
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-primary" placeholder="HSN (902190)" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
+                        </div>
+                        <div>
+                            <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-primary" placeholder="Rate" value={tempManual.price || ''} onChange={e=>setTempManual({...tempManual, price: Number(e.target.value)})} />
+                        </div>
+                        <div className="flex gap-2">
+                            <select className="border-2 border-white rounded-xl p-3 text-xs font-bold outline-none flex-1" value={tempManual.gst} onChange={e=>setTempManual({...tempManual, gst: Number(e.target.value)})}>
+                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                            </select>
+                            <button onClick={handleAddManualItem} className="bg-primary text-white p-3 rounded-xl hover:bg-slate-800 transition shadow-lg"><PackagePlus size={20}/></button>
+                        </div>
+                    </div>
+
+                    {manualItems.length > 0 && (
+                        <div className="space-y-2 mt-4">
+                            {manualItems.map(item => (
+                                <div key={item.hearingAidId} className="flex justify-between items-center bg-white p-3 px-5 rounded-xl border border-slate-100 shadow-sm animate-fade-in">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-black text-slate-800 uppercase">{item.model}</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase">HSN: {item.hsnCode} • GST: {item.gstRate}%</span>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                        <span className="font-black text-primary">₹{item.price.toLocaleString()}</span>
+                                        <button onClick={() => handleRemoveManualItem(item.hearingAidId)} className="text-red-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
                     <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
@@ -291,7 +362,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         <input type="date" value={quoteDate} onChange={e => setQuoteDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" />
                     </div>
                     <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Special Consideration (Flat Discount)</label>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Special Consideration (Discount)</label>
                         <input type="number" value={discountValue || ''} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-primary outline-none shadow-sm" placeholder="0.00" />
                     </div>
                     <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
@@ -360,11 +431,13 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
-                                {processedItems.map(item => (
-                                    <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-0">
+                                {processedItems.map((item, idx) => (
+                                    <tr key={item.hearingAidId || idx} className="border-b-2 border-slate-400 last:border-b-0">
                                         <td className="p-4 border-r-2 border-slate-900">
                                             <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand} {item.model}</p>
-                                            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">Estimate Ref: {item.serialNumber}</p>
+                                            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">
+                                                {item.serialNumber === 'N/A' ? 'SERVICE ESTIMATE' : `Estimate Ref: ${item.serialNumber}`}
+                                            </p>
                                         </td>
                                         <td className="p-4 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
                                         <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
