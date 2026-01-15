@@ -434,10 +434,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 {processedItems.map((item, idx) => (
                                     <tr key={item.hearingAidId || idx} className="border-b-2 border-slate-400 last:border-b-0">
                                         <td className="p-4 border-r-2 border-slate-900">
-                                            <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand} {item.model}</p>
-                                            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">
-                                                {item.serialNumber === 'N/A' ? 'SERVICE ESTIMATE' : `Estimate Ref: ${item.serialNumber}`}
-                                            </p>
+                                            <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand} {item.model}</p> 
                                         </td>
                                         <td className="p-4 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
                                         <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
