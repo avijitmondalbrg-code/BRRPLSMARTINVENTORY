@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Hospital, ServiceInvoice, ServiceInvoiceLine, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, CLINIC_GSTIN } from '../constants';
-import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2, IndianRupee, Percent } from 'lucide-react';
 
 interface ServiceBillingProps {
   hospitals: Hospital[];
@@ -15,6 +15,24 @@ interface ServiceBillingProps {
   userRole: UserRole;
 }
 
+const numberToWords = (num: number): string => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const inWords = (n: number): string => {
+        if ((n = n.toString() as any).length > 9) return 'overflow';
+        const n_array: any[] = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/) || [];
+        if (!n_array) return '';
+        let str = '';
+        str += (n_array[1] != 0) ? (a[Number(n_array[1])] || b[n_array[1][0]] + ' ' + a[n_array[1][1]]) + 'Crore ' : '';
+        str += (n_array[2] != 0) ? (a[Number(n_array[2])] || b[n_array[2][0]] + ' ' + a[n_array[2][1]]) + 'Lakh ' : '';
+        str += (n_array[3] != 0) ? (a[Number(n_array[3])] || b[n_array[3][0]] + ' ' + a[n_array[3][1]]) + 'Thousand ' : '';
+        str += (n_array[4] != 0) ? (a[Number(n_array[4])] || b[n_array[4][0]] + ' ' + a[n_array[4][1]]) + 'Hundred ' : '';
+        str += (n_array[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_array[5])] || b[n_array[5][0]] + ' ' + a[n_array[5][1]]) : '';
+        return str;
+    };
+    return inWords(Math.floor(num)) + 'Rupees Only';
+};
+
 export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoices, onAddHospital, onSaveInvoice, onDeleteInvoice, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'review'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,9 +43,10 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
   const [showHospResults, setShowHospResults] = useState(false);
   
   const [invoiceLines, setInvoiceLines] = useState<ServiceInvoiceLine[]>([]);
-  const [tempLine, setTempLine] = useState<Partial<ServiceInvoiceLine>>({ description: '', hsn: '9987', qty: 1, rate: 0 });
+  const [tempLine, setTempLine] = useState<Partial<ServiceInvoiceLine>>({ description: '', hsn: '9987', qty: 1, rate: 0, discount: 0 });
   
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [globalAdjustment, setGlobalAdjustment] = useState<number>(0);
   const [notes, setNotes] = useState('');
   const [selectedBank, setSelectedBank] = useState(COMPANY_BANK_ACCOUNTS[0].name);
 
@@ -40,6 +59,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
     setHospitalSearch('');
     setInvoiceLines([]);
     setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setGlobalAdjustment(0);
     setNotes('');
   };
 
@@ -53,16 +73,22 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   const handleAddLine = () => {
     if(!tempLine.description || !tempLine.rate) return;
+    const qty = tempLine.qty || 1;
+    const rate = tempLine.rate || 0;
+    const discount = tempLine.discount || 0;
+    
     const newLine: ServiceInvoiceLine = {
       id: Date.now().toString(),
       description: tempLine.description || '',
       hsn: tempLine.hsn || '9987',
-      qty: tempLine.qty || 1,
-      rate: tempLine.rate || 0,
-      amount: (tempLine.qty || 1) * (tempLine.rate || 0)
+      qty,
+      rate,
+      discount,
+      taxableAmount: (qty * rate) - discount,
+      amount: (qty * rate) - discount
     };
     setInvoiceLines([...invoiceLines, newLine]);
-    setTempLine({ description: '', hsn: '9987', qty: 1, rate: 0 });
+    setTempLine({ description: '', hsn: '9987', qty: 1, rate: 0, discount: 0 });
   };
 
   const handleAddHospitalSubmit = () => {
@@ -81,8 +107,10 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
     setNewHospital({ name: '', address: '', gstin: '', pan: '' });
   };
 
-  const subtotal = invoiceLines.reduce((sum, line) => sum + line.amount, 0);
-  const total = subtotal; // GST default 0
+  const lineSubtotal = invoiceLines.reduce((sum, line) => sum + (line.qty * line.rate), 0);
+  const totalItemDiscount = invoiceLines.reduce((sum, line) => sum + (line.discount || 0), 0);
+  const netBeforeGlobal = lineSubtotal - totalItemDiscount;
+  const total = Math.max(0, netBeforeGlobal - globalAdjustment);
 
   const handleFinalSave = () => {
     if(!selectedHospital || invoiceLines.length === 0) return;
@@ -93,7 +121,10 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
       hospitalDetails: selectedHospital,
       date: invoiceDate,
       items: invoiceLines,
-      subtotal,
+      subtotal: lineSubtotal,
+      itemDiscount: totalItemDiscount,
+      globalAdjustment: globalAdjustment,
+      totalDiscount: totalItemDiscount + globalAdjustment,
       taxAmount: 0,
       totalAmount: total,
       notes,
@@ -143,7 +174,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                   <td className="p-5 text-right font-black text-lg">₹{inv.totalAmount.toLocaleString('en-IN')}</td>
                   <td className="p-5 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => { setSelectedHospital(inv.hospitalDetails); setInvoiceLines(inv.items); setInvoiceDate(inv.date); setNotes(inv.notes || ''); setSelectedBank(inv.bankAccountName || selectedBank); setViewMode('review'); }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition"><Printer size={18}/></button>
+                      <button onClick={() => { setSelectedHospital(inv.hospitalDetails); setInvoiceLines(inv.items); setInvoiceDate(inv.date); setNotes(inv.notes || ''); setGlobalAdjustment(inv.globalAdjustment || 0); setSelectedBank(inv.bankAccountName || selectedBank); setViewMode('review'); }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition"><Printer size={18}/></button>
                       {userRole === 'admin' && (
                         <button onClick={() => onDeleteInvoice(inv.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
                       )}
@@ -160,7 +191,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   if (viewMode === 'create') {
     return (
-      <div className="max-w-4xl mx-auto pb-10 animate-fade-in">
+      <div className="max-w-5xl mx-auto pb-10 animate-fade-in">
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 rounded-full text-gray-400 hover:bg-gray-100 shadow-sm transition"><ArrowLeft size={24}/></button>
           <div>
@@ -204,27 +235,29 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
           <div className="space-y-4">
             <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1">Service Particulars</label>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-              <div className="md:col-span-5"><input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Service Description" value={tempLine.description} onChange={e => setTempLine({...tempLine, description: e.target.value})} /></div>
+              <div className="md:col-span-4"><input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Service Description" value={tempLine.description} onChange={e => setTempLine({...tempLine, description: e.target.value})} /></div>
               <div className="md:col-span-2"><input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="HSN (9987)" value={tempLine.hsn} onChange={e => setTempLine({...tempLine, hsn: e.target.value})} /></div>
               <div className="md:col-span-1"><input type="number" className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Qty" value={tempLine.qty} onChange={e => setTempLine({...tempLine, qty: parseInt(e.target.value)})} /></div>
-              <div className="md:col-span-3"><input type="number" className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Rate" value={tempLine.rate || ''} onChange={e => setTempLine({...tempLine, rate: parseFloat(e.target.value)})} /></div>
+              <div className="md:col-span-2"><input type="number" className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Rate" value={tempLine.rate || ''} onChange={e => setTempLine({...tempLine, rate: parseFloat(e.target.value)})} /></div>
+              <div className="md:col-span-2"><input type="number" className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-sm" placeholder="Disc" value={tempLine.discount || ''} onChange={e => setTempLine({...tempLine, discount: parseFloat(e.target.value)})} /></div>
               <div className="md:col-span-1"><button onClick={handleAddLine} className="w-full h-full bg-primary text-white rounded-xl flex items-center justify-center hover:bg-secondary transition shadow-lg"><Plus size={20}/></button></div>
             </div>
 
             <div className="border-2 border-gray-50 rounded-2xl overflow-hidden mt-4">
               <table className="w-full text-left text-xs font-bold">
                 <thead className="bg-gray-50 text-gray-400 uppercase text-[9px] tracking-widest border-b">
-                  <tr><th className="p-4">Particulars</th><th className="p-4">HSN</th><th className="p-4 text-center">Qty</th><th className="p-4 text-right">Rate</th><th className="p-4 text-right">Amount</th><th className="p-4"></th></tr>
+                  <tr><th className="p-4">Particulars</th><th className="p-4">HSN</th><th className="p-4 text-center">Qty</th><th className="p-4 text-right">Rate</th><th className="p-4 text-right">Disc</th><th className="p-4 text-right">Amount</th><th className="p-4"></th></tr>
                 </thead>
                 <tbody className="divide-y uppercase">
                   {invoiceLines.length === 0 ? (
-                    <tr><td colSpan={6} className="p-10 text-center text-gray-300 italic">No items added yet</td></tr>
+                    <tr><td colSpan={7} className="p-10 text-center text-gray-300 italic">No items added yet</td></tr>
                   ) : invoiceLines.map(line => (
                     <tr key={line.id}>
                       <td className="p-4 text-gray-800">{line.description}</td>
                       <td className="p-4 text-gray-400 font-mono">{line.hsn}</td>
                       <td className="p-4 text-center">{line.qty}</td>
                       <td className="p-4 text-right">₹{line.rate.toLocaleString()}</td>
+                      <td className="p-4 text-right text-red-500">-₹{(line.discount || 0).toLocaleString()}</td>
                       <td className="p-4 text-right font-black">₹{line.amount.toLocaleString()}</td>
                       <td className="p-4 text-center"><button onClick={() => setInvoiceLines(invoiceLines.filter(l => l.id !== line.id))} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button></td>
                     </tr>
@@ -236,14 +269,29 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
             <div className="space-y-4">
-               <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bank Account Node</label>
-               <select className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-primary bg-gray-50" value={selectedBank} onChange={e => setSelectedBank(e.target.value)}>
-                  {COMPANY_BANK_ACCOUNTS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
-               </select>
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bank Account Node</label>
+                      <select className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-primary bg-gray-50" value={selectedBank} onChange={e => setSelectedBank(e.target.value)}>
+                         {COMPANY_BANK_ACCOUNTS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+                      </select>
+                   </div>
+                   <div className="space-y-1">
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Global Adjustment</label>
+                      <input type="number" className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-red-600 bg-gray-50 shadow-inner outline-none focus:border-red-300" value={globalAdjustment || ''} onChange={e => setGlobalAdjustment(Number(e.target.value))} placeholder="0.00" />
+                   </div>
+                </div>
+                <div className="bg-blue-50/50 p-4 rounded-2xl border-2 border-blue-50">
+                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1 mb-2">Invoice Remarks</label>
+                    <textarea className="w-full bg-white border-2 border-gray-50 p-3 rounded-xl text-xs h-20 resize-none font-bold" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Enter details..." />
+                </div>
             </div>
-            <div className="bg-gray-50 p-6 rounded-3xl border-2 border-gray-100 text-right">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Payable</p>
-              <p className="text-4xl font-black text-gray-900 tracking-tighter">₹{total.toLocaleString('en-IN')}</p>
+            <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-100 text-right">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Net Payable Amount</p>
+              <p className="text-5xl font-black text-gray-900 tracking-tighter">₹{total.toLocaleString('en-IN')}</p>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-[10px] font-bold text-primary uppercase tracking-wider">{numberToWords(total)}</p>
+              </div>
             </div>
           </div>
 
@@ -298,7 +346,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
         </div>
 
         <div id="invoice-printable-area" className="bg-white shadow-2xl p-[15mm] w-full max-w-[900px] min-h-[297mm] flex flex-col border-4 border-white print:border-0 print:shadow-none print:p-[5mm]">
-          {/* Re-architected Header to match Patient Billing */}
+          {/* Header */}
           <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
             <div className="flex items-center gap-6">
               <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
@@ -349,7 +397,10 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 {invoiceLines.map((line, idx) => (
                   <tr key={line.id} className="border-b-2 border-slate-300 last:border-b-4 last:border-slate-900">
                     <td className="p-4 text-center border-r-2 border-slate-900">{idx + 1}</td>
-                    <td className="p-4 border-r-2 border-slate-900 font-black">{line.description}</td>
+                    <td className="p-4 border-r-2 border-slate-900 font-black">
+                        {line.description}
+                        {line.discount > 0 && <p className="text-[8px] text-red-500 font-black tracking-widest mt-1">LESS: ₹{line.discount.toLocaleString()} ITEM DISCOUNT</p>}
+                    </td>
                     <td className="p-4 text-center border-r-2 border-slate-900 font-mono">{line.hsn}</td>
                     <td className="p-4 text-center border-r-2 border-slate-900">{line.qty}</td>
                     <td className="p-4 text-right border-r-2 border-slate-900">₹{line.rate.toLocaleString('en-IN')}</td>
@@ -360,27 +411,49 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
             </table>
           </div>
 
-          <div className="flex justify-end mb-12">
-            <div className="w-1/2 bg-slate-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+          <div className="grid grid-cols-2 gap-8 mb-12">
+            <div className="space-y-6">
+               {notes && (
+                  <div className="bg-blue-50/50 p-6 rounded-3xl border-2 border-dashed border-blue-200">
+                    <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-2 border-b border-blue-100 pb-1 tracking-widest">Invoicing Remarks:</h4>
+                    <p className="text-xs text-slate-800 italic leading-relaxed font-semibold uppercase">"{notes}"</p>
+                  </div>
+               )}
+               <div className="bg-[#3159a6] text-white p-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-center shadow-lg">
+                  Amount in Words: {numberToWords(total)}
+               </div>
+            </div>
+            
+            <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 opacity-5"><Landmark size={120}/></div>
-               <div className="flex justify-between items-center border-b border-white/10 pb-4 mb-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Gross Bill Value</span>
-                  <span className="text-xl font-bold">₹{subtotal.toLocaleString()}</span>
-               </div>
-               <div className="flex justify-between items-center border-b border-white/10 pb-4 mb-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Applied GST (0%)</span>
-                  <span className="text-xl font-bold">₹0.00</span>
-               </div>
-               <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.3em] text-[#3159a6]">Net Total</span>
-                  <span className="text-4xl font-black tracking-tighter">₹{total.toLocaleString()}</span>
+               <div className="space-y-3 relative z-10">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-60">
+                    <span>Gross Subtotal</span>
+                    <span>₹{lineSubtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-400">
+                    <span>Line Item Discount</span>
+                    <span>-₹{totalItemDiscount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-400">
+                    <span>Special Consideration</span>
+                    <span>-₹{globalAdjustment.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-60">
+                    <span>GST Applied (0%)</span>
+                    <span>₹0.00</span>
+                  </div>
+                  <div className="h-0.5 bg-white/10 my-4"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-[#3159a6]">Net Total</span>
+                    <span className="text-4xl font-black tracking-tighter">₹{total.toLocaleString()}</span>
+                  </div>
                </div>
             </div>
           </div>
 
-          {/* New Bottom Section: Bank Details and Legal Terms */}
           <div className="mt-auto">
-            {/* Bank details moved to bottom just above signature and terms */}
+            {/* Bank Details */}
             <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 mb-8 w-full">
               <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-[0.2em] mb-2 border-b border-slate-200 pb-1">Bank Settlement Node:</h5>
               <div className="grid grid-cols-4 text-[10px] uppercase font-black text-slate-800">

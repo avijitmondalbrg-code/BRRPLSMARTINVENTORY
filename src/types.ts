@@ -69,7 +69,9 @@ export interface ServiceInvoiceLine {
   hsn: string;
   qty: number;
   rate: number;
-  amount: number;
+  discount: number; // Added item-wise discount
+  taxableAmount: number; // Added taxable amount after discount
+  amount: number; // Final line amount
 }
 
 export interface ServiceInvoice {
@@ -80,6 +82,9 @@ export interface ServiceInvoice {
   date: string;
   items: ServiceInvoiceLine[];
   subtotal: number;
+  itemDiscount: number; // Total of line-item discounts
+  globalAdjustment: number; // Additional global discount
+  totalDiscount: number; // sum of both
   taxAmount: number;
   totalAmount: number;
   notes?: string;
