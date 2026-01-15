@@ -58,6 +58,7 @@ export interface Hospital {
   name: string;
   address: string;
   gstin?: string;
+  pan?: string; // Added PAN field
   contactPerson?: string;
   phone?: string;
 }

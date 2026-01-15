@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { Hospital, ServiceInvoice, ServiceInvoiceLine, UserRole } from '../types';
-// Fix: Added CLINIC_GSTIN to imports to resolve "Cannot find name" error
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, CLINIC_GSTIN } from '../constants';
 import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2 } from 'lucide-react';
 
@@ -34,7 +33,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   // Modal for adding new hospital
   const [showAddHospitalModal, setShowAddHospitalModal] = useState(false);
-  const [newHospital, setNewHospital] = useState<Partial<Hospital>>({ name: '', address: '', gstin: '' });
+  const [newHospital, setNewHospital] = useState<Partial<Hospital>>({ name: '', address: '', gstin: '', pan: '' });
 
   const resetForm = () => {
     setSelectedHospital(null);
@@ -72,13 +71,14 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
       id: `HOSP-${Date.now()}`,
       name: newHospital.name,
       address: newHospital.address,
-      gstin: newHospital.gstin
+      gstin: newHospital.gstin,
+      pan: newHospital.pan
     };
     onAddHospital(h);
     setSelectedHospital(h);
     setHospitalSearch(h.name);
     setShowAddHospitalModal(false);
-    setNewHospital({ name: '', address: '', gstin: '' });
+    setNewHospital({ name: '', address: '', gstin: '', pan: '' });
   };
 
   const subtotal = invoiceLines.reduce((sum, line) => sum + line.amount, 0);
@@ -253,16 +253,31 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
         {/* Add Hospital Modal */}
         {showAddHospitalModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-8 border-4 border-white animate-fade-in">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black uppercase tracking-widest text-sm">Register New Hospital</h3>
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in border-4 border-white">
+              <div className="bg-[#3159a6] p-5 text-white flex justify-between items-center font-black uppercase tracking-widest">
+                <h3>Register New Hospital</h3>
                 <button onClick={() => setShowAddHospitalModal(false)}><X size={24}/></button>
               </div>
-              <div className="space-y-4">
-                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-1">Hospital Name</label><input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold" value={newHospital.name} onChange={e => setNewHospital({...newHospital, name: e.target.value})} /></div>
-                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-1">GSTIN (Optional)</label><input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold uppercase" value={newHospital.gstin} onChange={e => setNewHospital({...newHospital, gstin: e.target.value})} /></div>
-                <div><label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Address</label><textarea className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold h-24 resize-none" value={newHospital.address} onChange={e => setNewHospital({...newHospital, address: e.target.value})} /></div>
-                <button onClick={handleAddHospitalSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-4">Confirm Registration</button>
+              <div className="p-8 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Hospital Name *</label>
+                  <input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-700 outline-none focus:border-primary" value={newHospital.name} onChange={e => setNewHospital({...newHospital, name: e.target.value})} placeholder="Hospital Name" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">GSTIN (Optional)</label>
+                    <input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold uppercase text-gray-700 outline-none focus:border-primary" value={newHospital.gstin} onChange={e => setNewHospital({...newHospital, gstin: e.target.value})} placeholder="GSTIN" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">PAN NO (Optional)</label>
+                    <input className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold uppercase text-gray-700 outline-none focus:border-primary" value={newHospital.pan} onChange={e => setNewHospital({...newHospital, pan: e.target.value})} placeholder="PAN NO" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Address *</label>
+                  <textarea className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold h-24 resize-none text-gray-700 outline-none focus:border-primary" value={newHospital.address} onChange={e => setNewHospital({...newHospital, address: e.target.value})} placeholder="Enter hospital full address..." />
+                </div>
+                <button onClick={handleAddHospitalSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl active:scale-95 transition-all">Confirm Registration</button>
               </div>
             </div>
           </div>
@@ -308,7 +323,10 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
               <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest border-b pb-1">Bill To:</h4>
               <p className="font-black text-2xl text-slate-900 uppercase tracking-tight mb-2">{selectedHospital.name}</p>
               <p className="text-xs text-slate-700 font-bold uppercase leading-relaxed min-h-[60px] italic">"{selectedHospital.address}"</p>
-              {selectedHospital.gstin && <p className="text-[10px] font-black text-[#3159a6] mt-4 uppercase">GSTIN: {selectedHospital.gstin}</p>}
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+                {selectedHospital.gstin && <p className="text-[10px] font-black text-[#3159a6] uppercase">GSTIN: {selectedHospital.gstin}</p>}
+                {selectedHospital.pan && <p className="text-[10px] font-black text-slate-600 uppercase">PAN: {selectedHospital.pan}</p>}
+              </div>
             </div>
             <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 flex flex-col justify-between">
               <div>
