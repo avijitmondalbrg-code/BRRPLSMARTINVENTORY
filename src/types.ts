@@ -53,6 +53,38 @@ export interface Patient {
   dob?: string;
 }
 
+export interface Hospital {
+  id: string;
+  name: string;
+  address: string;
+  gstin?: string;
+  contactPerson?: string;
+  phone?: string;
+}
+
+export interface ServiceInvoiceLine {
+  id: string;
+  description: string;
+  hsn: string;
+  qty: number;
+  rate: number;
+  amount: number;
+}
+
+export interface ServiceInvoice {
+  id: string;
+  hospitalId: string;
+  hospitalName: string;
+  hospitalDetails: Hospital;
+  date: string;
+  items: ServiceInvoiceLine[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes?: string;
+  bankAccountName?: string;
+}
+
 export interface PaymentRecord {
   id: string;
   date: string;
@@ -207,7 +239,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [

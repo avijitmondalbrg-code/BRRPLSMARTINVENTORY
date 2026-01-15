@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset } from './types';
+import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
+import { ServiceBilling } from './components/ServiceBilling';
 import { StockTransfer } from './components/StockTransfer';
 import { AssetTransfer } from './components/AssetTransfer';
 import { Dashboard } from './components/Dashboard';
@@ -17,7 +18,7 @@ import { AdvanceBookings } from './components/AdvanceBookings';
 import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -31,6 +32,8 @@ const App: React.FC = () => {
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [financialNotes, setFinancialNotes] = useState<FinancialNote[]>([]);
   const [stockTransfers, setStockTransfers] = useState<StockTransferType[]>([]);
@@ -50,6 +53,8 @@ const App: React.FC = () => {
       const fetchPromise = Promise.all([
           fetchCollection('inventory'),
           fetchCollection('invoices'),
+          fetchCollection('serviceInvoices'),
+          fetchCollection('hospitals'),
           fetchCollection('patients'),
           fetchCollection('quotations'),
           fetchCollection('financialNotes'),
@@ -61,7 +66,7 @@ const App: React.FC = () => {
           fetchCollection('companyAssets')
       ]);
 
-      const [inv, invs, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets] = await fetchPromise;
+      const [inv, invs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
@@ -73,6 +78,8 @@ const App: React.FC = () => {
 
       setInventory((inv as HearingAid[]) || []);
       setInvoices((invs as Invoice[]) || []);
+      setServiceInvoices((sinvs as ServiceInvoice[]) || []);
+      setHospitals((hosps as Hospital[]) || []);
       setPatients((pats as Patient[]) || []);
       setQuotations((quotes as Quotation[]) || []);
       setFinancialNotes((notes as FinancialNote[]) || []);
@@ -126,6 +133,22 @@ const App: React.FC = () => {
     } catch (e) {
         console.error("Failed to sync settings:", e);
     }
+  };
+
+  const handleAddHospital = async (h: Hospital) => {
+    setHospitals([...hospitals, h]);
+    try { await setDocument('hospitals', h.id, h); } catch(e) {}
+  };
+
+  const handleSaveServiceInvoice = async (inv: ServiceInvoice) => {
+    setServiceInvoices([inv, ...serviceInvoices]);
+    try { await setDocument('serviceInvoices', inv.id, inv); } catch(e) {}
+  };
+
+  const handleDeleteServiceInvoice = async (id: string) => {
+    if(!window.confirm("Delete this service invoice?")) return;
+    setServiceInvoices(serviceInvoices.filter(i => i.id !== id));
+    try { await deleteDocument('serviceInvoices', id); } catch(e) {}
   };
 
   const handleStockTransfer = async (itemId: string, toLocation: string, sender: string, transporter: string, receiver: string, note: string) => {
@@ -456,7 +479,8 @@ service cloud.firestore {
             { id: 'inventory', label: 'Inventory', icon: Package },
             { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft },
             { id: 'quotation', label: 'Quotations', icon: FileQuestion },
-            { id: 'billing', label: 'Billing', icon: FileText },
+            { id: 'billing', label: 'Patient Billing', icon: FileText },
+            { id: 'service-billing', label: 'Service Billing', icon: Landmark },
             { id: 'patients', label: 'Patients', icon: Users },
             { id: 'credit-note', label: 'Credit Note', icon: FileMinus },
             { id: 'debit-note', label: 'Debit Note', icon: FilePlus },
@@ -495,6 +519,7 @@ service cloud.firestore {
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
+          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} invoices={invoices} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}

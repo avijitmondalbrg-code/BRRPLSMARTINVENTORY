@@ -39,7 +39,6 @@ export interface AssetTransfer {
 export interface Patient {
   id: string;
   name: string;
-  dob?: string; // Date of Birth
   address: string;
   district?: string;
   state?: string;
@@ -51,6 +50,39 @@ export interface Patient {
   gstin?: string; // Patient's GSTIN (for B2B)
   addedDate?: string; // Date patient was added to system
   notes?: string; // Paragraph notes about the patient
+  dob?: string;
+}
+
+export interface Hospital {
+  id: string;
+  name: string;
+  address: string;
+  gstin?: string;
+  contactPerson?: string;
+  phone?: string;
+}
+
+export interface ServiceInvoiceLine {
+  id: string;
+  description: string;
+  hsn: string;
+  qty: number;
+  rate: number;
+  amount: number;
+}
+
+export interface ServiceInvoice {
+  id: string;
+  hospitalId: string;
+  hospitalName: string;
+  hospitalDetails: Hospital;
+  date: string;
+  items: ServiceInvoiceLine[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes?: string;
+  bankAccountName?: string;
 }
 
 export interface PaymentRecord {
@@ -190,7 +222,6 @@ export interface Lead {
   name: string;
   phone: string;
   email?: string;
-  // Fix: Added missing properties required by the CRM module
   address?: string;
   dob?: string;
   comment?: string;
@@ -208,7 +239,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [
@@ -221,7 +252,6 @@ export const LOCATIONS = [
   'NH BARASAT',
   'MANIPAL DHAKURIA',
   'MANIPAL SALTLAKE',
-  'Kasba Clinic',
   'NIDAN',
   'Home Visit'
 ];
@@ -233,7 +263,6 @@ export const BRANDS = [
   'Unitron',
   'Alps',
   'Widex',
-  'Microtone',
   'Battery 13',
   'Battery 675',
   'Battery 312',
