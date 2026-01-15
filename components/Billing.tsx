@@ -56,7 +56,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [productSearchTerm, setProductSearchTerm] = useState(''); 
   const [showPatientResults, setShowPatientResults] = useState(false);
-  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
+  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
   
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
@@ -70,6 +70,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [initialPayment, setInitialPayment] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
   const [paymentBank, setPaymentBank] = useState<string>('');
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
 
   const generateNextId = () => {
     const fy = getFinancialYear();
@@ -81,13 +82,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
 
   const resetForm = () => { 
     setStep('patient'); 
-    setPatient({ id: '', name: '', address: '', state: 'West Bengal', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); 
+    setPatient({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); 
     setSelectedItemIds([]); 
     setManualItems([]);
     setGstOverrides({}); 
     setItemDiscounts({}); 
     setTotalAdjustment(0);
     setInvoiceNotes('');
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
     setWarranty('2 Years Standard Warranty'); 
     setEditingInvoiceId(null); 
     setPatientSearchTerm(''); 
@@ -104,6 +106,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const handleEditInvoice = (inv: Invoice, startStep: 'patient' | 'review' = 'review') => {
     setEditingInvoiceId(inv.id);
     setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+    setInvoiceDate(inv.date);
     const inventoryIds = inv.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
     const manItems = inv.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
     setSelectedItemIds(inventoryIds);
@@ -122,7 +125,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   };
 
   const handleSelectPatient = (p: Patient) => { 
-    setPatient({ ...p, state: p.state || 'West Bengal', referDoctor: p.referDoctor || '' }); 
+    setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata', referDoctor: p.referDoctor || '' }); 
     setPatientSearchTerm(p.name); 
     setShowPatientResults(false); 
   };
@@ -219,7 +222,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
       subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
       placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
-      finalTotal: finalTotal, date: new Date().toISOString().split('T')[0], warranty, patientDetails: patient, notes: invoiceNotes,
+      finalTotal: finalTotal, date: invoiceDate, warranty, patientDetails: patient, notes: invoiceNotes,
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); 
@@ -486,10 +489,11 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-                    <div className="p-6 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Global Adjustment</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-[#3159a6] outline-none shadow-sm" placeholder="0.00" /></div>
-                    <div className="p-6 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
-                    <div className="p-6 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><MessageSquare size={12}/> Remarks</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl text-xs h-16 resize-none outline-none shadow-sm" placeholder="Internal clinical notes..." /></div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Invoice Date</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Global Adjustment</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-[#3159a6] outline-none shadow-sm" placeholder="0.00" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><MessageSquare size={12}/> Remarks</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl text-xs h-16 resize-none outline-none shadow-sm" placeholder="Internal clinical notes..." /></div>
                 </div>
                 <div className="mt-8 flex justify-between items-center bg-gray-50 p-8 rounded-3xl border-2 border-blue-50 shadow-inner">
                     <div><p className="text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] mb-1">Estimated Net Payable</p><p className="text-4xl font-black text-gray-900 tracking-tighter">₹{finalTotal.toLocaleString('en-IN')}</p></div>
@@ -600,7 +604,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <h2 className="text-lg font-black uppercase tracking-widest text-center">Tax Invoice</h2>
                             </div>
                             <p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateNextId()}</p>
-                            <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date().toLocaleDateString('en-IN')}</p>
+                            <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
 
@@ -608,7 +612,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
                             <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4>
                             <p className="font-black text-xl text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p>
-                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.state}</p>
+                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.district}, {patient.state}</p>
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
                             
                             <div className="mt-4 pt-3 border-t-2 border-slate-200 flex flex-wrap gap-x-6 gap-y-2">

@@ -27,12 +27,13 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [endDate, setEndDate] = useState('');
 
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
-  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' });
+  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   const [quotationNotes, setQuotationNotes] = useState<string>(''); 
+  const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
 
   const generateNextId = () => {
     const fy = getFinancialYear();
@@ -46,10 +47,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
   const resetForm = () => { 
     setStep('patient'); 
-    setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' }); 
+    setPatient({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' }); 
     setSelectedItemIds([]); 
     setDiscountValue(0); 
     setGstOverrides({});
+    setQuoteDate(new Date().toISOString().split('T')[0]);
     setWarranty('2 Years Standard Warranty'); 
     setQuotationNotes(''); 
     setEditingId(null); 
@@ -59,16 +61,17 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
 
   const handleSelectPatient = (p: Patient) => { 
-    setPatient({ ...p, state: p.state || 'West Bengal' }); 
+    setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata' }); 
     setPatientSearchTerm(p.name); 
   };
 
   const handleEditClick = (q: Quotation) => {
     setEditingId(q.id);
-    setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal' });
+    setPatient(q.patientDetails || { id: q.patientId, name: q.patientName, address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
     setSelectedItemIds(q.items.map(i => i.hearingAidId));
     setDiscountValue(q.discountValue);
     setQuotationNotes(q.notes || '');
+    setQuoteDate(q.date);
     setWarranty(q.warranty || '2 Years Standard Warranty');
     
     const overrides: Record<string, number> = {};
@@ -134,7 +137,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
       totalTaxableValue: subtotal, 
       totalTax, 
       finalTotal, 
-      date: new Date().toISOString().split('T')[0], 
+      date: quoteDate, 
       warranty, 
       notes: quotationNotes,
       patientDetails: patient, 
@@ -282,20 +285,22 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                     </table>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                    <div className="space-y-6">
-                        <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
-                            <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Special Consideration (Flat Discount)</label>
-                            <input type="number" value={discountValue || ''} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-primary outline-none shadow-sm" placeholder="0.00" />
-                        </div>
-                        <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
-                            <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Coverage</label>
-                            <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" />
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                    <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Quotation Date</label>
+                        <input type="date" value={quoteDate} onChange={e => setQuoteDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" />
                     </div>
-                    <div className="p-6 bg-gray-50 rounded-[2rem] border-2 border-gray-50 flex flex-col">
-                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1 ml-1"><MessageSquare size={12}/> Custom Quotation Remarks</label>
-                        <textarea value={quotationNotes} onChange={e => setQuotationNotes(e.target.value)} className="w-full border-2 border-white bg-white p-4 rounded-2xl text-xs flex-1 min-h-[150px] resize-none outline-none shadow-sm font-medium" placeholder="Clinical notes, payment terms, or validity details..." />
+                    <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Special Consideration (Flat Discount)</label>
+                        <input type="number" value={discountValue || ''} onChange={e => setDiscountValue(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-primary outline-none shadow-sm" placeholder="0.00" />
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50">
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Coverage</label>
+                        <input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" />
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-[2rem] border-2 border-gray-50 flex flex-col">
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1 ml-1"><MessageSquare size={12}/> Custom Remarks</label>
+                        <textarea value={quotationNotes} onChange={e => setQuotationNotes(e.target.value)} className="w-full border-2 border-white bg-white p-2 rounded-xl text-xs h-16 resize-none outline-none shadow-sm font-medium" placeholder="Validity details..." />
                     </div>
                 </div>
 
@@ -324,7 +329,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                             <h2 className="text-lg font-black uppercase tracking-widest">Quotation</h2>
                           </div>
                           <p className="text-xl font-black text-slate-900"># {editingId || generateNextId()}</p>
-                          <p className="text-xs font-black text-slate-500 uppercase tracking-widest mt-1">Date: {new Date().toLocaleDateString('en-IN')}</p>
+                          <p className="text-xs font-black text-slate-500 uppercase tracking-widest mt-1">Date: {new Date(quoteDate).toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
                     
@@ -332,7 +337,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100">
                             <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 border-b-2 border-slate-200 pb-1 tracking-widest">Attention Patient:</h4>
                             <p className="font-black text-2xl text-slate-900 uppercase tracking-tight mb-1">{patient.name}</p>
-                            <p className="font-bold text-slate-600 text-sm mb-3">{patient.phone}</p>
+                            <p className="font-bold text-slate-600 text-sm mb-3">{patient.phone} • {patient.district}, {patient.state}</p>
                             <p className="text-xs text-slate-700 font-bold uppercase leading-relaxed min-h-[40px] italic">"{patient.address}"</p>
                         </div>
                         <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 flex flex-col justify-center">
