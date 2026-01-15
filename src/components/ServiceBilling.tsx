@@ -298,28 +298,22 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
         </div>
 
         <div id="invoice-printable-area" className="bg-white shadow-2xl p-[15mm] w-full max-w-[900px] min-h-[297mm] flex flex-col border-4 border-white print:border-0 print:shadow-none print:p-[5mm]">
-          <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
-            <div className="flex gap-8">
-              <img src={logo} className="h-28 w-28 object-contain rounded-2xl border p-2" />
-              <div>
-                <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{COMPANY_NAME}</h1>
-                <p className="text-sm text-slate-600 font-bold italic mt-1">{COMPANY_TAGLINE}</p>
-                <div className="text-[10px] text-slate-800 font-bold mt-4 max-w-sm uppercase leading-tight">
-                  <p>{COMPANY_ADDRESS}</p>
-                  <p className="mt-1">PH: {COMPANY_PHONES} | EMAIL: {COMPANY_EMAIL}</p>
-                  <p className="mt-1">GSTIN: {CLINIC_GSTIN}</p>
-                </div>
-              </div>
+          {/* Re-architected Header to match Patient Billing */}
+          <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
+            <div className="flex items-center gap-6">
+              <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
             </div>
-            <div className="text-right">
-              <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg"><h2 className="text-lg font-black uppercase tracking-widest">Service Invoice</h2></div>
-              <p className="text-sm font-black text-slate-900"># {generateInvoiceId()}</p>
-              <p className="text-[11px] font-bold text-slate-500 uppercase mt-1">Date: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
+            <div className="text-right flex flex-col items-end">
+              <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
+                <h2 className="text-lg font-black uppercase tracking-widest text-center">Service Invoice</h2>
+              </div>
+              <p className="text-sm font-black text-slate-900 uppercase"># {generateInvoiceId()}</p>
+              <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 mb-8">
-            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
+            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100">
               <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest border-b pb-1">Bill To:</h4>
               <p className="font-black text-2xl text-slate-900 uppercase tracking-tight mb-2">{selectedHospital.name}</p>
               <p className="text-xs text-slate-700 font-bold uppercase leading-relaxed min-h-[60px] italic">"{selectedHospital.address}"</p>
@@ -328,19 +322,13 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 {selectedHospital.pan && <p className="text-[10px] font-black text-slate-600 uppercase">PAN: {selectedHospital.pan}</p>}
               </div>
             </div>
-            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 flex flex-col justify-between">
+            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest border-b pb-1">Payment Node:</h4>
-                <div className="space-y-1 text-[10px] font-black uppercase text-slate-800">
-                  <div className="flex justify-between"><span>Bank:</span><span>{bank.name}</span></div>
-                  <div className="flex justify-between"><span>A/C No:</span><span className="text-slate-900">{bank.accountNumber}</span></div>
-                  <div className="flex justify-between"><span>IFSC:</span><span className="text-slate-900">{bank.ifsc}</span></div>
-                  <div className="flex justify-between"><span>Branch:</span><span>{bank.branch}</span></div>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center">
-                 <span className="text-[10px] font-black text-slate-400 uppercase">Settlement:</span>
-                 <span className="text-xs font-black text-[#3159a6] uppercase">NEFT / RTGS / CHEQUE</span>
+                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Clinic Identity</h4>
+                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight leading-tight">{COMPANY_ADDRESS}</p>
+                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight mt-2">PH: {COMPANY_PHONES}</p>
+                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL} | GSTIN: {CLINIC_GSTIN}</p>
               </div>
             </div>
           </div>
@@ -390,7 +378,19 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
             </div>
           </div>
 
+          {/* New Bottom Section: Bank Details and Legal Terms */}
           <div className="mt-auto">
+            {/* Bank details moved to bottom just above signature and terms */}
+            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 mb-8 w-full">
+              <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-[0.2em] mb-2 border-b border-slate-200 pb-1">Bank Settlement Node:</h5>
+              <div className="grid grid-cols-4 text-[10px] uppercase font-black text-slate-800">
+                <p><span className="text-slate-400 mr-2">Bank:</span>{bank.name}</p>
+                <p><span className="text-slate-400 mr-2">A/C:</span>{bank.accountNumber}</p>
+                <p><span className="text-slate-400 mr-2">IFSC:</span>{bank.ifsc}</p>
+                <p className="text-right"><span className="text-slate-400 mr-2">Branch:</span>{bank.branch}</p>
+              </div>
+            </div>
+
             <div className="flex justify-between items-end">
               <div className="w-[65%]">
                 <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest">Legal Terms & Conditions</p>
@@ -406,7 +406,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
               </div>
             </div>
-            <div className="mt-12 text-center opacity-30 pb-4">
+            <div className="mt-12 text-center opacity-30 pb-4 print:opacity-10">
               <p className="text-[9px] font-black uppercase tracking-[0.8em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
             </div>
           </div>
