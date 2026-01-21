@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus, Activity, UserRole } from '../types';
-import { Plus, Search, Phone, Calendar, MessageCircle, MoreVertical, User, ArrowRight, CheckCircle, XCircle, Clock, IndianRupee, Lock, Mail, Send, MessageSquare, StickyNote, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3 } from 'lucide-react';
+import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote } from 'lucide-react';
 
 interface CRMProps {
   leads: Lead[];
@@ -21,7 +21,9 @@ const STATUS_COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
 ];
 
 export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConvertToPatient, onDelete, userRole }) => {
+  const [viewType, setViewType] = useState<'pipeline' | 'schedule'>('pipeline');
   const [searchTerm, setSearchTerm] = useState('');
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -34,19 +36,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
 
   // Form State
   const [formData, setFormData] = useState<Partial<Lead>>({
-    name: '', 
-    phone: '', 
-    address: '',
-    dob: '',
-    comment: '',
-    problem: '',
-    referDoctor: '',
-    haPotential: 'No',
-    entryBy: '',
-    source: 'Walk-in', 
-    status: 'New', 
-    value: 0,
-    nextFollowUp: ''
+    name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: '', source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
   });
 
   // Activity Form State
@@ -57,11 +47,29 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
     l.phone.includes(searchTerm)
   );
 
+  const scheduleLeads = useMemo(() => {
+    return leads.filter(l => l.nextFollowUp === scheduleDate);
+  }, [leads, scheduleDate]);
+
+  const exportScheduleToCSV = () => {
+    const headers = ['Patient Name', 'Phone', 'Status', 'Inquiry Source', 'Problem', 'Potential Value', 'Scheduled Date'];
+    const rows = scheduleLeads.map(l => [
+      `"${l.name}"`, l.phone, l.status, l.source, `"${l.problem || 'N/A'}"`, l.value || 0, l.nextFollowUp
+    ]);
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `follow_up_list_${scheduleDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleOpenAdd = () => {
     setEditingLeadId(null);
     setFormData({
-      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: userRole, 
-      source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
+      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: userRole, source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
     });
     setShowAddModal(true);
   };
@@ -79,30 +87,16 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
     if (editingLeadId) {
       const existingLead = leads.find(l => l.id === editingLeadId);
       if (!existingLead) return;
-
       const updatedLead: Lead = {
-        ...existingLead,
-        name: formData.name || existingLead.name,
-        phone: formData.phone || existingLead.phone,
-        address: formData.address || '',
-        dob: formData.dob || '',
-        comment: formData.comment || '',
-        problem: formData.problem || '',
-        referDoctor: formData.referDoctor || '',
-        haPotential: (formData.haPotential as 'Yes' | 'No') || 'No',
-        entryBy: formData.entryBy || userRole,
-        source: formData.source || existingLead.source,
-        value: Number(formData.value) || 0,
-        nextFollowUp: formData.nextFollowUp || '',
-        notes: formData.comment || existingLead.notes
+        ...existingLead, ...formData as Lead, notes: formData.comment || existingLead.notes
       };
       onUpdateLead(updatedLead);
       if (selectedLead?.id === editingLeadId) setSelectedLead(updatedLead);
     } else {
       const newLead: Lead = {
         id: `L-${Date.now()}`,
-        name: formData.name,
-        phone: formData.phone,
+        name: formData.name!,
+        phone: formData.phone!,
         address: formData.address || '',
         dob: formData.dob || '',
         comment: formData.comment || '',
@@ -120,26 +114,15 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
       };
       onAddLead(newLead);
     }
-    
     setShowAddModal(false);
-    setEditingLeadId(null);
   };
 
   const handleAddActivity = () => {
     if (!selectedLead || !newActivity.content) return;
-    
     const activity: Activity = {
-        id: `A-${Date.now()}`,
-        type: newActivity.type as any,
-        content: newActivity.content,
-        date: new Date().toISOString().split('T')[0]
+        id: `A-${Date.now()}`, type: newActivity.type as any, content: newActivity.content, date: new Date().toISOString().split('T')[0]
     };
-
-    const updatedLead = {
-        ...selectedLead,
-        activities: [activity, ...selectedLead.activities]
-    };
-
+    const updatedLead = { ...selectedLead, activities: [activity, ...selectedLead.activities] };
     onUpdateLead(updatedLead);
     setSelectedLead(updatedLead);
     setNewActivity({ type: 'Call', content: '' });
@@ -147,502 +130,294 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
 
   const handleStatusChange = (status: LeadStatus) => {
       if (!selectedLead) return;
-      
       if (status === 'Won' && selectedLead.status !== 'Won') {
-          if (window.confirm("Lead Marked as Won! Do you want to register them as a Patient?")) {
-             onConvertToPatient(selectedLead);
-          }
+          if (window.confirm("Mark as Won & Convert to Patient?")) onConvertToPatient(selectedLead);
       }
-
       const updatedLead = { ...selectedLead, status };
       onUpdateLead(updatedLead);
       setSelectedLead(updatedLead);
   };
 
-  const handleQuickReschedule = () => {
-      if (!selectedLead) return;
-      handleOpenEdit(selectedLead);
-  };
-
-  const openMessageModal = () => {
-      setMessageBody(`Hi ${selectedLead?.name}, `);
-      setEmailSubject('Regarding your inquiry at Bengal Rehabilitation');
-      setMessageChannel('WhatsApp');
-      setShowMessageModal(true);
-  }
-
   const handleSendMessage = () => {
       if (!selectedLead) return;
-
       let link = '';
-      let logType: Activity['type'] = 'WhatsApp';
-      let content = '';
-
       const cleanPhone = selectedLead.phone.replace(/\D/g, '');
       const phoneWithCode = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-
-      if (messageChannel === 'WhatsApp') {
-          const encodedBody = encodeURIComponent(messageBody);
-          link = `https://wa.me/${phoneWithCode}?text=${encodedBody}`;
-          logType = 'WhatsApp';
-          content = `Sent WhatsApp: "${messageBody}"`;
-      } else if (messageChannel === 'Email') {
-          if (!selectedLead.email) {
-              alert("This lead does not have an email address.");
-              return;
-          }
-          const encodedSubject = encodeURIComponent(emailSubject);
-          const encodedBody = encodeURIComponent(messageBody);
-          link = `mailto:${selectedLead.email}?subject=${encodedSubject}&body=${encodedBody}`;
-          logType = 'Email';
-          content = `Sent Email: Subject: "${emailSubject}" - Body: "${messageBody}"`;
-      } else if (messageChannel === 'SMS') {
-          const encodedBody = encodeURIComponent(messageBody);
-          link = `sms:${cleanPhone}?body=${encodedBody}`;
-          logType = 'SMS';
-          content = `Sent SMS: "${messageBody}"`;
-      }
+      if (messageChannel === 'WhatsApp') link = `https://wa.me/${phoneWithCode}?text=${encodeURIComponent(messageBody)}`;
+      else if (messageChannel === 'Email') link = `mailto:${selectedLead.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(messageBody)}`;
+      else if (messageChannel === 'SMS') link = `sms:${cleanPhone}?body=${encodeURIComponent(messageBody)}`;
 
       const activity: Activity = {
-          id: `A-${Date.now()}`,
-          type: logType,
-          content: content,
-          date: new Date().toISOString().split('T')[0]
+          id: `A-${Date.now()}`, type: messageChannel as any, content: `Auto-Log: Sent ${messageChannel} - ${messageBody}`, date: new Date().toISOString().split('T')[0]
       };
-
-      const updatedLead = {
-          ...selectedLead,
-          activities: [activity, ...selectedLead.activities]
-      };
-
-      onUpdateLead(updatedLead);
-      setSelectedLead(updatedLead);
-      
+      onUpdateLead({ ...selectedLead, activities: [activity, ...selectedLead.activities] });
       window.open(link, '_blank');
       setShowMessageModal(false);
   };
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2 uppercase tracking-tight">
-            <User className="h-6 w-6 text-primary" />
-            Lead Hub
+            <User className="h-6 w-6 text-primary" /> CRM Hub
           </h2>
-          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Pipeline & Prospect Management</p>
+          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Lead Pipeline & Daily Follow-ups</p>
         </div>
-        <div className="flex gap-4">
-            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border flex items-center gap-2">
-                 <Search className="text-gray-400" size={18} />
-                 <input 
-                    type="text" 
-                    placeholder="Find prospects..." 
-                    className="outline-none text-sm font-bold"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                 />
+
+        <div className="flex flex-wrap items-center gap-3">
+            <div className="bg-white p-1 rounded-xl shadow-sm border flex items-center">
+                <button onClick={() => setViewType('pipeline')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition ${viewType === 'pipeline' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}>
+                    <LayoutGrid size={14} /> Pipeline
+                </button>
+                <button onClick={() => setViewType('schedule')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition ${viewType === 'schedule' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}>
+                    <List size={14} /> Daily Tasks
+                </button>
             </div>
-            <button
-              onClick={handleOpenAdd}
-              className="bg-primary hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-xl transition-all font-black uppercase text-[10px] tracking-widest active:scale-95"
-            >
-              <Plus size={18} />
-              New Lead Entry
+
+            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border flex items-center gap-2">
+                 <Search className="text-gray-400" size={16} />
+                 <input type="text" placeholder="Find lead..." className="outline-none text-xs font-bold w-32" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+
+            <button onClick={handleOpenAdd} className="bg-primary hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-xl transition-all font-black uppercase text-[10px] tracking-widest">
+              <Plus size={18} /> New Entry
             </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto pb-4">
-         <div className="flex gap-4 h-full min-w-[1200px]">
+      {viewType === 'pipeline' ? (
+        <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
+          <div className="flex gap-4 h-full min-w-[1200px]">
             {STATUS_COLUMNS.map(col => (
                 <div key={col.id} className="flex-1 flex flex-col min-w-[280px] bg-gray-100/50 rounded-[2rem] border border-gray-200 shadow-inner">
                     <div className={`p-4 rounded-t-[2rem] border-b ${col.color} flex justify-between items-center`}>
                         <span className="font-black uppercase text-[10px] tracking-widest ml-2">{col.label}</span>
-                        <span className="bg-white bg-opacity-60 px-3 py-1 rounded-full text-[10px] font-black">
-                            {filteredLeads.filter(l => l.status === col.id).length}
-                        </span>
+                        <span className="bg-white/60 px-3 py-1 rounded-full text-[10px] font-black">{filteredLeads.filter(l => l.status === col.id).length}</span>
                     </div>
-                    
                     <div className="p-4 flex-1 overflow-y-auto space-y-4 custom-scrollbar">
-                        {filteredLeads
-                           .filter(l => l.status === col.id)
-                           .map(lead => {
-                             const isOverdue = lead.nextFollowUp && new Date(lead.nextFollowUp) < new Date(new Date().setHours(0,0,0,0));
-                             
-                             return (
-                             <div 
-                                key={lead.id}
-                                onClick={() => setSelectedLead(lead)}
-                                className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl cursor-pointer transition-all group relative border-b-4 border-b-transparent hover:border-b-primary"
-                             >
+                        {filteredLeads.filter(l => l.status === col.id).map(lead => (
+                             <div key={lead.id} onClick={() => setSelectedLead(lead)} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl cursor-pointer transition-all group relative border-b-4 border-b-transparent hover:border-b-primary">
                                 <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-2">
-                                        {isOverdue && (
-                                            <div className="flex-shrink-0 h-3 w-3 rounded-full bg-red-500 shadow-sm ring-2 ring-white animate-pulse" title="Overdue Follow-up"></div>
-                                        )}
-                                        <h4 className="font-black text-gray-800 uppercase tracking-tight leading-none">{lead.name}</h4>
-                                    </div>
-                                    {lead.value && lead.value > 0 && (
-                                        <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
-                                            ₹{(lead.value/1000).toFixed(0)}k
-                                        </span>
+                                    <h4 className="font-black text-gray-800 uppercase tracking-tight leading-none">{lead.name}</h4>
+                                    {lead.nextFollowUp === new Date().toISOString().split('T')[0] && (
+                                        <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse" title="Follow-up Today"></span>
                                     )}
                                 </div>
                                 <div className="text-[10px] text-gray-500 space-y-2 uppercase font-bold tracking-wider">
                                     <div className="flex items-center gap-2"><Phone size={12} className="text-primary"/> {lead.phone}</div>
-                                    {lead.nextFollowUp ? (
-                                        <div className={`flex items-center gap-2 ${
-                                            isOverdue ? 'text-red-600' : 'text-[#3159a6]'
-                                        }`}>
-                                            <Calendar size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 text-gray-300 italic"><Calendar size={12}/> Not Scheduled</div>
-                                    )}
+                                    {lead.nextFollowUp && <div className="flex items-center gap-2 text-[#3159a6]"><Calendar size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}</div>}
                                 </div>
                                 <div className="mt-4 pt-3 border-t flex justify-between items-center text-[9px] font-black text-gray-400 uppercase tracking-widest">
                                     <span>{lead.source}</span>
                                     <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
                                 </div>
                              </div>
-                           )})
-                        }
+                        ))}
                     </div>
                 </div>
             ))}
-         </div>
-      </div>
-
-      {/* Add/Edit Lead Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 overflow-y-auto">
-            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in my-auto border-4 border-white">
-                <div className="bg-primary p-6 flex justify-between items-center text-white flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        {editingLeadId ? <Edit3 size={20}/> : <Plus size={20} />}
-                        <h3 className="text-lg font-black uppercase tracking-widest">{editingLeadId ? 'Update Prospect Details' : 'Register New Lead'}</h3>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+            <div className="p-6 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
+                <div className="flex items-center gap-4">
+                    <div className="bg-white p-2 rounded-xl border-2 border-primary/20 shadow-inner flex items-center gap-3">
+                        <Filter size={16} className="text-primary ml-2"/>
+                        <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="outline-none font-black text-xs uppercase text-primary" />
                     </div>
-                    <button onClick={() => { setShowAddModal(false); setEditingLeadId(null); }} className="text-white/80 hover:text-white transition-transform hover:rotate-90"><XCircle size={28}/></button>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        Found <span className="text-primary">{scheduleLeads.length}</span> Scheduled follow-ups
+                    </p>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gray-50/30">
-                    <form id="add-lead-form" onSubmit={handleAddSubmit} className="space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Prospect Name *</label>
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                                    <input required className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-black bg-white uppercase" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Patient Name" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Contact Phone *</label>
-                                <div className="relative">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                                    <input required className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-black bg-white" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Mobile Number" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Follow-up Schedule</label>
-                                <div className="relative">
-                                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                                    <input type="date" className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-black bg-white" value={formData.nextFollowUp || ''} onChange={e => setFormData({...formData, nextFollowUp: e.target.value})} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Ref. Doctor / Consultant</label>
-                                <div className="relative">
-                                    <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                                    <input className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-black bg-white uppercase" value={formData.referDoctor || ''} onChange={e => setFormData({...formData, referDoctor: e.target.value})} placeholder="Referring MD" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Inquiry Source</label>
-                                <select className="w-full border-2 border-gray-100 rounded-2xl p-4 bg-white font-black uppercase text-[10px]" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}>
-                                    <option>Walk-in</option><option>Facebook Ad</option><option>Google Ad</option><option>Referral</option><option>Camp</option><option>Hospital</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">High Intent (HA Potential)</label>
-                                <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-white uppercase text-[10px]" value={formData.haPotential} onChange={e => setFormData({...formData, haPotential: e.target.value as any})}>
-                                    <option value="Yes">Yes (High Interest)</option>
-                                    <option value="No">No (General Inquiry)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Patient Location / Address</label>
-                            <div className="relative">
-                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                                <input className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-black bg-white uppercase" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Area or Full Address" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Clinical Observation / Problem</label>
-                            <div className="relative">
-                                <AlertCircle className="absolute left-4 top-4 text-gray-300" size={18}/>
-                                <textarea className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-medium h-24 resize-none bg-white uppercase text-xs" value={formData.problem || ''} onChange={e => setFormData({...formData, problem: e.target.value})} placeholder="Describe hearing difficulty details..." />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Executive Notes / Progress Summary</label>
-                            <div className="relative">
-                                <MessageSquare className="absolute left-4 top-4 text-gray-300" size={18}/>
-                                <textarea className="w-full pl-12 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none transition font-medium h-28 resize-none bg-white text-xs" value={formData.comment || ''} onChange={e => setFormData({...formData, comment: e.target.value})} placeholder="Sales notes, trial feedback, etc..." />
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div className="p-8 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4 flex-shrink-0">
-                    <button type="button" onClick={() => { setShowAddModal(false); setEditingLeadId(null); }} className="flex-1 py-4 border-2 border-gray-200 rounded-[2rem] font-black uppercase tracking-widest text-[10px] text-gray-400 hover:bg-white transition active:scale-95">Cancel</button>
-                    <button type="submit" form="add-lead-form" className="flex-[2] bg-primary text-white py-4 rounded-[2rem] hover:bg-slate-800 font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-all active:scale-95">{editingLeadId ? 'Update Record' : 'Save Inquiry Profile'}</button>
-                </div>
+                <button onClick={exportScheduleToCSV} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition active:scale-95">
+                    <Download size={14}/> Export Today's List
+                </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-primary text-white text-[10px] font-black uppercase tracking-widest z-10">
+                        <tr>
+                            <th className="p-5">Lead / Contact</th>
+                            <th className="p-5">Inquiry Focus</th>
+                            <th className="p-5">Current Stage</th>
+                            <th className="p-5">Last Activity</th>
+                            <th className="p-5 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {scheduleLeads.length === 0 ? (
+                            <tr><td colSpan={5} className="p-20 text-center text-gray-300 italic font-black uppercase text-xs tracking-widest">No follow-ups scheduled for this date</td></tr>
+                        ) : scheduleLeads.map(lead => (
+                            <tr key={lead.id} className="hover:bg-blue-50/30 transition-colors group">
+                                <td className="p-5" onClick={() => setSelectedLead(lead)}>
+                                    <p className="font-black text-gray-800 uppercase tracking-tight">{lead.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold flex items-center gap-1 mt-1"><Phone size={10}/> {lead.phone}</p>
+                                </td>
+                                <td className="p-5 max-w-xs" onClick={() => setSelectedLead(lead)}>
+                                    <p className="text-[10px] font-bold text-gray-600 line-clamp-2 uppercase italic">"{lead.problem || lead.comment || 'No specific notes'}"</p>
+                                </td>
+                                <td className="p-5">
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border-2 ${STATUS_COLUMNS.find(c => c.id === lead.status)?.color}`}>
+                                        {lead.status}
+                                    </span>
+                                </td>
+                                <td className="p-5">
+                                    {lead.activities.length > 0 ? (
+                                        <div className="text-[10px] font-bold text-gray-400 uppercase">
+                                            <p className="text-gray-600">{lead.activities[0].type}</p>
+                                            <p>{lead.activities[0].date}</p>
+                                        </div>
+                                    ) : <span className="text-[10px] text-gray-300 uppercase italic">No history</span>}
+                                </td>
+                                <td className="p-5 text-center">
+                                    <div className="flex justify-center gap-2">
+                                        <button onClick={() => setSelectedLead(lead)} className="p-2 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"><Phone size={16}/></button>
+                                        <button onClick={() => handleOpenEdit(lead)} className="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-800 hover:text-white transition-all shadow-sm"><Edit3 size={16}/></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
       )}
 
-      {/* Message Modal */}
-      {showMessageModal && selectedLead && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-0 overflow-hidden animate-fade-in">
-                  <div className="bg-teal-700 p-4 flex justify-between items-center text-white">
-                      <h3 className="font-bold flex items-center gap-2"><Send size={18}/> Send Message</h3>
-                      <button onClick={() => setShowMessageModal(false)} className="text-teal-200 hover:text-white"><XCircle/></button>
-                  </div>
-                  <div className="p-6 space-y-4">
-                      <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                          {['WhatsApp', 'Email', 'SMS'].map((channel: any) => (
-                              <button
-                                key={channel}
-                                onClick={() => setMessageChannel(channel)}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition flex items-center justify-center gap-2 ${
-                                    messageChannel === channel 
-                                        ? 'bg-white text-teal-700 shadow-sm' 
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                              >
-                                  {channel === 'WhatsApp' ? <MessageCircle size={16}/> : channel === 'Email' ? <Mail size={16}/> : <MessageSquare size={16}/>}
-                                  {channel}
-                              </button>
-                          ))}
-                      </div>
-
-                      <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-200">
-                          To: <span className="font-bold text-gray-800">{selectedLead.name}</span> 
-                          {messageChannel === 'Email' 
-                            ? ` <${selectedLead.email || 'No Email'}>` 
-                            : ` (${selectedLead.phone})`
-                          }
-                      </div>
-
-                      {messageChannel === 'Email' && (
-                          <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                              <input 
-                                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-teal-500 outline-none"
-                                value={emailSubject}
-                                onChange={e => setEmailSubject(e.target.value)}
-                                placeholder="Email Subject"
-                              />
-                          </div>
-                      )}
-
-                      <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Message Body</label>
-                          <textarea 
-                            className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-teal-500 outline-none h-32 resize-none"
-                            value={messageBody}
-                            onChange={e => setMessageBody(e.target.value)}
-                            placeholder="Type your message here..."
-                          />
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-2">
-                          <button onClick={() => setShowMessageModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                          <button 
-                            onClick={handleSendMessage}
-                            className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium flex items-center gap-2"
-                          >
-                              <Send size={16} /> Send & Log
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          </div>
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 overflow-y-auto">
+            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in my-auto border-4 border-white">
+                <div className="bg-primary p-6 flex justify-between items-center text-white">
+                    <h3 className="text-lg font-black uppercase tracking-widest">{editingLeadId ? 'Update Record' : 'New Inquiry'}</h3>
+                    <button onClick={() => setShowAddModal(false)} className="hover:rotate-90 transition-transform"><XCircle size={28}/></button>
+                </div>
+                <form onSubmit={handleAddSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Name *</label>
+                            <input required className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Phone *</label>
+                            <input required className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Next Follow-up Date</label>
+                            <input type="date" className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.nextFollowUp || ''} onChange={e => setFormData({...formData, nextFollowUp: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Inquiry Status</label>
+                            <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+                                {STATUS_COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Address / Location</label>
+                        <input className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Clinical Observation / Notes</label>
+                        <textarea className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none h-32 font-medium bg-gray-50" value={formData.problem} onChange={e => setFormData({...formData, problem: e.target.value})} />
+                    </div>
+                    <button type="submit" className="w-full bg-primary text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-slate-800 transition active:scale-95">Save Profile Record</button>
+                </form>
+            </div>
+        </div>
       )}
 
-      {/* Lead Details & Activity Panel */}
+      {/* Detail Panel */}
       {selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-end z-50">
-             <div className="bg-white w-full max-w-xl h-full shadow-2xl animate-slide-in-right flex flex-col">
-                <div className="p-6 bg-teal-700 text-white flex justify-between items-start">
+        <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
+            <div className="bg-white w-full max-w-xl h-full shadow-2xl animate-slide-in-right flex flex-col">
+                <div className="p-6 bg-primary text-white flex justify-between items-start">
                     <div>
                         <h3 className="text-xl font-bold uppercase tracking-tight">{selectedLead.name}</h3>
                         <p className="opacity-80 text-sm flex items-center gap-2 mt-1"><Phone size={14}/> {selectedLead.phone}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => handleOpenEdit(selectedLead)}
-                            className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition" title="Edit Prospect">
-                            <Edit3 size={20}/>
-                        </button>
-                        {userRole === 'admin' && (
-                            <button 
-                                onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete lead ${selectedLead.name}?`)) {
-                                        onDelete(selectedLead.id);
-                                        setSelectedLead(null);
-                                    }
-                                }}
-                                className="text-white/80 hover:text-white hover:bg-red-500/50 p-2 rounded-full transition" title="Delete Lead">
-                                <Trash2 size={20}/>
-                            </button>
-                        )}
-                        <button onClick={() => setSelectedLead(null)} className="text-white/80 hover:text-white p-2"><XCircle size={24}/></button>
+                    <div className="flex gap-2">
+                        <button onClick={() => handleOpenEdit(selectedLead)} className="p-2 hover:bg-white/10 rounded-full transition"><Edit3 size={20}/></button>
+                        <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-white/10 rounded-full transition"><XCircle size={24}/></button>
                     </div>
                 </div>
-                
+
                 <div className="p-6 border-b bg-gray-50 flex items-center justify-between">
-                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Status Stage</label>
-                        <select 
-                            className="bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full p-2 font-medium"
-                            value={selectedLead.status}
-                            onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-                        >
-                            {STATUS_COLUMNS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                        </select>
-                     </div>
+                     <select className="bg-white border border-gray-300 rounded-lg p-2 font-bold text-xs uppercase" value={selectedLead.status} onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}>
+                        {STATUS_COLUMNS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                     </select>
                      <div className="flex gap-2">
-                        <button onClick={openMessageModal} className="bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><Send size={16} /> Msg</button>
+                        <button onClick={() => { setMessageBody(`Hi ${selectedLead.name}, calling regarding your hearing check-up.`); setShowMessageModal(true); }} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow hover:bg-teal-700 transition">Message</button>
                         {selectedLead.status !== 'Won' && (
-                            <button onClick={() => handleStatusChange('Won')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><CheckCircle size={16} /> Won</button>
+                            <button onClick={() => handleStatusChange('Won')} className="bg-green-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow hover:bg-green-700 transition">Won</button>
                         )}
                      </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {/* Core Inquiry Details */}
                     <div className="bg-white border rounded-2xl p-5 space-y-4 shadow-sm">
-                        <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest border-b pb-2 mb-3">Inquiry Dossier</h4>
-                        <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Address</p>
-                                <p className="font-bold flex items-center gap-2"><MapPin size={12} className="text-teal-600"/> {selectedLead.address || 'Not Registered'}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Date of Birth</p>
-                                <p className="font-bold flex items-center gap-2"><Baby size={12} className="text-teal-600"/> {selectedLead.dob || 'Not Provided'}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Ref. Doctor</p>
-                                <p className="font-bold flex items-center gap-2"><UserCheck size={12} className="text-teal-600"/> {selectedLead.referDoctor || 'Self'}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">HA Potential</p>
-                                <p className={`font-black ${selectedLead.haPotential === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>{selectedLead.haPotential || 'No'}</p>
-                             </div>
-                             <div className="space-y-1 col-span-2">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Problem Statement</p>
-                                <p className="font-medium text-gray-700 bg-gray-50 p-2 rounded-lg border italic">"{selectedLead.problem || 'No specific problem description provided.'}"</p>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Entry Point</p>
-                                <p className="font-bold uppercase text-[11px]">{selectedLead.source} (via {selectedLead.entryBy || 'System'})</p>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Potential Value</p>
-                                <p className="font-bold text-teal-700">₹{(selectedLead.value || 0).toLocaleString()}</p>
-                             </div>
+                        <div className="grid grid-cols-2 gap-4 text-xs font-bold uppercase text-gray-500">
+                             <div><p className="text-[9px] text-gray-400">Next F/U</p><p className="text-primary font-black">{selectedLead.nextFollowUp || 'None'}</p></div>
+                             <div><p className="text-[9px] text-gray-400">Source</p><p>{selectedLead.source}</p></div>
                         </div>
+                        <div className="pt-2 border-t"><p className="text-[9px] text-gray-400 uppercase font-black">Clinical Summary</p><p className="text-gray-700 italic mt-1 font-medium">"{selectedLead.problem || 'No details recorded.'}"</p></div>
                     </div>
 
-                    {/* Follow-up Reminder */}
-                    {(() => {
-                        const isLeadOverdue = selectedLead.nextFollowUp && new Date(selectedLead.nextFollowUp) < new Date(new Date().setHours(0,0,0,0));
-                        return (
-                            <div className={`p-4 rounded-xl border flex items-center justify-between shadow-sm ${isLeadOverdue ? 'bg-red-50 border-red-200' : 'bg-indigo-50 border-indigo-200'}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 rounded-full ${isLeadOverdue ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                        <Calendar size={20} />
-                                    </div>
-                                    <div>
-                                        <p className={`text-[10px] font-black uppercase tracking-wider ${isLeadOverdue ? 'text-red-600' : 'text-indigo-600'}`}>Next Follow-up</p>
-                                        <p className={`text-lg font-black ${isLeadOverdue ? 'text-red-900' : 'text-indigo-900'}`}>
-                                            {selectedLead.nextFollowUp ? new Date(selectedLead.nextFollowUp).toLocaleDateString('en-IN') : 'Unscheduled'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                  {isLeadOverdue && <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded animate-pulse">OVERDUE</span>}
-                                  <button onClick={handleQuickReschedule} className="text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-800 border-b-2 border-indigo-200 hover:border-indigo-600 transition-all">Reschedule</button>
-                                </div>
-                            </div>
-                        );
-                    })()}
-
-                    {/* Interaction Feed */}
                     <div className="space-y-4">
-                        <h4 className="font-black text-gray-800 text-xs uppercase tracking-widest flex items-center gap-2"><MessageCircle size={16} className="text-teal-600"/> Engagement History</h4>
+                        <h4 className="font-black text-gray-800 text-[10px] uppercase tracking-widest flex items-center gap-2"><MessageCircle size={16} className="text-primary"/> Activity Log</h4>
                         <div className="space-y-4">
-                            {selectedLead.comment && (
-                                <div className="bg-amber-50 p-4 rounded-xl border-2 border-amber-100 border-dashed text-sm">
-                                    <p className="text-[10px] font-black uppercase text-amber-800 mb-1 tracking-widest">Initial Inquiry Comment</p>
-                                    <p className="text-amber-900 italic">"{selectedLead.comment}"</p>
-                                </div>
-                            )}
-                            
-                            {selectedLead.activities.length === 0 ? (
-                                <p className="text-gray-400 text-sm italic py-8 text-center bg-gray-50 rounded-2xl border-2 border-dashed">No interaction logs yet.</p>
-                            ) : selectedLead.activities.map(act => (
-                                <div key={act.id} className="flex gap-3 items-start group">
-                                    <div className="mt-1 bg-white border-2 border-gray-100 p-2 rounded-xl text-gray-400 group-hover:text-teal-600 transition-colors">
-                                        {act.type === 'Call' ? <Phone size={14}/> : act.type === 'Visit' ? <User size={14}/> : act.type === 'WhatsApp' ? <MessageCircle size={14}/> : <Mail size={14}/>}
-                                    </div>
-                                    <div className="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100 hover:border-teal-100 transition-all shadow-sm">
+                            {selectedLead.activities.map(act => (
+                                <div key={act.id} className="flex gap-3 items-start">
+                                    <div className="mt-1 bg-blue-50 p-2 rounded-xl text-primary"><StickyNote size={14}/></div>
+                                    <div className="bg-gray-50 rounded-2xl p-4 flex-1 border border-gray-100">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="font-black text-[10px] text-gray-800 uppercase tracking-widest">{act.type}</span>
-                                            <span className="text-[10px] font-bold text-gray-400">{act.date}</span>
+                                            <span className="font-black text-[9px] text-gray-800 uppercase tracking-widest">{act.type}</span>
+                                            <span className="text-[9px] font-bold text-gray-400">{act.date}</span>
                                         </div>
-                                        <p className="text-sm text-gray-600 font-medium">{act.content}</p>
+                                        <p className="text-xs text-gray-600 font-medium">{act.content}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="bg-blue-50 p-5 rounded-2xl border-2 border-blue-100 mt-6 shadow-sm">
-                            <h5 className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-3">Log Interaction</h5>
+                        <div className="bg-blue-50/50 p-5 rounded-3xl border-2 border-blue-50 mt-6">
                             <div className="flex gap-2 mb-3">
                                 {['Call', 'Visit', 'WhatsApp', 'Note'].map(type => (
-                                    <button 
-                                        key={type}
-                                        onClick={() => setNewActivity({...newActivity, type: type as any})}
-                                        className={`text-[10px] font-black uppercase px-4 py-1.5 rounded-full border transition-all ${newActivity.type === type ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
-                                    >
-                                        {type}
-                                    </button>
+                                    <button key={type} onClick={() => setNewActivity({...newActivity, type: type as any})} className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border transition ${newActivity.type === type ? 'bg-primary text-white' : 'bg-white text-gray-400'}`}>{type}</button>
                                 ))}
                             </div>
-                            <textarea 
-                                className="w-full border-2 border-blue-100 rounded-xl p-3 text-sm focus:border-blue-600 outline-none transition bg-white/50 h-20 resize-none font-medium"
-                                placeholder="Enter details of your interaction..."
-                                value={newActivity.content}
-                                onChange={e => setNewActivity({...newActivity, content: e.target.value})}
-                            />
-                            <button onClick={handleAddActivity} className="w-full bg-blue-600 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest mt-3 hover:bg-blue-700 shadow-lg active:scale-95 transition-all">Save Activity Log</button>
+                            <textarea className="w-full border-2 border-white rounded-xl p-3 text-xs h-20 resize-none outline-none font-medium" placeholder="Log outcome..." value={newActivity.content} onChange={e => setNewActivity({...newActivity, content: e.target.value})} />
+                            <button onClick={handleAddActivity} className="w-full bg-primary text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest mt-3 hover:bg-slate-800 transition">Record Log</button>
                         </div>
                     </div>
                 </div>
-             </div>
+            </div>
         </div>
+      )}
+
+      {/* Quick Message Modal */}
+      {showMessageModal && selectedLead && (
+          <div className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4">
+              <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+                  <div className="bg-teal-700 p-5 text-white flex justify-between items-center font-black uppercase tracking-widest">
+                      <h3>Send Quick Message</h3>
+                      <button onClick={() => setShowMessageModal(false)}><XCircle/></button>
+                  </div>
+                  <div className="p-8 space-y-4">
+                      <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+                          {['WhatsApp', 'Email', 'SMS'].map((c: any) => (
+                              <button key={c} onClick={() => setMessageChannel(c)} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition ${messageChannel === c ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-400'}`}>{c}</button>
+                          ))}
+                      </div>
+                      <textarea className="w-full border-2 border-gray-100 rounded-xl p-4 text-xs h-32 resize-none font-medium" value={messageBody} onChange={e => setMessageBody(e.target.value)} />
+                      <button onClick={handleSendMessage} className="w-full bg-teal-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg hover:bg-teal-700 transition">Send & Auto-Log</button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );
