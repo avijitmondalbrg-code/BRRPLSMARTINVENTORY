@@ -216,7 +216,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
       {selectedBooking && (
         <div className="fixed inset-0 bg-black/80 z-[130] flex flex-col items-center justify-start p-4 overflow-y-auto animate-fade-in backdrop-blur-xl print:bg-white print:p-0 print:block">
           
-          <div className="bg-white p-6 rounded-3xl shadow-xl mb-6 flex flex-wrap items-center gap-8 border border-gray-100 print:hidden w-full max-w-[900px] mt-4">
+          <div className="bg-white p-6 rounded-3xl shadow-xl mb-6 flex flex-wrap items-center gap-8 border border-gray-100 print:hidden w-full max-w-[900px] mt-4 flex-shrink-0">
               <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 rounded-lg text-primary"><Settings2 size={18}/></div>
                   <h4 className="text-xs font-black uppercase tracking-widest text-gray-500">Document Controls</h4>
@@ -248,12 +248,17 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 '--print-orientation': printOrientation,
                 '--print-size': 'A4'
             } as React.CSSProperties}
-            className="bg-white rounded-none w-full max-w-[900px] relative p-[15mm] flex flex-col print:p-0 print:shadow-none min-h-[297mm]"
+            className="bg-white rounded-none w-full max-w-[900px] relative p-[20mm] flex flex-col print:p-0 print:shadow-none min-h-[297mm] shadow-[0_40px_80px_rgba(0,0,0,0.5)] mb-10"
           >
+            {/* watermark style background */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.02] pointer-events-none select-none -rotate-12">
+               <IndianRupee size={400}/>
+            </div>
+
             {/* Header Area */}
             <div className="flex justify-between items-start border-b-4 border-slate-900 pb-10 mb-10 relative z-10">
               <div className="flex gap-8">
-                <div className="h-24 w-24 flex items-center justify-center border-2 border-gray-50 rounded-3xl p-2 bg-white">
+                <div className="h-28 w-28 flex items-center justify-center border-2 border-gray-50 rounded-3xl p-2 bg-white shadow-sm">
                   <img src={logo} alt="Logo" className="h-full w-full object-contain" />
                 </div>
                 <div>
@@ -275,7 +280,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
             </div>
 
             {/* Main Content Area */}
-            <div className="space-y-14 text-lg leading-loose text-slate-900 font-bold py-10 relative z-10 px-4">
+            <div className="space-y-16 text-lg leading-loose text-slate-900 font-bold py-10 relative z-10 px-4">
               <div className="flex flex-wrap gap-4 items-baseline">
                 <span className="whitespace-nowrap">Received with thanks from Mr./Mrs./Ms.</span>
                 <span className="border-b-2 border-slate-300 flex-grow px-4 font-black text-[#3159a6] text-3xl uppercase tracking-tighter">{selectedBooking.patientName}</span>
@@ -302,15 +307,15 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
             </div>
 
             {/* Amount in Words Area */}
-            <div className="mt-10 px-4">
-              <div className="border-2 border-dashed border-slate-300 p-6 rounded-2xl text-center bg-slate-50/30">
+            <div className="mt-10 px-4 relative z-10">
+              <div className="border-2 border-dashed border-slate-300 p-8 rounded-2xl text-center bg-slate-50/20">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em] mb-2">Rupees in Words</p>
-                  <p className="text-lg font-black text-slate-800">{numberToWords(selectedBooking.amount)}</p>
+                  <p className="text-xl font-black text-slate-800">{numberToWords(selectedBooking.amount)}</p>
               </div>
             </div>
 
             {/* Footer Area */}
-            <div className="mt-auto flex flex-col sm:flex-row justify-between items-center sm:items-end gap-16 relative z-10 pt-20 pb-10 px-4">
+            <div className="mt-auto flex flex-col sm:flex-row justify-between items-center sm:items-end gap-16 relative z-10 pt-24 pb-10 px-4">
               <div className="bg-[#3159a6] p-10 rounded-[2.5rem] text-center flex flex-col gap-1 w-full sm:w-auto shadow-2xl relative">
                 <div className="absolute -top-4 -left-4 bg-white p-2 rounded-full text-[#3159a6] shadow-lg border border-blue-50"><IndianRupee size={16}/></div>
                 <div className="space-y-2">
@@ -319,11 +324,13 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 </div>
               </div>
               
-              <div className="text-center w-full sm:w-72 pb-4">
+              <div className="text-center w-full sm:w-80 pb-4">
                 {signature ? (
-                  <img src={signature} className="h-24 mb-3 mx-auto mix-blend-multiply opacity-95" />
+                  <div className="h-28 mb-3 flex items-end justify-center">
+                    <img src={signature} className="max-h-full object-contain mix-blend-multiply opacity-95 transition-transform hover:scale-105" />
+                  </div>
                 ) : (
-                  <div className="h-24 w-full border-b-2 border-dashed border-slate-200 mb-4"></div>
+                  <div className="h-28 w-full border-b-2 border-dashed border-slate-200 mb-4"></div>
                 )}
                 <div className="h-0.5 bg-slate-900 w-full mb-3"></div>
                 <p className="text-xs font-black uppercase text-slate-900 tracking-[0.4em]">Authorized Signatory</p>
