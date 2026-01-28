@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus, Activity, UserRole } from '../types';
-import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote } from 'lucide-react';
+import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee } from 'lucide-react';
 
 interface CRMProps {
   leads: Lead[];
@@ -19,6 +19,8 @@ const STATUS_COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'Won', label: 'Closed Won', color: 'bg-green-50 border-green-200 text-green-700' },
   { id: 'Lost', label: 'Lost', color: 'bg-gray-50 border-gray-200 text-gray-700' },
 ];
+
+const SOURCE_OPTIONS = ['Walk-in', 'Ads', 'Referral', 'Facebook', 'Other'];
 
 export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConvertToPatient, onDelete, userRole }) => {
   const [viewType, setViewType] = useState<'pipeline' | 'schedule'>('pipeline');
@@ -207,6 +209,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                                 <div className="text-[10px] text-gray-500 space-y-2 uppercase font-bold tracking-wider">
                                     <div className="flex items-center gap-2"><Phone size={12} className="text-primary"/> {lead.phone}</div>
                                     {lead.nextFollowUp && <div className="flex items-center gap-2 text-[#3159a6]"><Calendar size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}</div>}
+                                    {lead.value ? <div className="flex items-center gap-2 text-teal-600 font-black"><IndianRupee size={12}/> {lead.value.toLocaleString()}</div> : null}
                                 </div>
                                 <div className="mt-4 pt-3 border-t flex justify-between items-center text-[9px] font-black text-gray-400 uppercase tracking-widest">
                                     <span>{lead.source}</span>
@@ -307,14 +310,27 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                     </div>
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Baby size={12}/> Date of Birth (Optional)</label>
+                            <input type="date" className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.dob || ''} onChange={e => setFormData({...formData, dob: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Inquiry Source</label>
+                            <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}>
+                                {SOURCE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Next Follow-up Date</label>
                             <input type="date" className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.nextFollowUp || ''} onChange={e => setFormData({...formData, nextFollowUp: e.target.value})} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Inquiry Status</label>
-                            <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
-                                {STATUS_COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                            </select>
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Budget Estimate (Optional)</label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input type="number" className="w-full pl-11 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.value || ''} onChange={e => setFormData({...formData, value: Number(e.target.value)})} placeholder="0.00" />
+                            </div>
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -325,7 +341,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                         <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Clinical Observation / Notes</label>
                         <textarea className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none h-32 font-medium bg-gray-50" value={formData.problem} onChange={e => setFormData({...formData, problem: e.target.value})} />
                     </div>
-                    <button type="submit" className="w-full bg-primary text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-slate-800 transition active:scale-95">Save Profile Record</button>
+                    <button type="submit" className="w-full bg-primary text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-slate-800 transition active:scale-95 text-xs">Save Inquiry Record</button>
                 </form>
             </div>
         </div>
@@ -363,6 +379,8 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                         <div className="grid grid-cols-2 gap-4 text-xs font-bold uppercase text-gray-500">
                              <div><p className="text-[9px] text-gray-400">Next F/U</p><p className="text-primary font-black">{selectedLead.nextFollowUp || 'None'}</p></div>
                              <div><p className="text-[9px] text-gray-400">Source</p><p>{selectedLead.source}</p></div>
+                             {selectedLead.dob && <div><p className="text-[9px] text-gray-400">Date of Birth</p><p>{new Date(selectedLead.dob).toLocaleDateString('en-IN')}</p></div>}
+                             {selectedLead.value ? <div><p className="text-[9px] text-gray-400">Budget</p><p className="text-teal-600 font-black">₹{selectedLead.value.toLocaleString()}</p></div> : null}
                         </div>
                         <div className="pt-2 border-t"><p className="text-[9px] text-gray-400 uppercase font-black">Clinical Summary</p><p className="text-gray-700 italic mt-1 font-medium">"{selectedLead.problem || 'No details recorded.'}"</p></div>
                     </div>
