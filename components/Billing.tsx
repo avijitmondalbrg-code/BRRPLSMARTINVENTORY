@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -41,6 +40,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Sales Dashboard Filters
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
   // Print Customization State
   const [printScale, setPrintScale] = useState(100);
   const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -256,26 +259,123 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       setShowCollectModal(true);
   };
 
-  if (viewMode === 'list') {
-      const filteredInvoices = (invoices || []).filter(inv => 
-        inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        inv.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.items.some(it => it.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        inv.items.some(it => it.model.toLowerCase().includes(searchTerm.toLowerCase()))
-      ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Filter logic and statistics calculation
+  const filteredInvoices = useMemo(() => {
+    return (invoices || []).filter(inv => {
+      const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           inv.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           inv.items.some(it => it.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           inv.items.some(it => it.model.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStart = !filterStartDate || inv.date >= filterStartDate;
+      const matchesEnd = !filterEndDate || inv.date <= filterEndDate;
+      
+      return matchesSearch && matchesStart && matchesEnd;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [invoices, searchTerm, filterStartDate, filterEndDate]);
 
+  const billingStats = useMemo(() => {
+    let totalSales = 0;
+    let totalOutstanding = 0;
+    let totalReceived = 0;
+
+    filteredInvoices.forEach(inv => {
+      totalSales += inv.finalTotal;
+      totalOutstanding += (inv.balanceDue || 0);
+      const collectedForInv = inv.payments.reduce((sum, p) => sum + p.amount, 0);
+      totalReceived += collectedForInv;
+    });
+
+    return { totalSales, totalOutstanding, totalReceived };
+  }, [filteredInvoices]);
+
+  const exportToCSV = () => {
+    const headers = ['Invoice No', 'Date', 'Patient Name', 'Phone', 'Items', 'Serials', 'Total Amount', 'Taxable Value', 'Total Tax', 'Amount Paid', 'Balance Due', 'Status'];
+    const rows = filteredInvoices.map(inv => [
+      inv.id,
+      inv.date,
+      `"${inv.patientName}"`,
+      inv.patientDetails?.phone || 'N/A',
+      `"${inv.items.map(it => `${it.brand} ${it.model}`).join('; ')}"`,
+      `"${inv.items.map(it => it.serialNumber).join('; ')}"`,
+      inv.finalTotal.toFixed(2),
+      inv.totalTaxableValue.toFixed(2),
+      inv.totalTax.toFixed(2),
+      (inv.finalTotal - inv.balanceDue).toFixed(2),
+      inv.balanceDue.toFixed(2),
+      inv.paymentStatus
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (viewMode === 'list') {
       return (
           <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileText className="text-[#3159a6]" /> Billing & Sales</h2>
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
-                        <input className="pl-10 pr-4 py-2 border rounded-xl text-sm w-full outline-none focus:ring-2 focus:ring-[#3159a6]" placeholder="Find by ID, Patient or Serial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                    </div>
+                    <button onClick={exportToCSV} className="bg-green-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-green-700 transition whitespace-nowrap"><Download size={16} /> Sales Report</button>
                     <button onClick={handleStartNew} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition whitespace-nowrap"><Plus size={16} /> New Invoice</button>
                   </div>
               </div>
+
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-blue-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-blue-50 rounded-2xl text-[#3159a6] group-hover:scale-110 transition-transform"><TrendingUp size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Sales (Period)</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalSales.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-green-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-green-50 rounded-2xl text-green-600 group-hover:scale-110 transition-transform"><CreditCard size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Collected</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalReceived.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-red-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform"><AlertCircle size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Outstanding</p>
+                    <p className="text-2xl font-black text-red-600 tracking-tighter">₹{billingStats.totalOutstanding.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters Area */}
+              <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center gap-6">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
+                    <input className="pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm w-full outline-none focus:bg-white focus:border-[#3159a6] transition font-bold" placeholder="Find by ID, Patient or Serial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-4 bg-gray-50 p-2 px-4 rounded-2xl border-2 border-gray-50 w-full lg:w-auto">
+                    <div className="flex items-center gap-2">
+                        <Calendar size={18} className="text-[#3159a6]" />
+                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">Date Filter</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        <span className="text-gray-300 font-black">/</span>
+                        <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        {(filterStartDate || filterEndDate) && (
+                            <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }} className="text-red-400 hover:text-red-600 ml-2"><X size={16}/></button>
+                        )}
+                    </div>
+                </div>
+              </div>
+
               <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
