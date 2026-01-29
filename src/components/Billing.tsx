@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -40,6 +40,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Post-Save Automation
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastSavedInvoice, setLastSavedInvoice] = useState<Invoice | null>(null);
+
   // Sales Dashboard Filters
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
@@ -229,7 +233,26 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); 
+    
+    // Automation Trigger
+    setLastSavedInvoice(invData);
+    setShowSuccessModal(true);
     setViewMode('list');
+  };
+
+  const handleSendWhatsAppThankYou = () => {
+    if (!lastSavedInvoice) return;
+    const patientName = lastSavedInvoice.patientName;
+    const invId = lastSavedInvoice.id;
+    const amount = Math.round(lastSavedInvoice.finalTotal).toLocaleString();
+    const phone = lastSavedInvoice.patientDetails?.phone.replace(/\D/g, '') || '';
+    
+    // Bengali Custom Message
+    const message = `Namaste ${patientName} ji,\n\nBengal Rehabilitation & Research Pvt. Ltd. (BRG) theke apnake dhonyobad.\n\nApnar invoice generate hoyeche:\n# Invoice: ${invId}\n# Total: ₹${amount}\n\nApnar shustho jiboner kamona kori. Shighroi clinic-e dekha hobe!\n\nWebsite: www.bengalrehabilitationgroup.com`;
+    
+    const whatsappUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowSuccessModal(false);
   };
 
   const handleApplyAdvance = (adv: AdvanceBooking) => {
@@ -414,6 +437,38 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                   </div>
               </div>
 
+              {/* Automation Success Modal */}
+              {showSuccessModal && lastSavedInvoice && (
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
+                      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
+                          <div className="p-10 text-center space-y-6">
+                              <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-green-100 shadow-inner">
+                                  <CheckCircle2 size={48} />
+                              </div>
+                              <div>
+                                  <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">Invoice Shared!</h3>
+                                  <p className="text-sm text-gray-500 font-bold mt-2">Data successfully archived in cloud vault.</p>
+                              </div>
+                              
+                              <div className="bg-blue-50 p-6 rounded-3xl border-2 border-blue-50 text-left">
+                                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Target Patient</p>
+                                  <p className="font-black text-gray-800 uppercase">{lastSavedInvoice.patientName}</p>
+                                  <p className="text-xs font-bold text-blue-600 font-mono mt-1">ID: {lastSavedInvoice.id}</p>
+                              </div>
+
+                              <div className="space-y-3">
+                                  <button onClick={handleSendWhatsAppThankYou} className="w-full bg-teal-600 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-teal-700 transition flex items-center justify-center gap-3 text-xs">
+                                      <MessageCircle size={18}/> Send WhatsApp Thank You
+                                  </button>
+                                  <button onClick={() => setShowSuccessModal(false)} className="w-full py-4 text-gray-400 font-black uppercase tracking-widest text-[10px] hover:text-gray-800 transition">
+                                      Skip for now
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
               {showCollectModal && collectingInvoice && (
                   <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fade-in">
                       <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
@@ -593,7 +648,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Invoice Date</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Global Adjustment</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-[#3159a6] outline-none shadow-sm" placeholder="0.00" /></div>
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
-                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><MessageSquare size={12}/> Remarks</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl text-xs h-16 resize-none outline-none shadow-sm" placeholder="Internal clinical notes..." /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1"><MessageSquare size={12}/> Remarks</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl text-xs h-16 resize-none outline-none shadow-sm" placeholder="Internal clinical notes..." /></div>
                 </div>
                 <div className="mt-8 flex justify-between items-center bg-gray-50 p-8 rounded-3xl border-2 border-blue-50 shadow-inner">
                     <div><p className="text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] mb-1">Estimated Net Payable</p><p className="text-4xl font-black text-gray-900 tracking-tighter">₹{finalTotal.toLocaleString('en-IN')}</p></div>
@@ -620,7 +675,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <option value="Debit Card">Debit Card</option>
                                 </select>
                                 </div>
-                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Target Account</label><select className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-[#3159a6] bg-gray-50 transition" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Target Account</label><select className="w-full border-2 border-gray-100 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-[#3159a6] bg-gray-50 transition" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
                             </div>
                         </div>
                         {patientAdvances.length > 0 && (
