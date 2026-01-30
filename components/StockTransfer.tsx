@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { HearingAid, LOCATIONS, StockTransfer as StockTransferType } from '../types';
 import { ArrowRightLeft, MapPin, Truck, History, ArrowRight, Search, User, UserCheck, Box, StickyNote, Calendar, X, Filter, CheckSquare, Square } from 'lucide-react';
 
@@ -35,15 +34,23 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
     item.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredHistory = transferHistory.filter(log => {
-    const matchesSearch = 
-        log.brand.toLowerCase().includes(historySearch.toLowerCase()) ||
-        log.model.toLowerCase().includes(historySearch.toLowerCase()) ||
-        log.serialNumber.toLowerCase().includes(historySearch.toLowerCase());
-    const matchesStartDate = !startDate || log.date >= startDate;
-    const matchesEndDate = !endDate || log.date <= endDate;
-    return matchesSearch && matchesStartDate && matchesEndDate;
-  });
+  const filteredHistory = useMemo(() => {
+    return transferHistory.filter(log => {
+      const matchesSearch = 
+          log.brand.toLowerCase().includes(historySearch.toLowerCase()) ||
+          log.model.toLowerCase().includes(historySearch.toLowerCase()) ||
+          log.serialNumber.toLowerCase().includes(historySearch.toLowerCase());
+      const matchesStartDate = !startDate || log.date >= startDate;
+      const matchesEndDate = !endDate || log.date <= endDate;
+      return matchesSearch && matchesStartDate && matchesEndDate;
+    }).sort((a, b) => {
+        // Sort by date descending
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        // Secondary sort by ID descending (which contains timestamp) to ensure precise ordering
+        return b.id.localeCompare(a.id);
+    });
+  }, [transferHistory, historySearch, startDate, endDate]);
 
   const toggleItemSelection = (id: string) => {
     setSelectedItemIds(prev => 
