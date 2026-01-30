@@ -294,7 +294,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       const matchesEnd = !filterEndDate || inv.date <= filterEndDate;
       
       return matchesSearch && matchesStart && matchesEnd;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => {
+        // Primary sort: Date descending
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        // Secondary sort: ID descending (to handle multiple invoices on same day)
+        return b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' });
+    });
   }, [invoices, searchTerm, filterStartDate, filterEndDate]);
 
   const billingStats = useMemo(() => {
@@ -412,7 +418,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
                                     <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{inv.patientName}</td>
                                     <td className="p-5">
-                                        {inv.items.map((it, idx) => (
+                                        {/* Sorted items display for sequence consistency */}
+                                        {[...inv.items]
+                                          .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber, undefined, { numeric: true }))
+                                          .map((it, idx) => (
                                             <div key={idx} className="mb-1 last:mb-0">
                                                 <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand} {it.model}</p>
                                                 <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
@@ -541,7 +550,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   return (
     <div className="max-w-5xl mx-auto pb-10">
         <div className="mb-6 flex items-center justify-between print:hidden">
-            <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 hover:bg-gray-100 rounded-full text-gray-400 shadow-sm transition"><ArrowLeft size={24} /></button><h2 className="text-2xl font-black uppercase tracking-tighter text-gray-800">Invoice Architect</h2></div>
+            <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 rounded-full text-gray-400 shadow-sm transition"><ArrowLeft size={24} /></button><h2 className="text-2xl font-black uppercase tracking-tighter text-gray-800">Invoice Architect</h2></div>
             <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl border">{['patient', 'product', 'payment', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${step === s ? 'bg-[#3159a6] text-white shadow-lg' : 'bg-transparent text-gray-400'}`}>{idx+1}. {s}</button>))}</div>
         </div>
         
