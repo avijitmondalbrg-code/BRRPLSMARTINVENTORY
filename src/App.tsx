@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
@@ -260,14 +259,31 @@ const App: React.FC = () => {
   const handleDeleteInvoice = async (invoiceId: string) => {
     const invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) return;
-    if (window.confirm("Delete invoice?")) {
-        const itemIds = invoice.items.map(i => i.hearingAidId);
-        setInventory(prev => prev.map(item => itemIds.includes(item.id) ? { ...item, status: 'Available' } : item));
+    
+    try {
+        // Filter out manual service item IDs (those starting with MAN-) 
+        // as they don't exist in the actual inventory collection
+        const inventoryItemIds = invoice.items
+            .map(i => i.hearingAidId)
+            .filter(id => id && !id.startsWith('MAN-'));
+
+        // Delete from Firestore and update items status back to 'Available'
+        // Using Promise.all to ensure all operations complete before updating local state
+        await Promise.all([
+            ...inventoryItemIds.map(id => updateDocument('inventory', id, { status: 'Available' })),
+            deleteDocument('invoices', invoiceId)
+        ]);
+
+        // Success - update local state
+        setInventory(prev => prev.map(item => 
+            inventoryItemIds.includes(item.id) ? { ...item, status: 'Available' } : item
+        ));
         setInvoices(prev => prev.filter(i => i.id !== invoiceId));
-        try {
-            for (const id of itemIds) { await updateDocument('inventory', id, { status: 'Available' }); }
-            await deleteDocument('invoices', invoiceId);
-        } catch(e) {}
+        
+        alert(`Invoice ${invoiceId} deleted and inventory restocked successfully.`);
+    } catch (err: any) {
+        console.error("Delete operation failed:", err);
+        alert(`Failed to delete invoice from server: ${err.message}. Please check your connection or permissions.`);
     }
   };
 
@@ -317,7 +333,7 @@ const App: React.FC = () => {
     const exists = invoices.find(i => i.id === invoice.id);
     if (exists) {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
-      try { await setDocument('invoices', invoice.id, invoice); } catch (e) {}
+      try { await setDocument('invoices', invoice.id, invoice); } catch ( e) {}
     } else {
       setInvoices([...invoices, invoice]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
