@@ -190,7 +190,12 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 <div>
                   <label className="text-[10px] font-black text-gray-400 mb-2 block tracking-widest ml-1 uppercase">Method</label>
                   <select className="w-full border-2 border-gray-100 bg-gray-50 p-3 rounded-2xl outline-none font-black text-primary focus:border-primary transition uppercase text-[10px]" value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value as any})}>
-                    <option value="Cash">Cash Ledger</option><option value="UPI">UPI Digital</option><option value="Account Transfer">Bank Transfer</option>
+                    <option value="Cash">Cash Ledger</option>
+                    <option value="UPI">UPI Digital</option>
+                    <option value="Account Transfer">Bank Transfer</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Cheque">Cheque</option>
                   </select>
                 </div>
                 <div>

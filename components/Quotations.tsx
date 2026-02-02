@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
@@ -16,6 +15,24 @@ interface QuotationsProps {
   signature: string | null;
   userRole: UserRole;
 }
+
+const numberToWords = (num: number): string => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const inWords = (n: number): string => {
+        if ((n = n.toString() as any).length > 9) return 'overflow';
+        const n_array: any[] = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/) || [];
+        if (!n_array) return '';
+        let str = '';
+        str += (n_array[1] != 0) ? (a[Number(n_array[1])] || b[n_array[1][0]] + ' ' + a[n_array[1][1]]) + 'Crore ' : '';
+        str += (n_array[2] != 0) ? (a[Number(n_array[2])] || b[n_array[2][0]] + ' ' + a[n_array[2][1]]) + 'Lakh ' : '';
+        str += (n_array[3] != 0) ? (a[Number(n_array[3])] || b[n_array[3][0]] + ' ' + a[n_array[3][1]]) + 'Thousand ' : '';
+        str += (n_array[4] != 0) ? (a[Number(n_array[4])] || b[n_array[4][0]] + ' ' + a[n_array[4][1]]) + 'Hundred ' : '';
+        str += (n_array[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_array[5])] || b[n_array[5][0]] + ' ' + a[n_array[5][1]]) : '';
+        return str;
+    };
+    return inWords(Math.floor(num)) + 'Rupees Only';
+};
 
 export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, patients, onCreateQuotation, onUpdateQuotation, onConvertToInvoice, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
@@ -150,7 +167,9 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
   const subtotal = processedItems.reduce((sum, i) => sum + i.taxableValue, 0);
   const totalTax = processedItems.reduce((sum, i) => sum + (i.cgstAmount + i.sgstAmount + i.igstAmount), 0);
-  const finalTotal = Math.max(0, (subtotal + totalTax) - discountValue);
+  const rawFinalTotal = (subtotal + totalTax) - discountValue;
+  const finalTotal = Math.round(Math.max(0, rawFinalTotal));
+  const roundOffAmount = finalTotal - rawFinalTotal;
 
   const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
@@ -470,6 +489,10 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Taxes ({isInterState ? 'IGST' : 'CGST+SGST'})</span><span>₹{totalTax.toLocaleString()}</span></div>
                                 <div className="flex justify-between text-[10px] font-black uppercase text-red-400 tracking-widest"><span>Special Consideration</span><span>-₹{discountValue.toLocaleString()}</span></div>
+                                <div className={`flex justify-between text-[10px] font-black uppercase tracking-widest ${roundOffAmount < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                    <span>Round Off</span>
+                                    <span>{roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
+                                </div>
                                 <div className="h-0.5 bg-white/20 my-4"></div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Final Estimate</span>

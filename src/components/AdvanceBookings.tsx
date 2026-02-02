@@ -190,7 +190,12 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 <div>
                   <label className="text-[10px] font-black text-gray-400 mb-2 block tracking-widest ml-1 uppercase">Method</label>
                   <select className="w-full border-2 border-gray-100 bg-gray-50 p-3 rounded-2xl outline-none font-black text-primary focus:border-primary transition uppercase text-[10px]" value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value as any})}>
-                    <option value="Cash">Cash Ledger</option><option value="UPI">UPI Digital</option><option value="Account Transfer">Bank Transfer</option>
+                    <option value="Cash">Cash Ledger</option>
+                    <option value="UPI">UPI Digital</option>
+                    <option value="Account Transfer">Bank Transfer</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Cheque">Cheque</option>
                   </select>
                 </div>
                 <div>
@@ -230,7 +235,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
 
               <div className="flex items-center gap-4 border-l pl-8">
                   <label className="text-[10px] font-black uppercase text-gray-400">Layout</label>
-                  <select className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none" value={printOrientation} onChange={(e) => setPrintOrientation(e.target.value as any)}>
+                  <select className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" value={printOrientation} onChange={(e) => setPrintOrientation(e.target.value as any)}>
                       <option value="portrait">Portrait</option><option value="landscape">Landscape</option>
                   </select>
               </div>

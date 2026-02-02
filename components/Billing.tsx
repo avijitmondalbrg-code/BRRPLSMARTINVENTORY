@@ -198,7 +198,12 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   });
 
   const allInvoiceItems = [...invInvoiceItems, ...processedManualItems];
-  const finalTotal: number = Math.max(0, (runningTaxableTotal + runningCGST + runningSGST + runningIGST) - totalAdjustment);
+  
+  // Explicit Round Off Logic
+  const rawFinalTotal = (runningTaxableTotal + runningCGST + runningSGST + runningIGST) - totalAdjustment;
+  const finalTotal: number = Math.round(Math.max(0, rawFinalTotal));
+  const roundOffAmount = finalTotal - rawFinalTotal;
+
   const totalItemDiscounts: number = (Object.values(itemDiscounts) as number[]).reduce((a: number, b: number) => a + b, 0);
 
   const gstSummary = React.useMemo(() => {
@@ -908,9 +913,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-white shadow-xl font-bold text-slate-900">
                                 <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{totalSubtotal.toLocaleString()}</span></div>
                                 <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Special Consideration</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-3">
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1">
                                     <span>Net GST</span>
                                     <span>₹{(runningCGST + runningSGST + runningIGST).toFixed(2)}</span>
+                                </div>
+                                <div className={`flex justify-between text-[11px] uppercase mb-3 ${roundOffAmount < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                    <span>Round Off</span>
+                                    <span>{roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
                                 </div>
                                 <div className="h-0.5 bg-slate-900 mb-3"></div>
                                 <div className="flex justify-between items-center text-slate-900">
