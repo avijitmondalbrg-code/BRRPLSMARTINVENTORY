@@ -38,8 +38,11 @@ export const STAFF_NAMES = [
   "Deep Dutta", 
   "Shyamal Mahato", 
   "Subhadeep Sen", 
-  "Shubhajit Das", 
+  "Shuvajit Das", 
   "Nikita Routh",
+  "Arijit Saha",
+  "Akash Thakur",
+  "Avijit Mondal"
   "Audiologist"
 ];
 

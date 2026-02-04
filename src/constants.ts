@@ -29,7 +29,7 @@ export const WEST_BENGAL_DISTRICTS = [
   "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"
 ];
 
-export const STAFF_NAMES = [
+export const STAFF_NAMES = [ 
   "",
   "Mahasin Sk", 
   "Susanta Gayen", 
@@ -38,8 +38,11 @@ export const STAFF_NAMES = [
   "Deep Dutta", 
   "Shyamal Mahato", 
   "Subhadeep Sen", 
-  "Shubhajit Das", 
+  "Shuvajit Das", 
   "Nikita Routh",
+  "Arijit Saha",
+  "Akash Thakur",
+  "Avijit Mondal"
   "Audiologist"
 ];
 
