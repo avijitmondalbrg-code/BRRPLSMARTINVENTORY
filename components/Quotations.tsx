@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
 import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Edit, MessageSquare, Download, Calendar, X, UserCheck, Stethoscope, Wrench, PackagePlus } from 'lucide-react';
 
 interface QuotationsProps {
@@ -53,6 +53,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   const [quotationNotes, setQuotationNotes] = useState<string>(''); 
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
+  const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
 
   const generateNextId = () => {
     const fy = getFinancialYear();
@@ -74,6 +75,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setQuoteDate(new Date().toISOString().split('T')[0]);
     setWarranty('2 Years Standard Warranty'); 
     setQuotationNotes(''); 
+    setEntryBy(STAFF_NAMES[0]);
     setEditingId(null); 
     setPatientSearchTerm(''); 
     setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
@@ -99,6 +101,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setQuotationNotes(q.notes || '');
     setQuoteDate(q.date);
     setWarranty(q.warranty || '2 Years Standard Warranty');
+    setEntryBy(q.entryBy || STAFF_NAMES[0]);
     
     const overrides: Record<string, number> = {};
     q.items.forEach(item => {
@@ -187,6 +190,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
       date: quoteDate, 
       warranty, 
       notes: quotationNotes,
+      entryBy: entryBy,
       patientDetails: patient, 
       status: 'Draft' 
     };
@@ -297,6 +301,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><UserCheck size={12}/> Ref. Dr.</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="Referring Doctor" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Consulting Audiologist" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Entry By (Staff) *</label><select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={entryBy} onChange={e => setEntryBy(e.target.value)}>{STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address *</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} placeholder="House/Flat No, Area, City" /></div>
                     </div>
                 </div>
@@ -418,8 +423,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                           <div className="bg-primary text-white px-8 py-2 inline-block mb-4 rounded-xl shadow-lg">
                             <h2 className="text-lg font-black uppercase tracking-widest">Quotation</h2>
                           </div>
-                          <p className="text-xl font-black text-slate-900"># {editingId || generateNextId()}</p>
-                          <p className="text-xs font-black text-slate-500 uppercase tracking-widest mt-1">Date: {new Date(quoteDate).toLocaleDateString('en-IN')}</p>
+                          <p className="text-sm font-black text-slate-900"># {editingId || generateNextId()}</p>
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Date: {new Date(quoteDate).toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
                     
@@ -434,6 +439,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                             <div className="space-y-4">
                                 <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Referring Professional</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self Inquiry'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Consulting Audiologist</p><p className="text-xs font-black text-primary uppercase">{patient.audiologist || 'Internal Dept'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Staff In-charge</p><p className="text-xs font-black text-slate-700 uppercase">{entryBy || 'N/A'}</p></div>
                             </div>
                         </div>
                     </div>

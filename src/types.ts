@@ -1,4 +1,3 @@
-
 export interface HearingAid {
   id: string;
   brand: string;
@@ -142,6 +141,7 @@ export interface Invoice {
   notes?: string;
   warranty?: string;
   patientDetails?: Patient; // Snapshot of patient details
+  entryBy?: string; // Staff member who created invoice
   
   // Payment Tracking
   payments: PaymentRecord[];
@@ -183,6 +183,7 @@ export interface Quotation {
   warranty?: string;
   patientDetails?: Patient;
   status: 'Draft' | 'Sent' | 'Converted';
+  entryBy?: string; // Staff member who created quotation
 }
 
 export interface FinancialNote {

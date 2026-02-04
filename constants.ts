@@ -1,4 +1,3 @@
-
 import { HearingAid, Invoice, Quotation, FinancialNote, Lead } from './types';
 
 // BRANDING LOCK
@@ -28,6 +27,20 @@ export const WEST_BENGAL_DISTRICTS = [
   "Hooghly", "Howrah", "Jalpaiguri", "Jhargram", "Kalimpong", "Kolkata", "Malda", 
   "Murshidabad", "Nadia", "North 24 Parganas", "Paschim Bardhaman", "Paschim Medinipur", 
   "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"
+];
+
+export const STAFF_NAMES = [
+  "Select", 
+  "Mahasin Sk", 
+  "Susanta Gayen", 
+  "Subhajit Das", 
+  "Sabuj Das", 
+  "Deep Dutta", 
+  "Shyamal Mahato", 
+  "Subhadeep Sen", 
+  "Shubhajit Das", 
+  "Nikita Routh",
+  "Audiologist"
 ];
 
 export const COMPANY_BANK_ACCOUNTS = [

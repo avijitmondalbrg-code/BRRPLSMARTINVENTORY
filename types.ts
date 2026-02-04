@@ -1,4 +1,3 @@
-
 export interface HearingAid {
   id: string;
   brand: string;
@@ -58,7 +57,7 @@ export interface Hospital {
   name: string;
   address: string;
   gstin?: string;
-  pan?: string; // PAN field for hospital
+  pan?: string; // Added PAN field
   contactPerson?: string;
   phone?: string;
 }
@@ -69,8 +68,8 @@ export interface ServiceInvoiceLine {
   hsn: string;
   qty: number;
   rate: number;
-  discount: number; // Item-wise discount
-  taxableAmount: number; // Amount after discount
+  discount: number; // Added item-wise discount
+  taxableAmount: number; // Added taxable amount after discount
   amount: number; // Final line amount
 }
 
@@ -82,9 +81,9 @@ export interface ServiceInvoice {
   date: string;
   items: ServiceInvoiceLine[];
   subtotal: number;
-  itemDiscount: number;
-  globalAdjustment: number;
-  totalDiscount: number;
+  itemDiscount: number; // Total of line-item discounts
+  globalAdjustment: number; // Additional global discount
+  totalDiscount: number; // sum of both
   taxAmount: number;
   totalAmount: number;
   notes?: string;
@@ -119,23 +118,32 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   patientId: string;
-  patientName: string; 
+  patientName: string; // Denormalized for display ease
   items: InvoiceItem[];
-  subtotal: number; 
+  
+  // Financials
+  subtotal: number; // Sum of Unit Prices
   discountType: 'flat' | 'percent';
-  discountValue: number; 
+  discountValue: number; // Sum of all item discounts
   totalDiscount: number;
-  placeOfSupply: 'Intra-State' | 'Inter-State'; 
-  totalTaxableValue: number; 
+  
+  // Tax
+  placeOfSupply: 'Intra-State' | 'Inter-State'; // Within State vs Outside
+  totalTaxableValue: number; // (Subtotal - Discount)
   totalCGST: number;
   totalSGST: number;
   totalIGST: number;
   totalTax: number;
-  finalTotal: number; 
+  
+  finalTotal: number; // Taxable + Tax
+  
   date: string;
   notes?: string;
   warranty?: string;
-  patientDetails?: Patient; 
+  patientDetails?: Patient; // Snapshot of patient details
+  entryBy?: string; // Staff member who created invoice
+  
+  // Payment Tracking
   payments: PaymentRecord[];
   paymentStatus: 'Paid' | 'Partial' | 'Unpaid';
   balanceDue: number;
@@ -161,17 +169,21 @@ export interface Quotation {
   patientId: string;
   patientName: string;
   items: InvoiceItem[];
+  
   subtotal: number;
   discountType: 'flat' | 'percent';
   discountValue: number;
+  
   totalTaxableValue: number;
   totalTax: number;
+  
   finalTotal: number;
   date: string;
   notes?: string;
   warranty?: string;
   patientDetails?: Patient;
   status: 'Draft' | 'Sent' | 'Converted';
+  entryBy?: string; // Staff member who created quotation
 }
 
 export interface FinancialNote {
@@ -201,6 +213,7 @@ export interface StockTransfer {
   note?: string;
 }
 
+// FIX: Restored CRM Types to resolve Module not found errors
 export type LeadStatus = 'New' | 'Contacted' | 'Appointment' | 'Trial' | 'Won' | 'Lost';
 
 export interface Activity {
@@ -223,14 +236,14 @@ export interface Lead {
   referDoctor?: string;
   haPotential?: 'Yes' | 'No';
   entryBy?: string;
-  source: string; 
+  source: string; // e.g. 'Walk-in', 'Facebook', 'Referral'
   status: LeadStatus;
   assignedTo?: string;
   createdAt: string;
   nextFollowUp?: string;
   notes?: string;
   activities: Activity[];
-  value?: number; 
+  value?: number; // Potential value
 }
 
 export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets';

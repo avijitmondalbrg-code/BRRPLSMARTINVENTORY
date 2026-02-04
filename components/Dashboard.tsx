@@ -1,23 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { HearingAid, Invoice, StockTransfer, Quotation } from '../types';
+import { HearingAid, Invoice, StockTransfer, Quotation, Lead } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight, UserCheck, Briefcase } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
+import { STAFF_NAMES } from '../constants';
 
 interface DashboardProps {
   inventory: HearingAid[];
   invoices: Invoice[];
   stockTransfers: StockTransfer[];
   quotations: Quotation[];
+  leads: Lead[];
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations, leads }) => {
   const [insights, setInsights] = React.useState<string>('');
   const [loadingInsights, setLoadingInsights] = React.useState(false);
   
   // Traceability Search State
   const [serialSearch, setSerialSearch] = useState('');
   const [traceResult, setTraceResult] = useState<any>(null);
+
+  // Staff Filter State
+  const [staffFilter, setStaffFilter] = useState<string>('');
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
@@ -60,8 +65,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
     const quotes = quotations.filter(q => q.items.some(item => item.serialNumber.toUpperCase() === sn));
 
     // 5. Detect if potentially deleted
-    // Logic: If there is a history (moves/sale/quotes) but no record in current inventory array, 
-    // and status is not 'Sold' (since 'Sold' items remain in inventory array usually), it might have been deleted.
     const isDeleted = (moves.length > 0 || sale || quotes.length > 0) && !invRecord;
 
     setTraceResult({
@@ -73,6 +76,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
         isDeleted
     });
   };
+
+  const staffStats = useMemo(() => {
+    if (!staffFilter) return null;
+    const staffLeads = leads.filter(l => l.entryBy === staffFilter);
+    const staffSales = invoices.filter(inv => inv.entryBy === staffFilter);
+    const staffTotalRevenue = staffSales.reduce((sum, inv) => sum + inv.finalTotal, 0);
+
+    return {
+        leads: staffLeads,
+        sales: staffSales,
+        totalRevenue: staffTotalRevenue
+    };
+  }, [staffFilter, leads, invoices]);
 
   return (
     <div className="space-y-6">
@@ -107,8 +123,93 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
+            {/* Staff Performance Audit */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                           <UserCheck className="text-primary" size={20} /> Staff Contribution Audit
+                        </h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Search staff to see entries and sales performance</p>
+                    </div>
+                </div>
+
+                <div className="flex gap-4 mb-8">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <select 
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:bg-white focus:border-primary outline-none transition font-black uppercase"
+                            value={staffFilter}
+                            onChange={e => setStaffFilter(e.target.value)}
+                        >
+                            <option value="">-- Choose Staff Member --</option>
+                            {STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                {staffStats ? (
+                    <div className="animate-fade-in space-y-6">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Leads Created</p>
+                                <p className="text-2xl font-black text-[#3159a6]">{staffStats.leads.length}</p>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                                <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">Sales Closed</p>
+                                <p className="text-2xl font-black text-green-700">{staffStats.sales.length}</p>
+                            </div>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Revenue</p>
+                                <p className="text-xl font-black text-slate-800 tracking-tighter">₹{staffStats.totalRevenue.toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="border-t pt-4">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Recent Lead Entries</h4>
+                                <div className="space-y-2">
+                                    {staffStats.leads.length === 0 ? (
+                                        <p className="text-xs text-gray-300 italic py-4 text-center border-2 border-dashed rounded-2xl">No leads logged by this user</p>
+                                    ) : staffStats.leads.slice(0, 5).map(lead => (
+                                        <div key={lead.id} className="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
+                                            <div>
+                                                <p className="text-xs font-black text-gray-800 uppercase tracking-tight">{lead.name}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase">{lead.status} • {lead.createdAt}</p>
+                                            </div>
+                                            <ArrowRight size={14} className="text-gray-200" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="border-t pt-4">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Recent Invoices Issued</h4>
+                                <div className="space-y-2">
+                                    {staffStats.sales.length === 0 ? (
+                                        <p className="text-xs text-gray-300 italic py-4 text-center border-2 border-dashed rounded-2xl">No sales recorded by this user</p>
+                                    ) : staffStats.sales.slice(0, 5).map(inv => (
+                                        <div key={inv.id} className="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
+                                            <div>
+                                                <p className="text-xs font-black text-gray-800 uppercase tracking-tight">{inv.id}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase">{inv.patientName} • {inv.date}</p>
+                                            </div>
+                                            <p className="text-xs font-black text-green-600">₹{inv.finalTotal.toLocaleString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-30">
+                        <div className="p-6 bg-gray-50 rounded-full mb-4"><Briefcase size={40}/></div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Select staff member to audit performance logs</p>
+                    </div>
+                )}
+            </div>
+
             {/* Device Traceability Search */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col h-full">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col">
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">

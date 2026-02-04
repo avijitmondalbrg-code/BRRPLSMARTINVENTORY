@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle } from 'lucide-react';
 
 interface BillingProps {
@@ -73,6 +73,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [totalAdjustment, setTotalAdjustment] = useState<number>(0); 
   const [invoiceNotes, setInvoiceNotes] = useState<string>(''); 
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
+  const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
   const [existingPayments, setExistingPayments] = useState<PaymentRecord[]>([]);
   const [initialPayment, setInitialPayment] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
@@ -98,6 +99,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setInvoiceNotes('');
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setWarranty('2 Years Standard Warranty'); 
+    setEntryBy(STAFF_NAMES[0]);
     setEditingInvoiceId(null); 
     setPatientSearchTerm(''); 
     setProductSearchTerm(''); 
@@ -124,6 +126,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setTotalAdjustment(inv.discountValue || 0);
     setInvoiceNotes(inv.notes || '');
     setWarranty(inv.warranty || '2 Years Standard Warranty');
+    setEntryBy(inv.entryBy || STAFF_NAMES[0]);
     setExistingPayments(inv.payments || []);
     setInitialPayment(0);
     setProductSearchTerm('');
@@ -234,7 +237,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
       subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
       placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
-      finalTotal: finalTotal, date: invoiceDate, warranty, patientDetails: patient, notes: invoiceNotes,
+      finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, patientDetails: patient, notes: invoiceNotes,
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); 
@@ -571,6 +574,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Ref. Dr. (Referrer)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="e.g. Dr. Name" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">State (Supply Destination)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.state} onChange={e => setPatient({...patient, state: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Name" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Entry By (Staff) *</label><select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={entryBy} onChange={e => setEntryBy(e.target.value)}>{STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
                     </div>
                 </div>
@@ -787,6 +791,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                             <div className="mt-4 pt-3 border-t-2 border-slate-200 flex flex-wrap gap-x-6 gap-y-2">
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Referred By</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-[#3159a6] uppercase">{patient.audiologist || 'Internal'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Staff Code</p><p className="text-xs font-black text-slate-700 uppercase">{entryBy || 'N/A'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
                             </div>
                         </div>
@@ -946,7 +951,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="flex justify-between items-end">
                             <div className="w-[60%]">
                                 <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
-                                <div className="text-[10px] text-slate-800 font-bold space-y-1 leading-tight uppercase tracking-tight">
+                                <div className="text-[10px] text-slate-800 font-bold space-y-1.5 uppercase leading-tight tracking-tight">
                                     <p>1. Please keep this Invoice safe for future correspondence.</p>
                                     <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
                                     <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. These exemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June 2017.</p>

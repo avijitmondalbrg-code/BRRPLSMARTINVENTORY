@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus, Activity, UserRole } from '../types';
+import { COMPANY_ADDRESS, STAFF_NAMES } from '../constants';
 import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee } from 'lucide-react';
 
 interface CRMProps {
@@ -30,6 +31,10 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+  // Automation State
+  const [showStatusSuccessModal, setShowStatusSuccessModal] = useState(false);
+  const [lastStatusChangeLead, setLastStatusChangeLead] = useState<Lead | null>(null);
+
   // Message Modal State
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageChannel, setMessageChannel] = useState<'WhatsApp' | 'Email' | 'SMS'>('WhatsApp');
@@ -38,7 +43,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
 
   // Form State
   const [formData, setFormData] = useState<Partial<Lead>>({
-    name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: '', source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
+    name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
   });
 
   // Activity Form State
@@ -71,7 +76,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   const handleOpenAdd = () => {
     setEditingLeadId(null);
     setFormData({
-      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: userRole, source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
+      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
     });
     setShowAddModal(true);
   };
@@ -105,7 +110,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
         problem: formData.problem || '',
         referDoctor: formData.referDoctor || '',
         haPotential: (formData.haPotential as 'Yes' | 'No') || 'No',
-        entryBy: formData.entryBy || userRole,
+        entryBy: formData.entryBy || STAFF_NAMES[0],
         source: formData.source || 'Walk-in',
         status: 'New',
         createdAt: new Date().toISOString().split('T')[0],
@@ -135,9 +140,32 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
       if (status === 'Won' && selectedLead.status !== 'Won') {
           if (window.confirm("Mark as Won & Convert to Patient?")) onConvertToPatient(selectedLead);
       }
+      
       const updatedLead = { ...selectedLead, status };
       onUpdateLead(updatedLead);
       setSelectedLead(updatedLead);
+
+      if (status === 'Appointment') {
+        setLastStatusChangeLead(updatedLead);
+        setShowStatusSuccessModal(true);
+      }
+  };
+
+  const handleSendAppointmentWhatsApp = () => {
+    if (!lastStatusChangeLead) return;
+    const name = lastStatusChangeLead.name;
+    const date = lastStatusChangeLead.nextFollowUp ? new Date(lastStatusChangeLead.nextFollowUp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not Scheduled';
+    const phone = lastStatusChangeLead.phone.replace(/\D/g, '');
+    
+    // Use the 'problem' field (Clinical Observation / Notes) as the "remarks" containing the address/instructions
+    const remarks = lastStatusChangeLead.problem || lastStatusChangeLead.notes || COMPANY_ADDRESS;
+    
+    // Bengali/Hinglish Custom Message
+    const message = `Namaste ${name} ji,\n\nBengal Rehabilitation & Research Pvt. Ltd. (BRG) theke apnar appointment confirm kora hoyeche.\n\n📅 Date: ${date}\n📍 Details/Address: ${remarks}\n\nDhonyobad! Shighroi clinic-e dekha hobe.`;
+    
+    const whatsappUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowStatusSuccessModal(false);
   };
 
   const handleSendMessage = () => {
@@ -333,9 +361,17 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Address / Location</label>
-                        <input className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Address / Location</label>
+                            <input className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Entry By (Staff) *</label>
+                            <select required className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.entryBy} onChange={e => setFormData({...formData, entryBy: e.target.value})}>
+                                {STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                            </select>
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Clinical Observation / Notes</label>
@@ -345,6 +381,40 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                 </form>
             </div>
         </div>
+      )}
+
+      {/* Appointment/Status Change Automation Modal */}
+      {showStatusSuccessModal && lastStatusChangeLead && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
+              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
+                  <div className="p-10 text-center space-y-6">
+                      <div className="w-20 h-20 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-purple-100 shadow-inner">
+                          <CheckCircle2 size={48} />
+                      </div>
+                      <div>
+                          <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">Status Updated!</h3>
+                          <p className="text-sm text-gray-500 font-bold mt-2">Lead moved to <b>Appointment</b> stage.</p>
+                      </div>
+                      
+                      <div className="bg-blue-50 p-6 rounded-3xl border-2 border-blue-50 text-left">
+                          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Target Lead</p>
+                          <p className="font-black text-gray-800 uppercase">{lastStatusChangeLead.name}</p>
+                          <p className="text-xs font-bold text-blue-600 mt-1">
+                              📅 {lastStatusChangeLead.nextFollowUp ? new Date(lastStatusChangeLead.nextFollowUp).toLocaleDateString('en-IN') : 'Date not set'}
+                          </p>
+                      </div>
+
+                      <div className="space-y-3">
+                          <button onClick={handleSendAppointmentWhatsApp} className="w-full bg-teal-600 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-teal-700 transition flex items-center justify-center gap-3 text-xs">
+                              <MessageCircle size={18}/> Send Appointment Confirmation
+                          </button>
+                          <button onClick={() => setShowStatusSuccessModal(false)} className="w-full py-4 text-gray-400 font-black uppercase tracking-widest text-[10px] hover:text-gray-800 transition">
+                              Skip for now
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* Detail Panel */}
@@ -381,6 +451,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                              <div><p className="text-[9px] text-gray-400">Source</p><p>{selectedLead.source}</p></div>
                              {selectedLead.dob && <div><p className="text-[9px] text-gray-400">Date of Birth</p><p>{new Date(selectedLead.dob).toLocaleDateString('en-IN')}</p></div>}
                              {selectedLead.value ? <div><p className="text-[9px] text-gray-400">Budget</p><p className="text-teal-600 font-black">₹{selectedLead.value.toLocaleString()}</p></div> : null}
+                             <div className="col-span-2"><p className="text-[9px] text-gray-400">Entry By</p><p className="text-primary">{selectedLead.entryBy || 'N/A'}</p></div>
                         </div>
                         <div className="pt-2 border-t"><p className="text-[9px] text-gray-400 uppercase font-black">Clinical Summary</p><p className="text-gray-700 italic mt-1 font-medium">"{selectedLead.problem || 'No details recorded.'}"</p></div>
                     </div>
