@@ -29,8 +29,8 @@ export const WEST_BENGAL_DISTRICTS = [
   "Purba Bardhaman", "Purba Medinipur", "Purulia", "South 24 Parganas", "Uttar Dinajpur"
 ];
 
-export const STAFF_NAMES = [
-  "Select", 
+export const STAFF_NAMES = [ 
+  "",
   "Mahasin Sk", 
   "Susanta Gayen", 
   "Subhajit Das", 

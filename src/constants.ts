@@ -30,7 +30,7 @@ export const WEST_BENGAL_DISTRICTS = [
 ];
 
 export const STAFF_NAMES = [
-  "Select", 
+  "",
   "Mahasin Sk", 
   "Susanta Gayen", 
   "Subhajit Das", 
