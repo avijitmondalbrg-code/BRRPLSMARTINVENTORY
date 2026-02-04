@@ -239,9 +239,12 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                                     {lead.nextFollowUp && <div className="flex items-center gap-2 text-[#3159a6]"><Calendar size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}</div>}
                                     {lead.value ? <div className="flex items-center gap-2 text-teal-600 font-black"><IndianRupee size={12}/> {lead.value.toLocaleString()}</div> : null}
                                 </div>
-                                <div className="mt-4 pt-3 border-t flex justify-between items-center text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                    <span>{lead.source}</span>
-                                    <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                                <div className="mt-4 pt-3 border-t flex justify-between items-end">
+                                    <div className="text-[9px] font-black uppercase tracking-widest">
+                                        <p className="text-gray-400">{lead.source}</p>
+                                        <p className="text-primary mt-1 flex items-center gap-1"><User size={8} /> {lead.entryBy || 'System'}</p>
+                                    </div>
+                                    <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary mb-0.5" />
                                 </div>
                              </div>
                         ))}
