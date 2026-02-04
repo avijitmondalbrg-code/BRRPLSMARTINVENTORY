@@ -1,18 +1,23 @@
-
-import React from 'react';
-import { HearingAid, Invoice } from '../types';
+import React, { useState, useMemo } from 'react';
+import { HearingAid, Invoice, StockTransfer, Quotation } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, Package, Sparkles, Clock } from 'lucide-react';
+import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
 
 interface DashboardProps {
   inventory: HearingAid[];
   invoices: Invoice[];
+  stockTransfers: StockTransfer[];
+  quotations: Quotation[];
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations }) => {
   const [insights, setInsights] = React.useState<string>('');
   const [loadingInsights, setLoadingInsights] = React.useState(false);
+  
+  // Traceability Search State
+  const [serialSearch, setSerialSearch] = useState('');
+  const [traceResult, setTraceResult] = useState<any>(null);
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
@@ -33,7 +38,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
     const result = await analyzeStockTrends(summary);
     setInsights(result);
     setLoadingInsights(false);
-  }
+  };
+
+  const handleTraceDevice = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serialSearch.trim()) return;
+
+    const sn = serialSearch.trim().toUpperCase();
+    
+    // 1. Find current inventory record
+    const invRecord = inventory.find(i => i.serialNumber.toUpperCase() === sn);
+    
+    // 2. Find move records
+    const moves = stockTransfers.filter(t => t.serialNumber.toUpperCase() === sn)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+    // 3. Find sale record
+    const sale = invoices.find(inv => inv.items.some(item => item.serialNumber.toUpperCase() === sn));
+    
+    // 4. Find quotation records
+    const quotes = quotations.filter(q => q.items.some(item => item.serialNumber.toUpperCase() === sn));
+
+    // 5. Detect if potentially deleted
+    // Logic: If there is a history (moves/sale/quotes) but no record in current inventory array, 
+    // and status is not 'Sold' (since 'Sold' items remain in inventory array usually), it might have been deleted.
+    const isDeleted = (moves.length > 0 || sale || quotes.length > 0) && !invRecord;
+
+    setTraceResult({
+        sn,
+        current: invRecord,
+        moves,
+        sale,
+        quotes,
+        isDeleted
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -67,7 +106,124 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices }) => 
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 space-y-6">
+            {/* Device Traceability Search */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col h-full">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                           <History className="text-primary" size={20} /> Trace Device Lifecycle
+                        </h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Audit any Serial Number across logs</p>
+                    </div>
+                </div>
+
+                <form onSubmit={handleTraceDevice} className="flex gap-3 mb-8">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input 
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl focus:bg-white focus:border-primary outline-none transition font-black uppercase placeholder:font-bold placeholder:text-gray-300"
+                            placeholder="Enter Serial Number (e.g. SN12345)"
+                            value={serialSearch}
+                            onChange={e => setSerialSearch(e.target.value)}
+                        />
+                    </div>
+                    <button type="submit" className="bg-primary text-white px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition shadow-xl shadow-blue-900/20 active:scale-95">Trace Journey</button>
+                </form>
+
+                {traceResult ? (
+                    <div className="flex-1 animate-fade-in">
+                        <div className="bg-blue-50/50 rounded-3xl p-6 border border-blue-100 mb-6 flex justify-between items-start">
+                            <div>
+                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Target Device</p>
+                                <h4 className="text-2xl font-black text-gray-800 tracking-tighter uppercase">{traceResult.current?.brand || 'ARCHIVED'} {traceResult.current?.model || 'DEVICE'}</h4>
+                                <p className="text-xs font-bold text-gray-400 font-mono tracking-widest mt-1">S/N: {traceResult.sn}</p>
+                            </div>
+                            <div className="text-right">
+                                {traceResult.isDeleted && (
+                                    <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                        <AlertTriangle size={12}/> Potentially Deleted
+                                    </span>
+                                )}
+                                {!traceResult.isDeleted && traceResult.current && (
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100 ${traceResult.current.status === 'Available' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-primary'}`}>
+                                        Current Status: {traceResult.current.status}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-6 pl-4 border-l-2 border-dashed border-gray-200 ml-4">
+                            {/* Entry Point */}
+                            <div className="relative">
+                                <div className="absolute -left-[25px] top-0 h-4 w-4 rounded-full bg-primary border-4 border-white shadow-sm"></div>
+                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm ml-2">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1"><Package size={12}/> Inventory Entry</span>
+                                        <span className="text-[10px] font-bold text-gray-400">{traceResult.current?.addedDate || 'Legacy Record'}</span>
+                                    </div>
+                                    <p className="text-xs font-bold text-gray-600">Added to system at <span className="text-gray-800 font-black">{traceResult.current?.location || 'Unknown Hub'}</span></p>
+                                </div>
+                            </div>
+
+                            {/* Transfers */}
+                            {traceResult.moves.map((move: StockTransfer) => (
+                                <div key={move.id} className="relative">
+                                    <div className="absolute -left-[25px] top-0 h-4 w-4 rounded-full bg-orange-400 border-4 border-white shadow-sm"></div>
+                                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm ml-2">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1"><MapPin size={12}/> Stock Movement</span>
+                                            <span className="text-[10px] font-bold text-gray-400">{move.date}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs font-bold">
+                                            <span className="text-gray-400">{move.fromLocation}</span>
+                                            <ArrowRight size={12} className="text-orange-400"/>
+                                            <span className="text-gray-800 font-black">{move.toLocation}</span>
+                                        </div>
+                                        <p className="text-[9px] text-gray-400 uppercase mt-2 font-black">Logged By: {move.sender} | Via: {move.transporter}</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Quotations */}
+                            {traceResult.quotes.map((q: Quotation) => (
+                                <div key={q.id} className="relative">
+                                    <div className="absolute -left-[25px] top-0 h-4 w-4 rounded-full bg-yellow-400 border-4 border-white shadow-sm"></div>
+                                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm ml-2">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest flex items-center gap-1"><FileText size={12}/> Quotation Issued</span>
+                                            <span className="text-[10px] font-bold text-gray-400">{q.date}</span>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-600">Estimate provided to <span className="text-gray-800 font-black">{q.patientName}</span></p>
+                                        <p className="text-[9px] text-gray-400 uppercase mt-1 font-black">Ref: {q.id}</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Sale */}
+                            {traceResult.sale && (
+                                <div className="relative">
+                                    <div className="absolute -left-[25px] top-0 h-4 w-4 rounded-full bg-green-500 border-4 border-white shadow-sm"></div>
+                                    <div className="bg-green-50 p-4 rounded-2xl border border-green-100 shadow-sm ml-2">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-black text-green-700 uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12}/> Final Settlement (Sale)</span>
+                                            <span className="text-[10px] font-bold text-green-600">{traceResult.sale.date}</span>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-700 uppercase">Purchased by <span className="text-gray-900 font-black">{traceResult.sale.patientName}</span></p>
+                                        <p className="text-xs font-black text-green-700 mt-1">Invoice: {traceResult.sale.id}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-30">
+                        <div className="p-6 bg-gray-50 rounded-full mb-4"><Search size={40}/></div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Search a valid serial number to see life cycle logs</p>
+                    </div>
+                )}
+            </div>
+
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-96 flex flex-col">
                 <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] mb-6">Stock Level by Brand</h3>
                 <ResponsiveContainer width="100%" height="100%">
