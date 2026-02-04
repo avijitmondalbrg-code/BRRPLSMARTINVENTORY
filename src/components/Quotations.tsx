@@ -483,20 +483,19 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none -rotate-12 translate-y-12 scale-150"></div>
+                        <div className="bg-white p-8 rounded-[2.5rem] border-4 border-slate-900 font-bold text-slate-900 shadow-xl relative overflow-hidden">
                             <div className="space-y-3 relative z-10">
-                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Taxes ({isInterState ? 'IGST' : 'CGST+SGST'})</span><span>₹{totalTax.toLocaleString()}</span></div>
-                                <div className="flex justify-between text-[10px] font-black uppercase text-red-400 tracking-widest"><span>Special Consideration</span><span>-₹{discountValue.toLocaleString()}</span></div>
-                                <div className={`flex justify-between text-[10px] font-black uppercase tracking-widest ${roundOffAmount < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                <div className="flex justify-between text-[11px] font-black uppercase text-slate-500 tracking-widest"><span>Gross Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] font-black uppercase text-slate-500 tracking-widest"><span>Taxes ({isInterState ? 'IGST' : 'CGST+SGST'})</span><span>₹{totalTax.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] font-black uppercase text-red-600 tracking-widest"><span>Special Consideration</span><span>-₹{discountValue.toLocaleString()}</span></div>
+                                <div className={`flex justify-between text-[11px] font-black uppercase tracking-widest ${roundOffAmount < 0 ? 'text-red-500' : 'text-green-600'}`}>
                                     <span>Round Off</span>
                                     <span>{roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
                                 </div>
-                                <div className="h-0.5 bg-white/20 my-4"></div>
+                                <div className="h-1 bg-slate-900 my-4"></div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Final Estimate</span>
-                                    <span className="text-4xl font-black tracking-tighter">₹{Math.round(finalTotal).toLocaleString()}</span>
+                                    <span className="text-xs font-black uppercase tracking-[0.3em] text-[#3159a6]">Final Estimate</span>
+                                    <span className="text-4xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
