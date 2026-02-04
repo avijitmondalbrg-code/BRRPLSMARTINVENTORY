@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag } from 'lucide-react';
 import { ViewState } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -50,8 +49,8 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
             { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, color: 'text-blue-200' },
             { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-200' },
             { id: 'crm', label: 'Pipeline', icon: Briefcase, color: 'text-teal-200' },
+            { id: 'purchases', label: 'Procurement', icon: ShoppingBag, color: 'text-purple-200' },
             { id: 'assets', label: 'Equipment', icon: HardDrive, color: 'text-amber-200' },
-            { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck, color: 'text-blue-300' },
             { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-200' },
             { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft, color: 'text-purple-200' },
             { id: 'quotation', label: 'Quotations', icon: FileQuestion, color: 'text-yellow-100' },
