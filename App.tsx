@@ -139,28 +139,31 @@ const App: React.FC = () => {
 
   const handleAddPurchase = async (p: PurchaseRecord) => {
     // 1. Save purchase record
-    setPurchases([p, ...purchases]);
+    setPurchases(prev => [p, ...prev]);
     
-    // 2. Map to inventory record
+    // 2. Map to inventory record with random suffix to avoid collisions in bulk loops
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 7);
     const newStockItem: HearingAid = {
-      id: `HA-PUR-${Date.now()}`,
+      id: `HA-PUR-${timestamp}-${randomSuffix}`,
       brand: p.brand,
       model: p.model,
       serialNumber: p.serialNumber,
-      price: p.mrp, // User specified MRP should go to price
+      price: p.mrp, // Only MRP goes to stock price as per requirement
       hsnCode: p.hsnCode,
       location: p.location,
       status: 'Available',
       addedDate: p.invoiceDate
     };
 
-    // Use existing inventory state updater
     setInventory(prev => [...prev, newStockItem]);
 
     try { 
       await setDocument('purchases', p.id, p); 
       await setDocument('inventory', newStockItem.id, newStockItem);
-    } catch(e) {}
+    } catch(e) {
+      console.error("Firebase Sync Error in Purchase:", e);
+    }
   };
 
   const handleDeletePurchase = async (id: string) => {

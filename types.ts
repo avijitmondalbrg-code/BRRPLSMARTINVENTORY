@@ -11,6 +11,7 @@ export interface HearingAid {
   gstRate?: number; // Percentage (e.g., 12, 18)
 }
 
+// FIX: Added missing Vendor interface to resolve import errors
 export interface Vendor {
   id: string;
   name: string;
@@ -19,6 +20,7 @@ export interface Vendor {
   addedDate: string;
 }
 
+// FIX: Added missing PurchaseRecord interface to resolve import errors
 export interface PurchaseRecord {
   id: string;
   vendorId: string;
@@ -272,6 +274,7 @@ export interface Lead {
   value?: number; // Potential value
 }
 
+// FIX: Added 'purchases' and 'vendors' to ViewState to resolve navigation state errors
 export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets' | 'purchases' | 'vendors';
 export type UserRole = 'admin' | 'user';
 
