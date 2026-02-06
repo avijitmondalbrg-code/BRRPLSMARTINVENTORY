@@ -203,8 +203,8 @@ export const Purchases: React.FC<PurchasesProps> = ({ vendors, purchases, onAddV
 
       {/* Vendor Add Modal */}
       {showVendorModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-fade-in border-4 border-white">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-fade-in border-4 border-white my-auto">
             <div className="bg-primary p-6 text-white flex justify-between items-center">
               <h3 className="font-black uppercase tracking-widest text-xs ml-2">Vendor On-boarding</h3>
               <button onClick={() => setShowVendorModal(false)}><X size={24}/></button>
@@ -230,13 +230,14 @@ export const Purchases: React.FC<PurchasesProps> = ({ vendors, purchases, onAddV
 
       {/* Purchase Entry Modal */}
       {showPurchaseModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-8">
-            <div className="bg-primary p-6 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-auto flex flex-col max-h-[95vh]">
+            <div className="bg-primary p-6 text-white flex justify-between items-center flex-shrink-0">
               <h3 className="font-black uppercase tracking-widest text-xs ml-2">Stock Procurement Node</h3>
               <button onClick={() => setShowPurchaseModal(false)}><X size={24}/></button>
             </div>
-            <div className="p-8 space-y-6">
+            
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-grow">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 relative">
                     <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Users size={12}/> Search Vendor *</label>
@@ -342,7 +343,9 @@ export const Purchases: React.FC<PurchasesProps> = ({ vendors, purchases, onAddV
                     </div>
                   </div>
                </div>
+            </div>
 
+            <div className="p-8 pt-0 flex-shrink-0">
                <button onClick={handleSavePurchase} className="w-full bg-slate-900 text-white py-5 rounded-[2.5rem] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition active:scale-95 text-[10px] flex items-center justify-center gap-3">
                   <Store size={18}/> Commit {isBulkMode ? 'Bulk ' : ''}Purchase & Push to Stock
                </button>
