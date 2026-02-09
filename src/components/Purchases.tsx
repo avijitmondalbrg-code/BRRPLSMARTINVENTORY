@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Vendor, PurchaseRecord, LOCATIONS, BRANDS, UserRole } from '../types';
-import { ShoppingBag, Users, Plus, Search, Calendar, FileText, IndianRupee, Trash2, X, CheckCircle, Store, Tag, List } from 'lucide-react';
+import { ShoppingBag, Users, Plus, Search, Calendar, FileText, IndianRupee, Trash2, X, CheckCircle, Store, Tag, List, ShieldAlert } from 'lucide-react';
 
 interface PurchasesProps {
   vendors: Vendor[];
@@ -13,6 +13,22 @@ interface PurchasesProps {
 }
 
 export const Purchases: React.FC<PurchasesProps> = ({ vendors, purchases, onAddVendor, onAddPurchase, onDeletePurchase, onDeleteVendor, userRole }) => {
+  // Access Control: Block non-admin users
+  if (userRole !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+        <div className="p-6 bg-red-50 text-red-500 rounded-full mb-6">
+          <ShieldAlert size={48} />
+        </div>
+        <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter mb-2">Access Denied</h2>
+        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] max-w-xs text-center leading-relaxed">
+          Procurement and Vendor Registry are restricted to Administrative access only. 
+          Please contact the system owner if you require these permissions.
+        </p>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<'purchases' | 'vendors'>('purchases');
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);

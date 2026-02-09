@@ -1,15 +1,33 @@
-
 import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck } from 'lucide-react';
-import { ViewState } from '../types';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag } from 'lucide-react';
+import { ViewState, UserRole } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
 interface FrontCoverProps {
   logo: string;
   onNavigate: (view: ViewState) => void;
+  userRole: UserRole;
 }
 
-export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
+export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRole }) => {
+  // Define all possible navigation items
+  const allNavItems = [
+    { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, color: 'text-blue-200', roles: ['admin', 'user'] },
+    { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-200', roles: ['admin', 'user'] },
+    { id: 'crm', label: 'Pipeline', icon: Briefcase, color: 'text-teal-200', roles: ['admin', 'user'] },
+    { id: 'purchases', label: 'Procurement', icon: ShoppingBag, color: 'text-purple-200', roles: ['admin'] }, // Admin only
+    { id: 'assets', label: 'Equipment', icon: HardDrive, color: 'text-amber-200', roles: ['admin', 'user'] },
+    { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-200', roles: ['admin', 'user'] },
+    { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft, color: 'text-purple-200', roles: ['admin', 'user'] },
+    { id: 'quotation', label: 'Quotations', icon: FileQuestion, color: 'text-yellow-100', roles: ['admin', 'user'] },
+    { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200', roles: ['admin', 'user'] },
+    { id: 'credit-note', label: 'Credit Note', icon: FileMinus, color: 'text-red-200', roles: ['admin', 'user'] },
+    { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200', roles: ['admin', 'user'] }
+  ];
+
+  // Filter items based on user role
+  const visibleNavItems = allNavItems.filter(item => item.roles.includes(userRole));
+
   return (
     <div className="min-h-screen bg-[#3159a6] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Decorative background elements for depth */}
@@ -46,19 +64,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate }) => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5 w-full max-w-7xl px-4">
-          {[
-            { id: 'dashboard', label: 'Analytics', icon: LayoutDashboard, color: 'text-blue-200' },
-            { id: 'advance-booking', label: 'Advances', icon: Wallet, color: 'text-green-200' },
-            { id: 'crm', label: 'Pipeline', icon: Briefcase, color: 'text-teal-200' },
-            { id: 'assets', label: 'Equipment', icon: HardDrive, color: 'text-amber-200' },
-            { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck, color: 'text-blue-300' },
-            { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-200' },
-            { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft, color: 'text-purple-200' },
-            { id: 'quotation', label: 'Quotations', icon: FileQuestion, color: 'text-yellow-100' },
-            { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200' },
-            { id: 'credit-note', label: 'Credit Note', icon: FileMinus, color: 'text-red-200' },
-            { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200' }
-          ].map((item, idx) => (
+          {visibleNavItems.map((item, idx) => (
             <button 
               key={item.id}
               onClick={() => onNavigate(item.id as any)}

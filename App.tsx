@@ -521,7 +521,7 @@ service cloud.firestore {
   );
 
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
-  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} />;
+  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -532,24 +532,24 @@ service cloud.firestore {
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {[
-            { id: 'front-cover', label: 'Home', icon: Home },
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'assets', label: 'Company Assets', icon: HardDrive },
-            { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck },
-            { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet },
-            { id: 'crm', label: 'Sales CRM', icon: Briefcase },
-            { id: 'purchases', label: 'Purchase Entry', icon: ShoppingBag },
-            { id: 'inventory', label: 'Inventory', icon: Package },
-            { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft },
-            { id: 'quotation', label: 'Quotations', icon: FileQuestion },
-            { id: 'billing', label: 'Patient Billing', icon: FileText },
-            { id: 'service-billing', label: 'Service Billing', icon: Landmark },
-            { id: 'patients', label: 'Patients', icon: Users },
-            { id: 'credit-note', label: 'Credit Note', icon: FileMinus },
-            { id: 'debit-note', label: 'Debit Note', icon: FilePlus },
-            { id: 'receipts', label: 'Receipts', icon: Receipt },
-            { id: 'settings', label: 'Settings', icon: SettingsIcon }
-          ].map(item => (
+            { id: 'front-cover', label: 'Home', icon: Home, roles: ['admin', 'user'] },
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
+            { id: 'assets', label: 'Company Assets', icon: HardDrive, roles: ['admin', 'user'] },
+            { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck, roles: ['admin', 'user'] },
+            { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet, roles: ['admin', 'user'] },
+            { id: 'crm', label: 'Sales CRM', icon: Briefcase, roles: ['admin', 'user'] },
+            { id: 'purchases', label: 'Purchase Entry', icon: ShoppingBag, roles: ['admin'] }, // Admin restricted
+            { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin', 'user'] },
+            { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft, roles: ['admin', 'user'] },
+            { id: 'quotation', label: 'Quotations', icon: FileQuestion, roles: ['admin', 'user'] },
+            { id: 'billing', label: 'Patient Billing', icon: FileText, roles: ['admin', 'user'] },
+            { id: 'service-billing', label: 'Service Billing', icon: Landmark, roles: ['admin', 'user'] },
+            { id: 'patients', label: 'Patients', icon: Users, roles: ['admin', 'user'] },
+            { id: 'credit-note', label: 'Credit Note', icon: FileMinus, roles: ['admin', 'user'] },
+            { id: 'debit-note', label: 'Debit Note', icon: FilePlus, roles: ['admin', 'user'] },
+            { id: 'receipts', label: 'Receipts', icon: Receipt, roles: ['admin', 'user'] },
+            { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'user'] }
+          ].filter(item => item.roles.includes(userRole!)).map(item => (
             <button key={item.id} onClick={() => setActiveView(item.id as any)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
               <item.icon size={18} /> <span className="text-sm font-medium">{item.label}</span>
             </button>
