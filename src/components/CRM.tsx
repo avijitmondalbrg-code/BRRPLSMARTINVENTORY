@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Lead, LeadStatus, Activity, UserRole } from '../types';
+import { Lead, LeadStatus, Activity, UserRole, LOCATIONS } from '../types';
 import { COMPANY_ADDRESS, STAFF_NAMES } from '../constants';
-import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee } from 'lucide-react';
+import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee, Landmark, Stethoscope } from 'lucide-react';
 
 interface CRMProps {
   leads: Lead[];
@@ -43,7 +43,11 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
 
   // Form State
   const [formData, setFormData] = useState<Partial<Lead>>({
-    name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
+    name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: '',
+    createdAt: new Date().toISOString().split('T')[0],
+    hospital: LOCATIONS[0],
+    hearingLoss: '',
+    audiologist: ''
   });
 
   // Activity Form State
@@ -76,7 +80,11 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   const handleOpenAdd = () => {
     setEditingLeadId(null);
     setFormData({
-      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: ''
+      name: '', phone: '', address: '', dob: '', comment: '', problem: '', referDoctor: '', haPotential: 'No', entryBy: STAFF_NAMES[0], source: 'Walk-in', status: 'New', value: 0, nextFollowUp: '',
+      createdAt: new Date().toISOString().split('T')[0],
+      hospital: LOCATIONS[0],
+      hearingLoss: '',
+      audiologist: ''
     });
     setShowAddModal(true);
   };
@@ -108,16 +116,19 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
         dob: formData.dob || '',
         comment: formData.comment || '',
         problem: formData.problem || '',
-        referDoctor: formData.referDoctor || '',
+        referDoctor: formData.source === 'Referral' ? formData.referDoctor || '' : '',
         haPotential: (formData.haPotential as 'Yes' | 'No') || 'No',
         entryBy: formData.entryBy || STAFF_NAMES[0],
         source: formData.source || 'Walk-in',
         status: 'New',
-        createdAt: new Date().toISOString().split('T')[0],
+        createdAt: formData.createdAt || new Date().toISOString().split('T')[0],
         activities: [],
         value: Number(formData.value) || 0,
         nextFollowUp: formData.nextFollowUp || '',
-        notes: formData.comment || ''
+        notes: formData.comment || '',
+        hospital: formData.hospital || LOCATIONS[0],
+        hearingLoss: formData.hearingLoss || '',
+        audiologist: formData.audiologist || ''
       };
       onAddLead(newLead);
     }
@@ -328,7 +339,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                     <h3 className="text-lg font-black uppercase tracking-widest">{editingLeadId ? 'Update Record' : 'New Inquiry'}</h3>
                     <button onClick={() => setShowAddModal(false)} className="hover:rotate-90 transition-transform"><XCircle size={28}/></button>
                 </div>
-                <form onSubmit={handleAddSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleAddSubmit} className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Name *</label>
@@ -339,31 +350,68 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                             <input required className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                         </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Baby size={12}/> Date of Birth (Optional)</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Baby size={12}/> Date of Birth</label>
                             <input type="date" className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.dob || ''} onChange={e => setFormData({...formData, dob: e.target.value})} />
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Calendar size={12}/> Entry Date *</label>
+                            <input type="date" required className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.createdAt || ''} onChange={e => setFormData({...formData, createdAt: e.target.value})} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Inquiry Source</label>
                             <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}>
                                 {SOURCE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Landmark size={12}/> Choose Hospital</label>
+                            <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.hospital} onChange={e => setFormData({...formData, hospital: e.target.value})}>
+                                {LOCATIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </div>
                     </div>
+
+                    {formData.source === 'Referral' && (
+                        <div className="space-y-2 animate-fade-in">
+                            <label className="text-[10px] font-black uppercase text-[#3159a6] ml-1 flex items-center gap-1"><UserCheck size={12}/> Referral Doctor Name *</label>
+                            <input required className="w-full border-2 border-blue-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-blue-50/30" value={formData.referDoctor} onChange={e => setFormData({...formData, referDoctor: e.target.value})} placeholder="Enter doctor name" />
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><AlertCircle size={12}/> Hearing Loss Details</label>
+                            <input className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.hearingLoss} onChange={e => setFormData({...formData, hearingLoss: e.target.value})} placeholder="e.g. Mod-Severe B/L" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist Name</label>
+                            <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.audiologist} onChange={e => setFormData({...formData, audiologist: e.target.value})}>
+                                <option value="">-- Select Audiologist --</option>
+                                {STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Next Follow-up Date</label>
                             <input type="date" className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.nextFollowUp || ''} onChange={e => setFormData({...formData, nextFollowUp: e.target.value})} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Budget Estimate (Optional)</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Budget Estimate</label>
                             <div className="relative">
                                 <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                 <input type="number" className="w-full pl-11 border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black bg-gray-50" value={formData.value || ''} onChange={e => setFormData({...formData, value: Number(e.target.value)})} placeholder="0.00" />
                             </div>
                         </div>
                     </div>
+
                     <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Address / Location</label>
@@ -376,10 +424,12 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                             </select>
                         </div>
                     </div>
+                    
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Clinical Observation / Notes</label>
+                        <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><StickyNote size={12}/> Clinical Observation / Remarks</label>
                         <textarea className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none h-32 font-medium bg-gray-50" value={formData.problem} onChange={e => setFormData({...formData, problem: e.target.value})} />
                     </div>
+                    
                     <button type="submit" className="w-full bg-primary text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-slate-800 transition active:scale-95 text-xs">Save Inquiry Record</button>
                 </form>
             </div>
@@ -454,6 +504,9 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                              <div><p className="text-[9px] text-gray-400">Source</p><p>{selectedLead.source}</p></div>
                              {selectedLead.dob && <div><p className="text-[9px] text-gray-400">Date of Birth</p><p>{new Date(selectedLead.dob).toLocaleDateString('en-IN')}</p></div>}
                              {selectedLead.value ? <div><p className="text-[9px] text-gray-400">Budget</p><p className="text-teal-600 font-black">₹{selectedLead.value.toLocaleString()}</p></div> : null}
+                             <div className="col-span-2"><p className="text-[9px] text-gray-400">Hospital</p><p className="text-[#3159a6] font-black">{selectedLead.hospital || 'N/A'}</p></div>
+                             {selectedLead.hearingLoss && <div className="col-span-2"><p className="text-[9px] text-gray-400">Hearing Loss</p><p className="text-red-500 font-black">{selectedLead.hearingLoss}</p></div>}
+                             {selectedLead.audiologist && <div className="col-span-2"><p className="text-[9px] text-gray-400">Consulting Audiologist</p><p className="text-primary font-black">{selectedLead.audiologist}</p></div>}
                              <div className="col-span-2"><p className="text-[9px] text-gray-400">Entry By</p><p className="text-primary">{selectedLead.entryBy || 'N/A'}</p></div>
                         </div>
                         <div className="pt-2 border-t"><p className="text-[9px] text-gray-400 uppercase font-black">Clinical Summary</p><p className="text-gray-700 italic mt-1 font-medium">"{selectedLead.problem || 'No details recorded.'}"</p></div>

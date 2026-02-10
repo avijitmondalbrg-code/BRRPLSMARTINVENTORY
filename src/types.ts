@@ -272,6 +272,9 @@ export interface Lead {
   notes?: string;
   activities: Activity[];
   value?: number; // Potential value
+  hospital?: string;
+  hearingLoss?: string;
+  audiologist?: string;
 }
 
 // FIX: Added 'purchases' and 'vendors' to ViewState to resolve navigation state errors
