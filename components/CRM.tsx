@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, LeadStatus, Activity, UserRole, LOCATIONS } from '../types';
-import { COMPANY_ADDRESS, STAFF_NAMES } from '../constants';
+import { COMPANY_ADDRESS, STAFF_NAMES, AUDIOLOGIST_NAMES } from '../constants';
 import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee, Landmark, Stethoscope } from 'lucide-react';
 
 interface CRMProps {
@@ -393,7 +393,7 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                             <label className="text-[10px] font-black uppercase text-gray-400 ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist Name</label>
                             <select className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-primary outline-none font-black uppercase bg-gray-50" value={formData.audiologist} onChange={e => setFormData({...formData, audiologist: e.target.value})}>
                                 <option value="">-- Select Audiologist --</option>
-                                {STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
+                                {AUDIOLOGIST_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
                             </select>
                         </div>
                     </div>

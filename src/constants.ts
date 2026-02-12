@@ -45,6 +45,25 @@ export const STAFF_NAMES = [
   "Avijit Mondal",
   "Audiologist"
 ];
+export const AUDIOLOGIST_NAMES = [ 
+  "",
+  "Amit Majumder", 
+  "Paramita Pal", 
+  "Upendra Kumar", 
+  "Neetu Singh", 
+  "Kajal", 
+  "Aratibala Mahapatra", 
+  "Haraprasad Behura", 
+  "Biswajit Bag", 
+  "Diptanu Dey",
+  "Samir Kusali",
+  "Pragna Ghosh",
+  "Animesh Pattanayak",
+  "Animesh Panda",
+  "Nikhilesh DasAdhikary",
+  "Sk. Asraf Hossain"
+
+];
 
 export const COMPANY_BANK_ACCOUNTS = [
   { name: "SBI CA", accountNumber: "42367906742", ifsc: "SBIN0001357", branch: "Thakurpukur" },
