@@ -67,7 +67,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
-  const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+  const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
   const [totalAdjustment, setTotalAdjustment] = useState<number>(0); 
@@ -107,7 +107,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setPaymentMethod('Cash'); 
     setPaymentBank(''); 
     setExistingPayments([]);
-    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -158,7 +158,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
           totalAmount: 0
       };
       setManualItems([...manualItems, newItem]);
-      setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+      setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleRemoveManualItem = (id: string) => {
@@ -431,7 +431,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                           .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber, undefined, { numeric: true }))
                                           .map((it, idx) => (
                                             <div key={idx} className="mb-1 last:mb-0">
-                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand} {it.model}</p>
+                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand ? `${it.brand} ` : ''}{it.model}</p>
                                                 <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
                                             </div>
                                         ))}
@@ -627,17 +627,23 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-4">
                             <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Description (e.g. Shell Repair: / Service:)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
                         </div>
-                        <div>
+                        <div className="hidden">
                             <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-[#3159a6]" placeholder="HSN (9987)" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
                         </div>
                         <div>
                             <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Rate" value={tempManual.price || ''} onChange={e=>setTempManual({...tempManual, price: Number(e.target.value)})} />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="hidden">
                             <select className="border-2 border-white rounded-xl p-3 text-xs font-bold outline-none flex-1" value={tempManual.gst} onChange={e=>setTempManual({...tempManual, gst: Number(e.target.value)})}>
+                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                            </select>
+                        </div>
+                        <div className="md:col-span-1 flex gap-2">
+                           <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-[#3159a6]" placeholder="HSN" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
+                           <select className="border-2 border-white rounded-xl p-3 text-xs font-bold outline-none" value={tempManual.gst} onChange={e=>setTempManual({...tempManual, gst: Number(e.target.value)})}>
                                 <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
                             </select>
                             <button onClick={handleAddManualItem} className="bg-[#3159a6] text-white p-3 rounded-xl hover:bg-slate-800 transition shadow-lg"><PackagePlus size={20}/></button>
@@ -835,7 +841,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 {allInvoiceItems.map(item => (
                                     <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-4 last:border-slate-900">
                                         <td className="p-2 border-r-2 border-slate-900">
-                                            <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand} {item.model}</p>
+                                            <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand ? `${item.brand} ` : ''}{item.model}</p>
                                             <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">
                                                 {item.serialNumber === 'N/A' ? 'PROCEDURE' : `S/N: ${item.serialNumber}`}
                                             </p>

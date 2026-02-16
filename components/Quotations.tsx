@@ -47,7 +47,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
-  const [tempManual, setTempManual] = useState({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+  const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
@@ -78,7 +78,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setEntryBy(STAFF_NAMES[0]);
     setEditingId(null); 
     setPatientSearchTerm(''); 
-    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -131,7 +131,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
         totalAmount: 0
     };
     setManualItems([...manualItems, newItem]);
-    setTempManual({ brand: 'Service', model: '', hsn: '902190', price: 0, gst: 0 });
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
   };
 
   const handleRemoveManualItem = (id: string) => {
@@ -459,7 +459,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                 {processedItems.map((item, idx) => (
                                     <tr key={item.hearingAidId || idx} className="border-b-2 border-slate-400 last:border-b-0">
                                         <td className="p-4 border-r-2 border-slate-900">
-                                            <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand} {item.model}</p>
+                                            <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand ? `${item.brand} ` : ''}{item.model}</p>
                                         </td>
                                         <td className="p-4 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
                                         <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
