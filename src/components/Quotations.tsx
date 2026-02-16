@@ -47,7 +47,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
-  const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
+  const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
@@ -78,7 +78,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setEntryBy(STAFF_NAMES[0]);
     setEditingId(null); 
     setPatientSearchTerm(''); 
-    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -115,23 +115,27 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
   const handleAddManualItem = () => {
     if (!tempManual.model || tempManual.price <= 0) return;
+    const qty = tempManual.qty || 1;
+    const taxableValue = tempManual.price * qty;
+
     const newItem: InvoiceItem = {
         hearingAidId: `MAN-${Date.now()}`,
         brand: tempManual.brand,
         model: tempManual.model,
         serialNumber: 'N/A',
         price: tempManual.price,
+        qty: qty,
         hsnCode: tempManual.hsn,
         gstRate: tempManual.gst,
         discount: 0,
-        taxableValue: tempManual.price,
+        taxableValue: taxableValue,
         cgstAmount: 0,
         sgstAmount: 0,
         igstAmount: 0,
         totalAmount: 0
     };
     setManualItems([...manualItems, newItem]);
-    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0 });
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
   };
 
   const handleRemoveManualItem = (id: string) => {
@@ -153,7 +157,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
       return {
         hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber,
-        price: item.price, hsnCode: item.hsnCode || '90214090', gstRate, discount: 0,
+        price: item.price, qty: 1, hsnCode: item.hsnCode || '90214090', gstRate, discount: 0,
         taxableValue, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: taxableValue + totalTax
       };
     }).filter(i => i !== null) as InvoiceItem[];
@@ -344,12 +348,15 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         <Wrench size={14}/> Manual Service / Non-Inventory Entry
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
                         <div className="md:col-span-2">
                             <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-primary" placeholder="Service (e.g. Repair / Ear Mold)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
                         </div>
                         <div>
-                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-primary" placeholder="HSN (902190)" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-primary" placeholder="HSN" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
+                        </div>
+                        <div>
+                            <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-primary" placeholder="Qty" value={tempManual.qty || ''} onChange={e=>setTempManual({...tempManual, qty: Number(e.target.value)})} />
                         </div>
                         <div>
                             <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-primary" placeholder="Rate" value={tempManual.price || ''} onChange={e=>setTempManual({...tempManual, price: Number(e.target.value)})} />
@@ -367,11 +374,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                             {manualItems.map(item => (
                                 <div key={item.hearingAidId} className="flex justify-between items-center bg-white p-3 px-5 rounded-xl border border-slate-100 shadow-sm animate-fade-in">
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-black text-slate-800 uppercase">{item.model}</span>
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase">HSN: {item.hsnCode} • GST: {item.gstRate}%</span>
+                                        <span className="text-xs font-black text-slate-800 uppercase">{item.model} {item.qty && item.qty > 1 ? `(Qty: ${item.qty})` : ''}</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase">HSN: {item.hsnCode} • Rate: ₹{item.price.toLocaleString()} • GST: {item.gstRate}%</span>
                                     </div>
                                     <div className="flex items-center gap-6">
-                                        <span className="font-black text-primary">₹{item.price.toLocaleString()}</span>
+                                        <span className="font-black text-primary">₹{item.taxableValue.toLocaleString()}</span>
                                         <button onClick={() => handleRemoveManualItem(item.hearingAidId)} className="text-red-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
                                     </div>
                                 </div>
@@ -448,11 +455,12 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                         <table className="w-full border-collapse text-[12px]">
                             <thead className="bg-primary text-white uppercase font-black tracking-tight">
                                 <tr>
-                                    <th className="p-4 text-left border-r-2 border-white/20">Description of Goods</th>
+                                    <th className="p-4 text-left border-r-2 border-white/20">Description</th>
                                     <th className="p-4 text-center border-r-2 border-white/20">HSN</th>
-                                    <th className="p-4 text-right border-r-2 border-white/20">Taxable Value</th>
+                                    <th className="p-4 text-center border-r-2 border-white/20">Qty</th>
+                                    <th className="p-4 text-right border-r-2 border-white/20">Rate</th>
                                     <th className="p-4 text-center border-r-2 border-white/20">GST %</th>
-                                    <th className="p-4 text-right">Estimated Total</th>
+                                    <th className="p-4 text-right">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
@@ -462,7 +470,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                                             <p className="font-black text-slate-900 uppercase text-[13px] tracking-tight">{item.brand ? `${item.brand} ` : ''}{item.model}</p>
                                         </td>
                                         <td className="p-4 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
-                                        <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.taxableValue.toLocaleString()}</td>
+                                        <td className="p-4 text-center border-r-2 border-slate-900">{item.qty || 1}</td>
+                                        <td className="p-4 text-right border-r-2 border-slate-900 font-mono">₹{item.price.toLocaleString()}</td>
                                         <td className="p-4 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
                                         <td className="p-4 text-right font-black bg-slate-50">₹{item.totalAmount.toLocaleString()}</td>
                                     </tr>

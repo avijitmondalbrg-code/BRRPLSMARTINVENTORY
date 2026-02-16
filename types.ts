@@ -133,6 +133,7 @@ export interface InvoiceItem {
   model: string;
   serialNumber: string;
   price: number; // Unit Price
+  qty?: number; // Quantity
   hsnCode?: string;
   gstRate: number;
   discount: number; // Item-specific discount
