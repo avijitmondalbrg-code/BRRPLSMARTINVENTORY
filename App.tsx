@@ -138,10 +138,7 @@ const App: React.FC = () => {
   };
 
   const handleAddPurchase = async (p: PurchaseRecord) => {
-    // 1. Save purchase record
     setPurchases(prev => [p, ...prev]);
-    
-    // 2. Map to inventory record with random suffix to avoid collisions in bulk loops
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 7);
     const newStockItem: HearingAid = {
@@ -149,15 +146,13 @@ const App: React.FC = () => {
       brand: p.brand,
       model: p.model,
       serialNumber: p.serialNumber,
-      price: p.mrp, // Only MRP goes to stock price as per requirement
+      price: p.mrp,
       hsnCode: p.hsnCode,
       location: p.location,
       status: 'Available',
       addedDate: p.invoiceDate
     };
-
     setInventory(prev => [...prev, newStockItem]);
-
     try { 
       await setDocument('purchases', p.id, p); 
       await setDocument('inventory', newStockItem.id, newStockItem);
@@ -316,6 +311,8 @@ const App: React.FC = () => {
             .map(i => i.hearingAidId)
             .filter(id => id && !id.startsWith('MAN-'));
 
+        // Also check if we should restore any advances (this is complex, usually manual restore is better)
+        // but let's at least handle inventory
         await Promise.all([
             ...inventoryItemIds.map(id => updateDocument('inventory', id, { status: 'Available' })),
             deleteDocument('invoices', invoiceId)
@@ -377,15 +374,31 @@ const App: React.FC = () => {
 
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
+    
+    // Automation: Identify applied Advance Bookings
+    const appliedAdvanceIds = invoice.payments
+        .filter(p => p.method === 'Advance' && p.note?.includes('Ref: '))
+        .map(p => p.note?.replace('Ref: ', '').trim())
+        .filter(id => id);
+
     if (exists) {
       setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
       try { await setDocument('invoices', invoice.id, invoice); } catch ( e) {}
     } else {
       setInvoices([...invoices, invoice]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
+      
+      // Update local AdvanceBookings state
+      setAdvanceBookings(prev => prev.map(b => appliedAdvanceIds.includes(b.id) ? { ...b, status: 'Consumed' } : b));
+
       try {
           await setDocument('invoices', invoice.id, invoice);
           for (const id of soldItemIds) { await updateDocument('inventory', id, { status: 'Sold' }); }
+          
+          // Update applied advances in Firebase
+          for (const advId of appliedAdvanceIds as string[]) {
+            await updateDocument('advanceBookings', advId, { status: 'Consumed' });
+          }
       } catch(e) {}
     }
     setActiveView('billing');

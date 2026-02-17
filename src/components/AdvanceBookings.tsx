@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AdvanceBooking, Patient, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear, COMPANY_BANK_ACCOUNTS } from '../constants';
-import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2 } from 'lucide-react';
+import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2, Clock, CheckCircle2 } from 'lucide-react';
 
 interface AdvanceBookingsProps {
   bookings: AdvanceBooking[];
@@ -33,6 +33,7 @@ const numberToWords = (num: number): string => {
 };
 
 export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, patients, onAddBooking, onDeleteBooking, userRole, logo, signature }) => {
+  const [activeTab, setActiveTab] = useState<'Active' | 'Consumed'>('Active');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<AdvanceBooking | null>(null);
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
@@ -100,46 +101,69 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
     setPatientSearchTerm('');
   };
 
+  const displayedBookings = bookings.filter(b => activeTab === 'Consumed' ? b.status === 'Consumed' : b.status === 'Active');
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center print:hidden">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
             <Briefcase className="text-primary" /> Advance Collections
           </h2>
           <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-1">Pre-order Management</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="bg-primary text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95">
-          <Plus size={18} /> Issue Token Receipt
-        </button>
+        
+        <div className="flex items-center gap-4">
+            <div className="bg-gray-100 p-1 rounded-xl border flex items-center">
+                <button onClick={() => setActiveTab('Active')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition ${activeTab === 'Active' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}>
+                    Active Tokens ({bookings.filter(b=>b.status==='Active').length})
+                </button>
+                <button onClick={() => setActiveTab('Consumed')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition ${activeTab === 'Consumed' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}>
+                    History ({bookings.filter(b=>b.status==='Consumed').length})
+                </button>
+            </div>
+            <button onClick={() => setShowAddModal(true)} className="bg-primary text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95">
+                <Plus size={18} /> New Token
+            </button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 print:hidden">
-        {bookings.length === 0 ? (
+        {displayedBookings.length === 0 ? (
             <div className="col-span-full py-40 text-center bg-white rounded-[3rem] border-2 border-dashed border-gray-50 flex flex-col items-center">
               <div className="p-6 bg-blue-50 rounded-full text-primary mb-6"><Briefcase size={40} /></div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">No active advance records found</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">No {activeTab.toLowerCase()} records found</p>
             </div>
-        ) : bookings.map(booking => (
-          <div key={booking.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 hover:shadow-2xl transition-all group border-b-4 border-b-primary relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform"><IndianRupee size={80}/></div>
+        ) : displayedBookings.map(booking => (
+          <div key={booking.id} className={`bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 hover:shadow-2xl transition-all group border-b-4 relative overflow-hidden ${booking.status === 'Consumed' ? 'border-b-gray-300 opacity-60' : 'border-b-primary'}`}>
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
+                {booking.status === 'Consumed' ? <CheckCircle2 size={80}/> : <IndianRupee size={80}/>}
+            </div>
+            
             <div className="flex justify-between items-start mb-6 relative z-10">
               <div>
                 <h3 className="font-black text-xl text-gray-800 uppercase tracking-tighter leading-none">{booking.patientName}</h3>
                 <p className="text-[10px] text-gray-400 font-bold tracking-widest mt-2 uppercase">TOKEN: {booking.id}</p>
               </div>
-              <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest border-2 ${booking.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-100 text-gray-400 border-gray-200'}`}>
+              <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest border-2 ${booking.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                 {booking.status}
               </span>
             </div>
+
             <div className="space-y-4 mb-8 relative z-10">
               <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-500"><Phone size={14} className="text-primary"/> {booking.phone}</div>
-              <div className="flex items-center gap-3 text-2xl font-black bg-blue-50/50 px-5 py-4 rounded-2xl text-primary tracking-tighter border-2 border-blue-50 shadow-inner">
+              <div className={`flex items-center gap-3 text-2xl font-black px-5 py-4 rounded-2xl tracking-tighter border-2 shadow-inner ${booking.status === 'Consumed' ? 'bg-gray-50 text-gray-400 border-gray-100 line-through' : 'bg-blue-50/50 text-primary border-blue-50'}`}>
                 <IndianRupee size={20} strokeWidth={3}/> {booking.amount.toLocaleString()}
               </div>
+              {booking.status === 'Consumed' && (
+                  <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 flex items-center gap-1">
+                      <Clock size={10}/> Token was used in billing
+                  </p>
+              )}
             </div>
+
             <div className="flex gap-3 relative z-10">
-              <button onClick={() => setSelectedBooking(booking)} className="flex-1 py-4 text-[9px] font-black uppercase tracking-widest bg-primary text-white rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all">
+              <button onClick={() => setSelectedBooking(booking)} className={`flex-1 py-4 text-[9px] font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all ${booking.status === 'Consumed' ? 'bg-gray-100 text-gray-400 hover:bg-gray-200' : 'bg-primary text-white hover:bg-slate-800'}`}>
                 <Printer size={14}/> View Document
               </button>
               {userRole === 'admin' && (

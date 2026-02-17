@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -646,7 +646,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="md:col-span-1 flex gap-2">
                            <select className="border-2 border-white rounded-xl p-3 text-xs font-bold outline-none flex-1" value={tempManual.gst} onChange={e=>setTempManual({...tempManual, gst: Number(e.target.value)})}>
                                 <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
-                            </select>
+                           </select>
                             <button onClick={handleAddManualItem} className="bg-[#3159a6] text-white p-3 rounded-xl hover:bg-slate-800 transition shadow-lg"><PackagePlus size={20}/></button>
                         </div>
                     </div>
@@ -690,7 +690,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="p-8 bg-blue-50/50 rounded-3xl border-2 border-blue-50 shadow-inner"><label className="block text-[10px] font-black text-[#3159a6] uppercase tracking-widest mb-4 ml-1">Immediate Collection (INR)</label><div className="relative"><IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3159a6]" size={24} /><input type="number" className="w-full pl-12 pr-4 py-5 border-2 border-white bg-white rounded-2xl outline-none focus:border-[#3159a6] text-3xl font-black text-gray-800 shadow-sm" value={initialPayment || ''} onChange={e => setInitialPayment(Number(e.target.value))} placeholder="0.00" /></div></div>
                             <div className="p-8 bg-white rounded-3xl border-2 border-gray-50 space-y-5">
-                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Payment Mode</label><select className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-gray-700 bg-gray-50 transition" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}>
+                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Payment Mode</label><select className="w-full border-2 border-gray-100 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-gray-700 bg-gray-50 transition" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}>
                                 <option value="Cash">Cash</option>
                                 <option value="UPI">UPI</option>
                                 <option value="Account Transfer">Transfer</option>
@@ -712,7 +712,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         {existingPayments.length > 0 && (
                             <div className="bg-green-50/50 rounded-3xl border-2 border-green-100 p-8">
                                 <h4 className="text-[10px] font-black text-green-800 uppercase tracking-[0.3em] mb-5 ml-1">Payment Accumulation</h4>
-                                <div className="space-y-3">{existingPayments.map(p => (<div key={p.id} className="flex justify-between items-center text-sm bg-white px-5 py-3 rounded-xl border-2 border-green-50 shadow-sm"><span className="text-green-900 font-black uppercase tracking-widest text-[10px]">{p.method} {p.note ? `[${p.note}]` : ''}</span><span className="font-black text-green-900 text-lg">₹{p.amount.toLocaleString()}</span></div>))}</div>
+                                <div className="space-y-3">{existingPayments.map(p => (<div key={p.id} className="flex justify-between items-center text-sm bg-white px-5 py-3 rounded-xl border-2 border-green-50 shadow-sm"><span className={`font-black uppercase tracking-widest text-[10px] ${p.method === 'Advance' ? 'text-[#3159a6] flex items-center gap-1' : 'text-green-900'}`}>{p.method === 'Advance' && <CheckCircle2 size={12}/>}{p.method} {p.note ? `[${p.note}]` : ''}</span><span className="font-black text-green-900 text-lg">₹{p.amount.toLocaleString()}</span></div>))}</div>
                             </div>
                         )}
                     </div>
@@ -907,8 +907,8 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <div className="mt-3 pt-3 border-t-2 border-red-200">
                                     <div className="space-y-1 text-[10px] text-left">
                                         {existingPayments.map(p => (
-                                            <div key={p.id} className="flex justify-between font-bold text-slate-700 uppercase">
-                                                <span>{p.method} ({new Date(p.date).toLocaleDateString('en-IN')})</span>
+                                            <div key={p.id} className={`flex justify-between font-bold uppercase ${p.method === 'Advance' ? 'text-[#3159a6]' : 'text-slate-700'}`}>
+                                                <span>{p.method} {p.method === 'Advance' ? '(Applied Token)' : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
                                                 <span>₹{p.amount.toLocaleString()}</span>
                                             </div>
                                         ))}
