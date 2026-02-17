@@ -247,10 +247,21 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                         {filteredLeads.filter(l => l.status === col.id).map(lead => (
                              <div key={lead.id} onClick={() => setSelectedLead(lead)} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl cursor-pointer transition-all group relative border-b-4 border-b-transparent hover:border-b-primary">
                                 <div className="flex justify-between items-start mb-3">
-                                    <h4 className="font-black text-gray-800 uppercase tracking-tight leading-none">{lead.name}</h4>
-                                    {lead.nextFollowUp === new Date().toISOString().split('T')[0] && (
-                                        <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse" title="Follow-up Today"></span>
-                                    )}
+                                    <h4 className="font-black text-gray-800 uppercase tracking-tight leading-none truncate max-w-[160px]">{lead.name}</h4>
+                                    <div className="flex items-center gap-1">
+                                        {userRole === 'admin' && (
+                                            <button 
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id, lead.name); }} 
+                                              className="p-1.5 text-gray-200 hover:text-red-500 transition-colors"
+                                              title="Quick Delete"
+                                            >
+                                              <Trash2 size={14}/>
+                                            </button>
+                                        )}
+                                        {lead.nextFollowUp === new Date().toISOString().split('T')[0] && (
+                                            <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse" title="Follow-up Today"></span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="text-[10px] text-gray-500 space-y-2 uppercase font-bold tracking-wider">
                                     <div className="flex items-center gap-2"><Phone size={12} className="text-primary"/> {lead.phone}</div>
