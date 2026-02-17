@@ -196,6 +196,13 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
       setShowMessageModal(false);
   };
 
+  const handleDeleteLead = (leadId: string, leadName: string) => {
+    if (window.confirm(`Are you sure you want to permanently delete lead for "${leadName}"? This cannot be undone.`)) {
+      onDelete(leadId);
+      if (selectedLead?.id === leadId) setSelectedLead(null);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -319,8 +326,11 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                                 </td>
                                 <td className="p-5 text-center">
                                     <div className="flex justify-center gap-2">
-                                        <button onClick={() => setSelectedLead(lead)} className="p-2 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm"><Phone size={16}/></button>
-                                        <button onClick={() => handleOpenEdit(lead)} className="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-800 hover:text-white transition-all shadow-sm"><Edit3 size={16}/></button>
+                                        <button onClick={() => setSelectedLead(lead)} className="p-2 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm" title="View Detail"><Phone size={16}/></button>
+                                        <button onClick={() => handleOpenEdit(lead)} className="p-2 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-800 hover:text-white transition-all shadow-sm" title="Edit Inquiry"><Edit3 size={16}/></button>
+                                        {userRole === 'admin' && (
+                                          <button onClick={() => handleDeleteLead(lead.id, lead.name)} className="p-2 bg-red-50 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Delete Inquiry"><Trash2 size={16}/></button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -480,6 +490,9 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                         <p className="opacity-80 text-sm flex items-center gap-2 mt-1"><Phone size={14}/> {selectedLead.phone}</p>
                     </div>
                     <div className="flex gap-2">
+                        {userRole === 'admin' && (
+                          <button onClick={() => handleDeleteLead(selectedLead.id, selectedLead.name)} className="p-2 hover:bg-red-500 rounded-full transition" title="Delete Permanent"><Trash2 size={20}/></button>
+                        )}
                         <button onClick={() => handleOpenEdit(selectedLead)} className="p-2 hover:bg-white/10 rounded-full transition"><Edit3 size={20}/></button>
                         <button onClick={() => setSelectedLead(null)} className="p-2 hover:bg-white/10 rounded-full transition"><XCircle size={24}/></button>
                     </div>
