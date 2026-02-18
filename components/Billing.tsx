@@ -845,7 +845,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                         <td className="p-2 border-r-2 border-slate-900">
                                             <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand ? `${item.brand} ` : ''}{item.model}</p>
                                             <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">
-                                                {item.serialNumber === 'N/A' ? 'PROCEDURE' : `S/N: ${item.serialNumber}`}
+                                                {item.serialNumber === 'N/A' ? '' : `S/N: ${item.serialNumber}`}
                                             </p>
                                         </td>
                                         <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode || '90214090'}</td>
