@@ -279,7 +279,7 @@ export interface Lead {
 }
 
 // FIX: Added 'purchases' and 'vendors' to ViewState to resolve navigation state errors
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets' | 'purchases' | 'vendors';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'demo-billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets' | 'purchases' | 'vendors';
 export type UserRole = 'admin' | 'user';
 
 export const LOCATIONS = [

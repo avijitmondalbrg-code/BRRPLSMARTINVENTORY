@@ -3,6 +3,7 @@ import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, Stoc
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
+import { DemoBilling } from './components/DemoBilling';
 import { ServiceBilling } from './components/ServiceBilling';
 import { StockTransfer } from './components/StockTransfer';
 import { AssetTransfer } from './components/AssetTransfer';
@@ -18,7 +19,7 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [demoInvoices, setDemoInvoices] = useState<Invoice[]>([]);
   const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -55,6 +57,7 @@ const App: React.FC = () => {
       const fetchPromise = Promise.all([
           fetchCollection('inventory'),
           fetchCollection('invoices'),
+          fetchCollection('demoInvoices'),
           fetchCollection('serviceInvoices'),
           fetchCollection('hospitals'),
           fetchCollection('patients'),
@@ -70,7 +73,7 @@ const App: React.FC = () => {
           fetchCollection('purchases')
       ]);
 
-      const [inv, invs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur] = await fetchPromise;
+      const [inv, invs, dinvs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
@@ -84,6 +87,7 @@ const App: React.FC = () => {
       setVendors((vends as Vendor[]) || []);
       setPurchases((pur as PurchaseRecord[]) || []);
       setInvoices((invs as Invoice[]) || []);
+      setDemoInvoices((dinvs as Invoice[]) || []);
       setServiceInvoices((sinvs as ServiceInvoice[]) || []);
       setHospitals((hosps as Hospital[]) || []);
       setPatients((pats as Patient[]) || []);
@@ -311,8 +315,6 @@ const App: React.FC = () => {
             .map(i => i.hearingAidId)
             .filter(id => id && !id.startsWith('MAN-'));
 
-        // Also check if we should restore any advances (this is complex, usually manual restore is better)
-        // but let's at least handle inventory
         await Promise.all([
             ...inventoryItemIds.map(id => updateDocument('inventory', id, { status: 'Available' })),
             deleteDocument('invoices', invoiceId)
@@ -328,6 +330,16 @@ const App: React.FC = () => {
         console.error("Delete operation failed:", err);
         alert(`Failed to delete invoice from server: ${err.message}. Please check your connection or permissions.`);
     }
+  };
+
+  const handleCreateDemoInvoice = async (invoice: Invoice) => {
+    setDemoInvoices([invoice, ...demoInvoices]);
+    try { await setDocument('demoInvoices', invoice.id, invoice); } catch(e) {}
+  };
+
+  const handleDeleteDemoInvoice = async (id: string) => {
+    setDemoInvoices(prev => prev.filter(i => i.id !== id));
+    try { await deleteDocument('demoInvoices', id); } catch(e) {}
   };
 
   const handleDeleteReceipt = async (invoiceId: string, paymentId: string) => {
@@ -551,11 +563,12 @@ service cloud.firestore {
             { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck, roles: ['admin', 'user'] },
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet, roles: ['admin', 'user'] },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase, roles: ['admin', 'user'] },
-            { id: 'purchases', label: 'Purchase Entry', icon: ShoppingBag, roles: ['admin'] }, // Admin restricted
+            { id: 'purchases', label: 'Procurement', icon: ShoppingBag, roles: ['admin'] }, // Admin restricted
             { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin', 'user'] },
             { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft, roles: ['admin', 'user'] },
             { id: 'quotation', label: 'Quotations', icon: FileQuestion, roles: ['admin', 'user'] },
             { id: 'billing', label: 'Patient Billing', icon: FileText, roles: ['admin', 'user'] },
+            { id: 'demo-billing', label: 'Demo Invoice', icon: ShieldCheck, roles: ['admin', 'user'] },
             { id: 'service-billing', label: 'Service Billing', icon: Landmark, roles: ['admin', 'user'] },
             { id: 'patients', label: 'Patients', icon: Users, roles: ['admin', 'user'] },
             { id: 'credit-note', label: 'Credit Note', icon: FileMinus, roles: ['admin', 'user'] },
@@ -595,6 +608,7 @@ service cloud.firestore {
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
+          {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} userRole={userRole!} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}

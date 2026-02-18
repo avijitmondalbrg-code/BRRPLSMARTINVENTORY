@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { ViewState, UserRole } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -21,6 +21,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
     { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft, color: 'text-purple-200', roles: ['admin', 'user'] },
     { id: 'quotation', label: 'Quotations', icon: FileQuestion, color: 'text-yellow-100', roles: ['admin', 'user'] },
     { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200', roles: ['admin', 'user'] },
+    { id: 'demo-billing', label: 'Demo Invoice', icon: ShieldCheck, color: 'text-pink-200', roles: ['admin', 'user'] },
     { id: 'credit-note', label: 'Credit Note', icon: FileMinus, color: 'text-red-200', roles: ['admin', 'user'] },
     { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200', roles: ['admin', 'user'] }
   ];
