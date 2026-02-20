@@ -54,6 +54,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [quotationNotes, setQuotationNotes] = useState<string>(''); 
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
+  const [inventorySearchTerm, setInventorySearchTerm] = useState('');
 
   const generateNextId = () => {
     const fy = getFinancialYear();
@@ -202,6 +203,20 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setViewMode('list');
   };
 
+  const filteredInventory = useMemo(() => {
+    return inventory
+      .filter(i => (i.status === 'Available' || selectedItemIds.includes(i.id)))
+      .filter(i => {
+        const searchTerm = inventorySearchTerm.toLowerCase();
+        if (!searchTerm) return true;
+        return (
+          i.brand.toLowerCase().includes(searchTerm) ||
+          i.model.toLowerCase().includes(searchTerm) ||
+          i.serialNumber.toLowerCase().includes(searchTerm)
+        );
+      });
+  }, [inventory, inventorySearchTerm, selectedItemIds]);
+
   const filteredQuotations = useMemo(() => {
     return quotations.filter(q => {
       const matchSearch = q.id.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
@@ -317,13 +332,24 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
                 <h3 className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 2: Product & Tax Configuration</h3>
                 
+                <div className="mb-4 relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                    <input
+                        type="text"
+                        placeholder="Search by Brand, Model, or Serial No..."
+                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-100 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
+                        value={inventorySearchTerm}
+                        onChange={e => setInventorySearchTerm(e.target.value)}
+                    />
+                </div>
+
                 <div className="max-h-80 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-8 shadow-inner custom-scrollbar overflow-hidden">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-primary text-white sticky top-0 uppercase font-black text-[10px] tracking-widest">
                             <tr><th className="p-5 w-14"></th><th className="p-5">Device Description</th><th className="p-5">Serial No</th><th className="p-5 text-center">GST %</th><th className="p-5 text-right">MRP (Base)</th></tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {inventory.filter(i => (i.status === 'Available' || selectedItemIds.includes(i.id))).map(item => (
+                            {filteredInventory.map(item => (
                                 <tr key={item.id} className={`${selectedItemIds.includes(item.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'} transition`}>
                                     <td className="p-5 text-center"><input type="checkbox" className="h-5 w-5 rounded-lg border-2 border-gray-200 text-primary focus:ring-primary transition" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
                                     <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{item.brand} {item.model}</td>
