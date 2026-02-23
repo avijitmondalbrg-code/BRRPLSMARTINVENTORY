@@ -563,7 +563,7 @@ service cloud.firestore {
             { id: 'asset-transfer', label: 'Asset Logistic', icon: Truck, roles: ['admin', 'user'] },
             { id: 'advance-booking', label: 'Advance Bookings', icon: Wallet, roles: ['admin', 'user'] },
             { id: 'crm', label: 'Sales CRM', icon: Briefcase, roles: ['admin', 'user'] },
-            { id: 'purchases', label: 'Procurement', icon: ShoppingBag, roles: ['admin'] }, // Admin restricted
+            { id: 'purchases', label: 'Purchase', icon: ShoppingBag, roles: ['admin'] }, // Admin restricted
             { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin', 'user'] },
             { id: 'transfer', label: 'Stock Transfer', icon: ArrowRightLeft, roles: ['admin', 'user'] },
             { id: 'quotation', label: 'Quotations', icon: FileQuestion, roles: ['admin', 'user'] },
