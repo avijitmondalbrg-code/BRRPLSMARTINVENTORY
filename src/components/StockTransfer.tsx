@@ -58,10 +58,10 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
     );
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (selectedItemIds.length === 0 || !targetLocation) return;
     
-    // Validate if any item is already at destination (though logic prevents this usually)
+    // Validate if any item is already at destination
     const hasSameLocation = selectedItemIds.some(id => inventory.find(i => i.id === id)?.location === targetLocation);
     if (hasSameLocation) {
       alert("One or more items are already at the target location.");
@@ -73,17 +73,18 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
         return;
     }
     
-    // Execute transfer for each selected item
-    selectedItemIds.forEach(id => {
-      onTransfer(id, targetLocation, sender, transporter, receiver, note);
-    });
+    // Execute transfer for each selected item sequentially to avoid race conditions
+    for (const id of selectedItemIds) {
+      await onTransfer(id, targetLocation, sender, transporter, receiver, note);
+    }
     
+    const count = selectedItemIds.length;
     setSelectedItemIds([]);
     setSender('');
     setTransporter('');
     setReceiver('');
     setNote('');
-    alert(`${selectedItemIds.length} unit(s) transferred successfully! Locations updated.`);
+    alert(`${count} unit(s) transferred successfully! Locations updated.`);
   };
 
   return (

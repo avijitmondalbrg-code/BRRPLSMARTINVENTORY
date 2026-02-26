@@ -205,7 +205,7 @@ const App: React.FC = () => {
     if (!item) return;
 
     const transferLog: StockTransferType = {
-      id: `TRF-${Date.now()}`,
+      id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       hearingAidId: item.id,
       brand: item.brand,
       model: item.model,
@@ -220,8 +220,10 @@ const App: React.FC = () => {
     };
 
     const updatedItem = { ...item, location: toLocation };
-    setInventory(inventory.map(i => i.id === itemId ? updatedItem : i));
-    setStockTransfers([transferLog, ...stockTransfers]);
+    
+    // Use functional updates to prevent stale state issues in bulk mode
+    setInventory(prev => prev.map(i => i.id === itemId ? updatedItem : i));
+    setStockTransfers(prev => [transferLog, ...prev]);
 
     try {
       await updateDocument('inventory', itemId, { location: toLocation });
