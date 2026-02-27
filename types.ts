@@ -293,6 +293,7 @@ export const LOCATIONS = [
   'MANIPAL DHAKURIA',
   'MANIPAL SALTLAKE',
   'NIDAN',
+  'Kasba Clinic',
   'Home Visit'
 ];
 
