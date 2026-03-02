@@ -5,6 +5,7 @@ export const THEME_COLOR = "#3159a6";
 export const BORDER_RADIUS_LARGE = "2.5rem";
 
 export const CLINIC_GSTIN = "19AALCB1534C1ZY"; 
+export const COMPANY_PAN = "AALCB1534C";
 export const CLINIC_UDYAM = "WB-18-0032916";
 
 export const COMPANY_NAME = "Bengal Rehabilitation & Research Pvt. Ltd.";

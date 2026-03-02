@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 /* FIX: Moved BRANDS import from ../constants to ../types as it is exported from types.ts */
 import { Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, BRANDS } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear, COMPANY_PAN } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, IndianRupee, Edit, Wrench, PackagePlus, CheckCircle2, Settings2, Download, ShieldCheck, UserCheck, Stethoscope } from 'lucide-react';
 
 interface DemoBillingProps {
@@ -292,11 +292,12 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                     </table>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-10">
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Invoice Date</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold shadow-sm" /></div>
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Adjustment (Disc)</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-pink-600 shadow-sm" /></div>
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Payment Mode</label><select className="w-full border-2 border-white bg-white p-3 rounded-xl font-black shadow-sm" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value as any)}><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank</option></select></div>
                     <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty</label><input className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold shadow-sm" value={warranty} onChange={e=>setWarranty(e.target.value)} /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Summary Remarks</label><textarea className="w-full border-2 border-white bg-white p-2 rounded-xl text-xs h-12 resize-none outline-none shadow-sm font-medium" value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} placeholder="Standard reimbursement invoice copy." /></div>
                 </div>
 
                 <div className="mt-8 flex justify-between items-center bg-gray-50 p-8 rounded-3xl border-2 border-pink-100">
@@ -328,19 +329,30 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 mb-6">
+                    <div className="grid grid-cols-3 gap-6 mb-6">
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
                             <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4>
                             <p className="font-black text-xl text-slate-900 uppercase tracking-tight mb-1">{patient.name}</p>
                             <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone}</p>
                             <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed italic">"{patient.address || 'Address provided on request'}"</p>
                         </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-center">
+                            <div className="space-y-3">
+                                <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Referring Professional</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self Inquiry'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Consulting Audiologist</p><p className="text-xs font-black text-primary uppercase">{patient.audiologist || 'Internal Dept'}</p></div>
+                            </div>
+                        </div>
                         <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
                             <div>
                                 <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
                                 <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
                                 <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight leading-tight">{COMPANY_ADDRESS}</p>
-                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight mt-2">GSTIN: {CLINIC_GSTIN}</p>
+                                <div className="mt-2 space-y-0.5">
+                                    <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">GSTIN: {CLINIC_GSTIN}</p>
+                                    <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: {COMPANY_PAN}</p>
+                                    <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PH: {COMPANY_PHONES}</p>
+                                    <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">EMAIL: {COMPANY_EMAIL}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
