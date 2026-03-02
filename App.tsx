@@ -336,12 +336,16 @@ const App: React.FC = () => {
 
   const handleCreateDemoInvoice = async (invoice: Invoice) => {
     setDemoInvoices([invoice, ...demoInvoices]);
-    try { await setDocument('demoInvoices', invoice.id, invoice); } catch(e) {}
+    try { await setDocument('demoInvoices', invoice.id.replace(/\//g, '-'), invoice); } catch(e) {
+      console.error("Demo invoice sync failed:", e);
+    }
   };
 
   const handleDeleteDemoInvoice = async (id: string) => {
     setDemoInvoices(prev => prev.filter(i => i.id !== id));
-    try { await deleteDocument('demoInvoices', id); } catch(e) {}
+    try { await deleteDocument('demoInvoices', id.replace(/\//g, '-')); } catch(e) {
+      console.error("Demo invoice delete failed:", e);
+    }
   };
 
   const handleDeleteReceipt = async (invoiceId: string, paymentId: string) => {
