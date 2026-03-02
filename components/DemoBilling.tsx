@@ -59,8 +59,10 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
     const prefix = `BRRPL-HS-${fy}-`;
     const sameFyInvoices = invoices.filter(inv => inv.id.startsWith(prefix));
     if (sameFyInvoices.length === 0) return `${prefix}001`;
-    const numbers = sameFyInvoices.map(inv => parseInt(inv.id.split('/').pop() || '0', 10));
-    const nextNo = Math.max(...numbers) + 1;
+    const numbers = sameFyInvoices
+      .map(inv => parseInt(inv.id.split('-').pop() || '', 10))
+      .filter(n => !isNaN(n));
+    const nextNo = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
     return `${prefix}${nextNo.toString().padStart(3, '0')}`;
   };
 
