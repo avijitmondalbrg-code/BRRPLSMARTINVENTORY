@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 /* FIX: Moved BRANDS import from ../constants to ../types as it is exported from types.ts */
 import { Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, BRANDS } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, IndianRupee, Edit, Wrench, PackagePlus, CheckCircle2, Settings2, Download, ShieldCheck, UserCheck, Stethoscope } from 'lucide-react';
 
 interface DemoBillingProps {
@@ -55,7 +55,13 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
 
   const generateNextId = () => {
-    return `BRRPL-DEMO-${Date.now().toString().slice(-6)}`;
+    const fy = getFinancialYear();
+    const prefix = `BRRPL/HS/${fy}/`;
+    const sameFyInvoices = invoices.filter(inv => inv.id.startsWith(prefix));
+    if (sameFyInvoices.length === 0) return `${prefix}001`;
+    const numbers = sameFyInvoices.map(inv => parseInt(inv.id.split('/').pop() || '0', 10));
+    const nextNo = Math.max(...numbers) + 1;
+    return `${prefix}${nextNo.toString().padStart(3, '0')}`;
   };
 
   const resetForm = () => { 
@@ -317,7 +323,7 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                         <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
                         <div className="text-right flex flex-col items-end">
                             <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg"><h2 className="text-lg font-black uppercase tracking-widest text-center">Tax Invoice</h2></div>
-                            <p className="text-sm font-black text-slate-900 uppercase"># DEMO-{Date.now().toString().slice(-6)}</p>
+                            <p className="text-sm font-black text-slate-900 uppercase"># {manualItems.length > 0 && invoices.length >= 0 ? (viewMode === 'edit' ? invoices.find(i => i.date === invoiceDate)?.id : generateNextId()) : 'DRAFT'}</p>
                             <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
                         </div>
                     </div>
@@ -398,9 +404,11 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                     <div className="mt-auto flex justify-between items-end border-t-2 border-slate-100 pt-10">
                         <div className="w-[60%] text-[9px] text-slate-800 font-bold space-y-1.5 uppercase leading-tight tracking-tight">
                             <p className="font-black text-[11px] uppercase border-b-2 border-slate-900 inline-block mb-2">Terms & Validity</p>
-                            <p>1. This invoice is generated specifically for reimbursement claims.</p>
-                            <p>2. Hearing aids are classified under HSN 9021 and are GST exempted.</p>
-                            <p>3. Fitting services provided under clinical observation.</p>
+                            <p>1. Please keep this Invoice safe for future correspondence.</p>
+                                    <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                                    <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. These exemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June 2017.</p>
+                                    <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>    
+                                    <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
                         </div>
                         <div className="text-center w-64">
                             {signature ? <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply" /> : <div className="h-16 w-full border-b-2 border-dashed border-slate-200 mb-2"></div>}
