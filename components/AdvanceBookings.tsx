@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AdvanceBooking, Patient, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear, COMPANY_BANK_ACCOUNTS } from '../constants';
-import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2, Clock, CheckCircle2, Wallet } from 'lucide-react';
 
 interface AdvanceBookingsProps {
   bookings: AdvanceBooking[];
@@ -32,7 +32,7 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, patients, onAddBooking, onDeleteBooking, userRole, logo, signature }) => {
+export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, patients, onAddBooking, onUpdateBooking, onDeleteBooking, userRole, logo, signature }) => {
   const [activeTab, setActiveTab] = useState<'Active' | 'Consumed'>('Active');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<AdvanceBooking | null>(null);
