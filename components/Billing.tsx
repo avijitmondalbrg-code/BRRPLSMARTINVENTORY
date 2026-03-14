@@ -270,7 +270,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const handleApplyAdvance = (adv: AdvanceBooking) => {
       const newPayment: PaymentRecord = {
           id: `PAY-ADV-${Date.now()}`, date: new Date().toISOString().split('T')[0],
-          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id}`, bankDetails: 'N/A'
+          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id} (${adv.paymentMethod})`, bankDetails: 'N/A'
       };
       setExistingPayments([...existingPayments, newPayment]);
   };
@@ -706,7 +706,17 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         {patientAdvances.length > 0 && (
                             <div className="bg-amber-50/50 rounded-3xl border-2 border-amber-100 p-8">
                                 <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.3em] mb-5 ml-1">Unclaimed Advance Tokens</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{patientAdvances.map(adv => (<div key={adv.id} className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-sm transition-all hover:border-amber-400"><div><p className="font-black text-amber-900 text-lg">₹{adv.amount.toLocaleString()}</p><p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">{adv.date}</p></div><button onClick={() => handleApplyAdvance(adv)} className="px-6 py-2 bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-amber-700 transition active:scale-95 shadow-lg shadow-amber-900/10">Apply</button></div>))}</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {patientAdvances.map(adv => (
+                                        <div key={adv.id} className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-sm transition-all hover:border-amber-400">
+                                            <div>
+                                                <p className="font-black text-amber-900 text-lg">₹{adv.amount.toLocaleString()}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">{adv.date} • {adv.paymentMethod}</p>
+                                            </div>
+                                            <button onClick={() => handleApplyAdvance(adv)} className="px-6 py-2 bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-amber-700 transition active:scale-95 shadow-lg shadow-amber-900/10">Apply</button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                         {existingPayments.length > 0 && (
@@ -908,7 +918,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <div className="space-y-1 text-[10px] text-left">
                                         {existingPayments.map(p => (
                                             <div key={p.id} className={`flex justify-between font-bold uppercase ${p.method === 'Advance' ? 'text-[#3159a6]' : 'text-slate-700'}`}>
-                                                <span>{p.method} {p.method === 'Advance' ? '(Applied Token)' : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
+                                                <span>{p.method} {p.method === 'Advance' ? `[${p.note}]` : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
                                                 <span>₹{p.amount.toLocaleString()}</span>
                                             </div>
                                         ))}

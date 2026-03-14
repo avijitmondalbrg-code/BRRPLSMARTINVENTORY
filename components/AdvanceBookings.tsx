@@ -38,6 +38,8 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
   const [selectedBooking, setSelectedBooking] = useState<AdvanceBooking | null>(null);
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [showPatientResults, setShowPatientResults] = useState(false);
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
   
   // Print Settings
   const [printScale, setPrintScale] = useState(100);
@@ -101,7 +103,15 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
     setPatientSearchTerm('');
   };
 
-  const displayedBookings = bookings.filter(b => activeTab === 'Consumed' ? b.status === 'Consumed' : b.status === 'Active');
+  const displayedBookings = bookings.filter(b => {
+    const matchesTab = activeTab === 'Consumed' ? b.status === 'Consumed' : b.status === 'Active';
+    const term = activeTab === 'Active' ? activeSearchTerm : historySearchTerm;
+    const matchesSearch = !term || 
+      b.patientName.toLowerCase().includes(term.toLowerCase()) || 
+      b.id.toLowerCase().includes(term.toLowerCase()) ||
+      b.phone.includes(term);
+    return matchesTab && matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -114,6 +124,16 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
         </div>
         
         <div className="flex items-center gap-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                    type="text" 
+                    placeholder={activeTab === 'Active' ? "Search active tokens..." : "Search history..."}
+                    className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-primary transition w-64"
+                    value={activeTab === 'Active' ? activeSearchTerm : historySearchTerm}
+                    onChange={(e) => activeTab === 'Active' ? setActiveSearchTerm(e.target.value) : setHistorySearchTerm(e.target.value)}
+                />
+            </div>
             <div className="bg-gray-100 p-1 rounded-xl border flex items-center">
                 <button onClick={() => setActiveTab('Active')} className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase transition ${activeTab === 'Active' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}>
                     Active Tokens ({bookings.filter(b=>b.status==='Active').length})
@@ -122,6 +142,18 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                     History ({bookings.filter(b=>b.status==='Consumed').length})
                 </button>
             </div>
+            {activeTab === 'Consumed' && userRole === 'admin' && bookings.some(b => b.status === 'Consumed') && (
+                <button 
+                    onClick={() => {
+                        if(window.confirm('Are you sure you want to permanently delete ALL consumed tokens from history? This action cannot be undone.')) {
+                            bookings.filter(b => b.status === 'Consumed').forEach(b => onDeleteBooking(b.id));
+                        }
+                    }}
+                    className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-all border border-red-100"
+                >
+                    <Trash2 size={16} /> Clear History
+                </button>
+            )}
             <button onClick={() => setShowAddModal(true)} className="bg-primary text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95">
                 <Plus size={18} /> New Token
             </button>
