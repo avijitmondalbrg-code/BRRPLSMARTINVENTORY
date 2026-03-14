@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
 import { UserRole } from '../types';
 import { COMPANY_LOGO_BASE64 } from '../constants';
+import { auth } from '../services/firebase';
+import { signInWithPopup, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 
 interface LoginProps {
   logo: string;
@@ -19,18 +21,34 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged in App.tsx will handle the rest
+      onLogin('admin'); // Default to admin for Google login in this context
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
   const handleLoginProcess = async (uid: string, pass: string) => {
     setError('');
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // For demo purposes, we'll use anonymous auth if they use the demo credentials
       const cleanUserId = uid.trim().toLowerCase();
       const cleanPassword = pass.trim();
       
       if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
           (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
+          await signInAnonymously(auth);
           onLogin('admin');
       } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
+          await signInAnonymously(auth);
           onLogin('user');
       } else {
          throw new Error("Invalid User ID or Password. Please check and try again.");
@@ -139,6 +157,25 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 >
                   {loading ? 'Authorizing...' : 'Unlock System'}
                   {!loading && <ArrowRight size={18} />}
+                </button>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
+                    <span className="bg-gray-50 px-4 text-gray-400">Or Continue With</span>
+                  </div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full bg-white hover:bg-gray-50 text-gray-700 font-black py-4 rounded-2xl transition duration-200 border-2 border-gray-100 shadow-sm flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  Google Identity
                 </button>
                 
                 
