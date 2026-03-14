@@ -187,6 +187,9 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
               <div className={`flex items-center gap-3 text-2xl font-black px-5 py-4 rounded-2xl tracking-tighter border-2 shadow-inner ${booking.status === 'Consumed' ? 'bg-gray-50 text-gray-400 border-gray-100 line-through' : 'bg-blue-50/50 text-primary border-blue-50'}`}>
                 <IndianRupee size={20} strokeWidth={3}/> {booking.amount.toLocaleString()}
               </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                <Wallet size={12} className="text-primary"/> Mode: {booking.paymentMethod}
+              </div>
               {booking.status === 'Consumed' && (
                   <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 flex items-center gap-1">
                       <Clock size={10}/> Token was used in billing
