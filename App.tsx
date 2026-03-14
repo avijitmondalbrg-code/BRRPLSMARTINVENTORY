@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
@@ -19,71 +19,10 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Info } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 // Firebase Services
-import { fetchCollection, setDocument, updateDocument, deleteDocument, auth } from './services/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-
-interface ErrorBoundaryProps {
-  children: ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      let errorDetails = null;
-      try {
-        if (this.state.error?.message) {
-          errorDetails = JSON.parse(this.state.error.message);
-        }
-      } catch (e) {
-        // Not a JSON error
-      }
-
-      return (
-        <div className="h-screen flex flex-col items-center justify-center bg-red-50 p-6 text-center">
-          <ShieldAlert size={64} className="text-red-500 mb-4" />
-          <h1 className="text-2xl font-black text-red-800 uppercase mb-2">Something went wrong</h1>
-          <p className="text-red-600 mb-6 max-w-md">
-            {errorDetails ? `Firestore Error: ${errorDetails.error}` : this.state.error?.message || "An unexpected error occurred."}
-          </p>
-          {errorDetails && (
-            <div className="bg-white p-4 rounded-xl border border-red-200 text-left text-xs font-mono mb-6 max-w-2xl overflow-auto">
-              <pre>{JSON.stringify(errorDetails, null, 2)}</pre>
-            </div>
-          )}
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-red-600 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest hover:bg-red-700 transition shadow-lg"
-          >
-            Reload Application
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -109,14 +48,9 @@ const App: React.FC = () => {
   const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
   
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<{ message: string, code?: string, details?: any } | null>(null);
+  const [error, setError] = useState<{ message: string, code?: string } | null>(null);
 
   const refreshData = async () => {
-    if (!auth.currentUser) {
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -167,21 +101,14 @@ const App: React.FC = () => {
       
     } catch (err: any) {
       console.error("Data refresh failed:", err);
-      let errorDetails = null;
-      try {
-        errorDetails = JSON.parse(err.message);
-      } catch (e) {}
-
-      if (errorDetails?.error?.includes('permission-denied') || (err.message && err.message.toLowerCase().includes('permission'))) {
+      if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
           setError({ 
               code: 'PERMISSION_DENIED', 
-              message: "Access Denied: Cloud Firestore Security Rules are blocking the app.",
-              details: errorDetails
+              message: "Access Denied: Cloud Firestore Security Rules are blocking the app." 
           });
       } else {
           setError({ 
-              message: err.message || "Failed to sync with database. Please check your internet connection.",
-              details: errorDetails
+              message: err.message || "Failed to sync with database. Please check your internet connection." 
           });
       }
     } finally {
@@ -190,37 +117,18 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsAuthenticated(true);
-        // Default to user role if not set, or fetch from a user profile doc
-        if (!userRole) setUserRole('user');
-        refreshData();
-      } else {
-        setIsAuthenticated(false);
-        setUserRole(null);
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [userRole]);
+    refreshData();
+  }, []);
 
   const handleLogin = (role: UserRole) => {
       setUserRole(role);
       setIsAuthenticated(true);
-      // Note: Actual Firebase Auth login happens in Login component
   };
 
-  const handleLogout = async () => {
-      try {
-        await signOut(auth);
-        setIsAuthenticated(false);
-        setUserRole(null);
-        setActiveView('front-cover');
-      } catch (e) {
-        console.error("Logout failed", e);
-      }
+  const handleLogout = () => {
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setActiveView('front-cover');
   };
 
   const handleAddVendor = async (v: Vendor) => {
@@ -577,12 +485,6 @@ const App: React.FC = () => {
             <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-red-800 text-center">Firebase Rules Conflict</h2>
             <p className="font-bold text-red-700/70 mb-6 text-center">Your database is currently rejecting all requests due to restricted permissions.</p>
             
-            {error.details && (
-              <div className="bg-white p-4 rounded-xl border border-red-200 text-left text-[10px] font-mono mb-6 w-full overflow-auto max-h-40">
-                <pre>{JSON.stringify(error.details, null, 2)}</pre>
-              </div>
-            )}
-
             <div className="bg-white p-8 rounded-3xl text-left w-full border-2 border-red-200 shadow-inner">
                <h3 className="font-black uppercase text-xs tracking-[0.2em] mb-6 flex items-center gap-2 text-gray-400">
                  <CheckCircle2 size={16} className="text-green-500" /> Mandatory Fix Steps:
@@ -649,12 +551,11 @@ service cloud.firestore {
     </div>
   );
 
-  if (!isAuthenticated) return <ErrorBoundary><Login logo={companyLogo} onLogin={handleLogin} /></ErrorBoundary>;
-  if (activeView === 'front-cover') return <ErrorBoundary><FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} /></ErrorBoundary>;
+  if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
+  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
 
   return (
-    <ErrorBoundary>
-      <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
@@ -725,7 +626,6 @@ service cloud.firestore {
         </div>
       </main>
     </div>
-    </ErrorBoundary>
   );
 };
 export default App;

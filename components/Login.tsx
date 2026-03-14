@@ -3,8 +3,6 @@ import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
 import { UserRole } from '../types';
 import { COMPANY_LOGO_BASE64 } from '../constants';
-import { auth } from '../services/firebase';
-import { signInWithPopup, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 
 interface LoginProps {
   logo: string;
@@ -21,55 +19,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
-  const handleGoogleLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged in App.tsx will handle the rest
-      onLogin('admin'); // Default to admin for Google login in this context
-    } catch (err: any) {
-      console.error("Google Login Error:", err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setLoading(false);
-        return;
-      }
-      if (err.code === 'auth/admin-restricted-operation') {
-        setError("Firebase Error: User sign-up is disabled in your Firebase Console. Please go to Authentication > Settings > User actions and check 'Enable create (sign-up)'.");
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError("Firebase Error: Google Sign-in is not enabled in your Firebase Console.");
-      } else {
-        setError(err.message);
-      }
-      setLoading(false);
-    }
-  };
-
   const handleLoginProcess = async (uid: string, pass: string) => {
     setError('');
     setLoading(true);
     try {
+      await new Promise(resolve => setTimeout(resolve, 600));
       const cleanUserId = uid.trim().toLowerCase();
       const cleanPassword = pass.trim();
       
-      // Validation check before Firebase call
-      if (!((cleanUserId === 'admin' && (cleanPassword === 'admin' || cleanPassword === 'brrpl9874')) || 
-            (cleanUserId === 'user' && cleanPassword === 'user1234'))) {
-         throw new Error("Invalid User ID or Password. Please use 'admin' / 'admin' or click the Demo buttons below.");
-      }
-
-      await signInAnonymously(auth);
-      onLogin(cleanUserId === 'admin' ? 'admin' : 'user');
-    } catch (err: any) {
-      console.error("Login Error:", err);
-      if (err.code === 'auth/admin-restricted-operation') {
-        setError("CRITICAL: User creation is blocked. Go to Firebase Console > Authentication > Settings > User actions and ENABLE 'Enable create (sign-up)'.");
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError("Firebase Error: Anonymous provider is not enabled. Please check your Sign-in providers.");
+      if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
+          (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
+          onLogin('admin');
+      } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
+          onLogin('user');
       } else {
-        setError(err.message || "An unexpected error occurred.");
+         throw new Error("Invalid User ID or Password. Please check and try again.");
       }
+    } catch (err: any) {
+      setError(err.message);
       setLoading(false);
     }
   };
@@ -173,45 +140,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   {loading ? 'Authorizing...' : 'Unlock System'}
                   {!loading && <ArrowRight size={18} />}
                 </button>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-                    <span className="bg-gray-50 px-4 text-gray-400">Or Continue With</span>
-                  </div>
-                </div>
-
-                <button 
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading}
-                  className="w-full bg-white hover:bg-gray-50 text-gray-700 font-black py-4 rounded-2xl transition duration-200 border-2 border-gray-100 shadow-sm flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                  Google Identity
-                </button>
-
-                <div className="pt-6 flex flex-col gap-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center mb-1">Quick Demo Access</p>
-                  <div className="flex gap-2">
-                    <button 
-                      type="button"
-                      onClick={() => { setUserId('admin'); setPassword('admin'); handleLoginProcess('admin', 'admin'); }}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded-xl text-[10px] uppercase tracking-wider transition"
-                    >
-                      Admin Demo
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => { setUserId('user'); setPassword('user1234'); handleLoginProcess('user', 'user1234'); }}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded-xl text-[10px] uppercase tracking-wider transition"
-                    >
-                      User Demo
-                    </button>
-                  </div>
-                </div>
                 
                 
             </div>
