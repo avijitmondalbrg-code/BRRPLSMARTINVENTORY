@@ -219,12 +219,16 @@ export interface FinancialNote {
   id: string;
   type: 'CREDIT' | 'DEBIT';
   date: string;
-  patientId: string;
-  patientName: string;
+  targetType?: 'PATIENT' | 'VENDOR';
+  targetId?: string;
+  targetName?: string;
+  patientId?: string; // Legacy
+  patientName?: string; // Legacy
   referenceInvoiceId?: string;
   amount: number;
   reason: string;
   patientDetails?: Patient;
+  vendorDetails?: Vendor;
 }
 
 export interface StockTransfer {

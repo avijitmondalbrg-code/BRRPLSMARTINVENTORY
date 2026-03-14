@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import { FinancialNote, Patient, Invoice, UserRole } from '../types';
+import { FinancialNote, Patient, Invoice, UserRole, Vendor } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear } from '../constants';
 // Added CheckCircle2 and IndianRupee to imports to fix "Cannot find name" errors on lines 309 and 356
-import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee } from 'lucide-react';
+import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2 } from 'lucide-react';
 
 interface FinancialNotesProps {
   type: 'CREDIT' | 'DEBIT';
   notes: FinancialNote[];
   patients: Patient[];
+  vendors: Vendor[];
   invoices: Invoice[];
   onSave: (note: FinancialNote) => void;
   onDelete: (noteId: string) => void;
@@ -17,14 +18,19 @@ interface FinancialNotesProps {
   userRole: UserRole;
 }
 
-export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, invoices, onSave, onDelete, logo, signature, userRole }) => {
+export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, onSave, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
+  const [targetType, setTargetType] = useState<'PATIENT' | 'VENDOR'>('PATIENT');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [showPatientResults, setShowPatientResults] = useState(false);
+
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [vendorSearchTerm, setVendorSearchTerm] = useState('');
+  const [showVendorResults, setShowVendorResults] = useState(false);
   
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
@@ -52,6 +58,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setSelectedInvoice(inv);
       setInvoiceSearchTerm(inv.id);
       setShowInvoiceResults(false);
+      setTargetType('PATIENT');
       
       // Auto-set patient from invoice
       if (inv.patientDetails) {
@@ -70,17 +77,24 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   };
 
   const handleSave = () => {
-    if (!selectedPatient || amount <= 0 || !reason) { 
+    if (targetType === 'PATIENT' && (!selectedPatient || amount <= 0 || !reason)) { 
         alert("Please select a patient, enter an amount, and provide a reason."); 
         return; 
     }
+    if (targetType === 'VENDOR' && (!selectedVendor || amount <= 0 || !reason)) { 
+        alert("Please select a vendor, enter an amount, and provide a reason."); 
+        return; 
+    }
+
     const newNote: FinancialNote = { 
         id: generateNextId(), 
         type, 
         date: new Date().toISOString().split('T')[0], 
-        patientId: selectedPatient.id, 
-        patientName: selectedPatient.name, 
-        patientDetails: selectedPatient, 
+        targetType,
+        targetId: targetType === 'PATIENT' ? selectedPatient!.id : selectedVendor!.id,
+        targetName: targetType === 'PATIENT' ? selectedPatient!.name : selectedVendor!.name,
+        patientDetails: targetType === 'PATIENT' ? selectedPatient! : undefined,
+        vendorDetails: targetType === 'VENDOR' ? selectedVendor! : undefined,
         referenceInvoiceId: selectedInvoice?.id,
         amount, 
         reason 
@@ -91,8 +105,11 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   };
 
   const resetForm = () => {
+      setTargetType('PATIENT');
       setSelectedPatient(null);
       setPatientSearchTerm('');
+      setSelectedVendor(null);
+      setVendorSearchTerm('');
       setSelectedInvoice(null);
       setInvoiceSearchTerm('');
       setAmount(0);
@@ -123,8 +140,10 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         <div className="grid grid-cols-2 gap-12 mb-10">
             <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
                 <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 border-b-2 border-slate-200 pb-1 tracking-widest">Issued To:</h4>
-                <p className="font-black text-2xl text-slate-900 uppercase tracking-tight">{note.patientName}</p>
-                {note.patientDetails?.phone && <p className="text-sm font-bold text-slate-600 mt-1">{note.patientDetails.phone}</p>}
+                <p className="font-black text-2xl text-slate-900 uppercase tracking-tight">{note.targetName || note.patientName}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">({note.targetType || 'PATIENT'})</p>
+                {(note.targetType === 'PATIENT' || !note.targetType) && note.patientDetails?.phone && <p className="text-sm font-bold text-slate-600 mt-1">{note.patientDetails.phone}</p>}
+                {note.targetType === 'VENDOR' && note.vendorDetails?.gstin && <p className="text-sm font-bold text-slate-600 mt-1">GSTIN: {note.vendorDetails.gstin}</p>}
                 {note.referenceInvoiceId && (
                     <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-200 flex items-center gap-2 text-[#3159a6] font-black uppercase text-[10px] tracking-widest">
                         <Link size={12}/> Ref Invoice: {note.referenceInvoiceId}
@@ -161,7 +180,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       const filteredNotes = notes.filter(n => 
         n.type === type && (
             n.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            n.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (n.targetName || n.patientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             n.referenceInvoiceId?.toLowerCase().includes(searchTerm.toLowerCase())
         )
       ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -187,7 +206,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                 <Search className="text-gray-400" size={20} />
                 <input 
                     type="text" 
-                    placeholder="Search by ID, Patient or Ref Invoice..." 
+                    placeholder="Search by ID, Name or Ref Invoice..." 
                     className="flex-1 outline-none text-sm font-medium" 
                     value={searchTerm} 
                     onChange={e=>setSearchTerm(e.target.value)}
@@ -198,16 +217,21 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-slate-900 text-slate-400 font-black border-b text-[10px] uppercase tracking-widest">
-                            <tr><th className="p-5">Note ID</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5">Ref. Invoice</th><th className="p-5 text-right">Amount</th><th className="p-5 text-center">Actions</th></tr>
+                            <tr><th className="p-5">Note ID</th><th className="p-5">Date</th><th className="p-5">Issued To</th><th className="p-5">Type</th><th className="p-5">Ref. Invoice</th><th className="p-5 text-right">Amount</th><th className="p-5 text-center">Actions</th></tr>
                         </thead>
                         <tbody className="divide-y text-sm font-medium text-slate-600">
                             {filteredNotes.length === 0 ? (
-                                <tr><td colSpan={6} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No entries found</td></tr>
+                                <tr><td colSpan={7} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No entries found</td></tr>
                             ) : filteredNotes.map(n => (
                                 <tr key={n.id} className="hover:bg-slate-50/50 transition">
                                     <td className="p-5 font-black text-slate-900 uppercase">{n.id}</td>
                                     <td className="p-5 font-bold text-slate-400">{new Date(n.date).toLocaleDateString('en-IN')}</td>
-                                    <td className="p-5 font-black text-slate-800 uppercase tracking-tight">{n.patientName}</td>
+                                    <td className="p-5 font-black text-slate-800 uppercase tracking-tight">{n.targetName || n.patientName}</td>
+                                    <td className="p-5">
+                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg border ${(n.targetType || 'PATIENT') === 'PATIENT' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                                            {n.targetType || 'PATIENT'}
+                                        </span>
+                                    </td>
                                     <td className="p-5">
                                         {n.referenceInvoiceId ? (
                                             <span className="text-[10px] font-black text-[#3159a6] bg-blue-50 px-2 py-1 rounded border border-blue-100">{n.referenceInvoiceId}</span>
@@ -315,37 +339,89 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                 <hr className="border-dashed border-gray-100" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Patient Selection */}
+                    {/* Target Selection */}
                     <div className="space-y-4">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Consignee Patient *</label>
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input 
-                                className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-[#3159a6] outline-none transition-all font-bold text-gray-700 bg-gray-50 focus:bg-white shadow-sm" 
-                                placeholder="Search by name..." 
-                                value={patientSearchTerm} 
-                                onChange={e => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }}
-                                onFocus={() => setShowPatientResults(true)}
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Issue To *</label>
+                        <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl mb-4">
+                            <button 
+                                type="button"
+                                onClick={() => { setTargetType('PATIENT'); setSelectedVendor(null); setVendorSearchTerm(''); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition ${targetType === 'PATIENT' ? 'bg-white text-[#3159a6] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                                 disabled={!!selectedInvoice}
-                            />
-                            {showPatientResults && patientSearchTerm && !selectedInvoice && (
-                                <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
-                                    {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
-                                        <button 
-                                            key={p.id} 
-                                            type="button"
-                                            onClick={()=>{setSelectedPatient(p); setShowPatientResults(false); setPatientSearchTerm(p.name);}} 
-                                            className="w-full text-left p-3 hover:bg-blue-50 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase text-xs text-slate-700 tracking-tighter"
-                                        >
-                                            {p.name} <span className="text-[9px] text-gray-400 ml-2">({p.phone})</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            >
+                                <User size={14} /> Patient
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => { setTargetType('VENDOR'); setSelectedPatient(null); setPatientSearchTerm(''); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition ${targetType === 'VENDOR' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                disabled={!!selectedInvoice}
+                            >
+                                <Building2 size={14} /> Vendor
+                            </button>
                         </div>
-                        {selectedPatient && !selectedInvoice && (
+
+                        {targetType === 'PATIENT' ? (
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input 
+                                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-[#3159a6] outline-none transition-all font-bold text-gray-700 bg-gray-50 focus:bg-white shadow-sm" 
+                                    placeholder="Search by patient name..." 
+                                    value={patientSearchTerm} 
+                                    onChange={e => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }}
+                                    onFocus={() => setShowPatientResults(true)}
+                                    disabled={!!selectedInvoice}
+                                />
+                                {showPatientResults && patientSearchTerm && !selectedInvoice && (
+                                    <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                                        {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
+                                            <button 
+                                                key={p.id} 
+                                                type="button"
+                                                onClick={()=>{setSelectedPatient(p); setShowPatientResults(false); setPatientSearchTerm(p.name);}} 
+                                                className="w-full text-left p-3 hover:bg-blue-50 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase text-xs text-slate-700 tracking-tighter"
+                                            >
+                                                {p.name} <span className="text-[9px] text-gray-400 ml-2">({p.phone})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input 
+                                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-purple-600 outline-none transition-all font-bold text-gray-700 bg-gray-50 focus:bg-white shadow-sm" 
+                                    placeholder="Search by vendor name..." 
+                                    value={vendorSearchTerm} 
+                                    onChange={e => { setVendorSearchTerm(e.target.value); setShowVendorResults(true); }}
+                                    onFocus={() => setShowVendorResults(true)}
+                                />
+                                {showVendorResults && vendorSearchTerm && (
+                                    <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                                        {vendors.filter(v=>v.name.toLowerCase().includes(vendorSearchTerm.toLowerCase())).map(v=>(
+                                            <button 
+                                                key={v.id} 
+                                                type="button"
+                                                onClick={()=>{setSelectedVendor(v); setShowVendorResults(false); setVendorSearchTerm(v.name);}} 
+                                                className="w-full text-left p-3 hover:bg-purple-50 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase text-xs text-slate-700 tracking-tighter"
+                                            >
+                                                {v.name} <span className="text-[9px] text-gray-400 ml-2">({v.gstin})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {selectedPatient && targetType === 'PATIENT' && !selectedInvoice && (
                             <div className="text-[10px] font-black text-[#3159a6] bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 uppercase tracking-widest inline-block animate-fade-in">
                                 Selection: {selectedPatient.name}
+                            </div>
+                        )}
+                        {selectedVendor && targetType === 'VENDOR' && (
+                            <div className="text-[10px] font-black text-purple-600 bg-purple-50 px-4 py-2 rounded-xl border border-purple-100 uppercase tracking-widest inline-block animate-fade-in">
+                                Selection: {selectedVendor.name}
                             </div>
                         )}
                     </div>
