@@ -30,7 +30,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // onAuthStateChanged in App.tsx will handle the rest
       onLogin('admin'); // Default to admin for Google login in this context
     } catch (err: any) {
-      setError(err.message);
+      console.error("Google Login Error:", err);
+      if (err.code === 'auth/admin-restricted-operation') {
+        setError("Firebase Error: User sign-up is disabled in your Firebase Console. Please go to Authentication > Settings > User actions and check 'Enable create (sign-up)'.");
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("Firebase Error: Google Sign-in is not enabled in your Firebase Console.");
+      } else {
+        setError(err.message);
+      }
       setLoading(false);
     }
   };
@@ -54,7 +61,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
          throw new Error("Invalid User ID or Password. Please check and try again.");
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error("Demo Login Error:", err);
+      if (err.code === 'auth/admin-restricted-operation') {
+        setError("Firebase Error: User sign-up is disabled in your Firebase Console. Please go to Authentication > Settings > User actions and check 'Enable create (sign-up)'.");
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("Firebase Error: Anonymous Sign-in is not enabled in your Firebase Console.");
+      } else {
+        setError(err.message);
+      }
       setLoading(false);
     }
   };
