@@ -270,7 +270,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const handleApplyAdvance = (adv: AdvanceBooking) => {
       const newPayment: PaymentRecord = {
           id: `PAY-ADV-${Date.now()}`, date: new Date().toISOString().split('T')[0],
-          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id} (${adv.paymentMethod})`, bankDetails: 'N/A'
+          amount: adv.amount, method: 'Advance', note: `TOKEN: ${adv.id} | MODE: ${adv.paymentMethod}`, bankDetails: 'N/A'
       };
       setExistingPayments([...existingPayments, newPayment]);
   };
@@ -722,7 +722,20 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         {existingPayments.length > 0 && (
                             <div className="bg-green-50/50 rounded-3xl border-2 border-green-100 p-8">
                                 <h4 className="text-[10px] font-black text-green-800 uppercase tracking-[0.3em] mb-5 ml-1">Payment Accumulation</h4>
-                                <div className="space-y-3">{existingPayments.map(p => (<div key={p.id} className="flex justify-between items-center text-sm bg-white px-5 py-3 rounded-xl border-2 border-green-50 shadow-sm"><span className={`font-black uppercase tracking-widest text-[10px] ${p.method === 'Advance' ? 'text-[#3159a6] flex items-center gap-1' : 'text-green-900'}`}>{p.method === 'Advance' && <CheckCircle2 size={12}/>}{p.method} {p.note ? `[${p.note}]` : ''}</span><span className="font-black text-green-900 text-lg">₹{p.amount.toLocaleString()}</span></div>))}</div>
+                                <div className="space-y-3">
+                                    {existingPayments.map(p => (
+                                        <div key={p.id} className="flex justify-between items-center text-sm bg-white px-5 py-3 rounded-xl border-2 border-green-50 shadow-sm">
+                                            <div className="flex flex-col">
+                                                <span className={`font-black uppercase tracking-widest text-[10px] ${p.method === 'Advance' ? 'text-[#3159a6] flex items-center gap-1' : 'text-green-900'}`}>
+                                                    {p.method === 'Advance' && <CheckCircle2 size={12}/>}
+                                                    {p.method}
+                                                </span>
+                                                {p.note && <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">{p.note}</span>}
+                                            </div>
+                                            <span className="font-black text-green-900 text-lg">₹{p.amount.toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -918,7 +931,10 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <div className="space-y-1 text-[10px] text-left">
                                         {existingPayments.map(p => (
                                             <div key={p.id} className={`flex justify-between font-bold uppercase ${p.method === 'Advance' ? 'text-[#3159a6]' : 'text-slate-700'}`}>
-                                                <span>{p.method} {p.method === 'Advance' ? `[${p.note}]` : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
+                                                <div className="flex flex-col">
+                                                    <span>{p.method} {p.method !== 'Advance' ? `(${new Date(p.date).toLocaleDateString('en-IN')})` : ''}</span>
+                                                    {p.method === 'Advance' && p.note && <span className="text-[8px] text-gray-400 lowercase italic">{p.note}</span>}
+                                                </div>
                                                 <span>₹{p.amount.toLocaleString()}</span>
                                             </div>
                                         ))}

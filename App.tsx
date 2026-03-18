@@ -280,7 +280,24 @@ const App: React.FC = () => {
 
   const handleAddFinancialNote = async (note: FinancialNote) => {
     setFinancialNotes([note, ...financialNotes]);
-    try { await setDocument('financialNotes', note.id, note); } catch(e) {}
+    try { 
+      await setDocument('financialNotes', note.id, note); 
+      
+      // If it's a Debit Note with selected hearing aids, remove them from inventory
+      if (note.type === 'DEBIT' && note.selectedHearingAids && note.selectedHearingAids.length > 0) {
+        const haIdsToRemove = note.selectedHearingAids.map(ha => ha.id);
+        
+        // Update local inventory state
+        setInventory(prev => prev.filter(item => !haIdsToRemove.includes(item.id)));
+        
+        // Remove from Firestore
+        for (const id of haIdsToRemove) {
+          await deleteDocument('inventory', id);
+        }
+      }
+    } catch(e) {
+      console.error("Financial note sync failed:", e);
+    }
   };
 
   const handleDeleteFinancialNote = async (id: string) => {
@@ -619,8 +636,8 @@ service cloud.firestore {
           {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} userRole={userRole!} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
         </div>

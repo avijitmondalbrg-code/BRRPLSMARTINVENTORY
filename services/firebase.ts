@@ -7,18 +7,11 @@ import {
   doc, 
   setDoc, 
   updateDoc, 
-  deleteDoc, 
+  deleteDoc,
+  getDocFromServer,
 } from "firebase/firestore";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB-Pf2iKqsTO7kIrpofuRC0yVko8VGZOjI",
-  authDomain: "brg-smart-inventory.firebaseapp.com",
-  projectId: "brg-smart-inventory",
-  storageBucket: "brg-smart-inventory.firebasestorage.app",
-  messagingSenderId: "1027406256024",
-  appId: "1:1027406256024:web:02e5fc367916da4d65bded",
-  measurementId: "G-FPGD0KV7NN"
-};
+import { getAuth } from "firebase/auth";
+import firebaseConfig from "../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
 
@@ -26,9 +19,73 @@ const app = initializeApp(firebaseConfig);
  * Optimized Firestore configuration for high-latency or restricted networks.
  * experimentalForceLongPolling: true - Bypasses WebSockets entirely to avoid handshake timeouts.
  */
-export const db = initializeFirestore(app as any, {
+export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-});
+}, firebaseConfig.firestoreDatabaseId);
+
+export const auth = getAuth(app);
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. ");
+    }
+  }
+}
+testConnection();
 
 /**
  * Utility to remove undefined values recursively from an object/array.
@@ -63,8 +120,7 @@ export const fetchCollection = async (collectionName: string) => {
       ...doc.data() 
     }));
   } catch (error: any) {
-    console.error(`Error fetching ${collectionName}:`, error);
-    // CRITICAL: Re-throw the error so App.tsx can detect PERMISSION_DENIED
+    handleFirestoreError(error, OperationType.LIST, collectionName);
     throw error;
   }
 };
@@ -75,7 +131,7 @@ export const setDocument = async (collectionName: string, docId: string, data: a
     const docRef = doc(db, collectionName, docId);
     return await setDoc(docRef, sanitized, { merge: true });
   } catch (error) {
-    console.error(`Error setting document ${docId}:`, error);
+    handleFirestoreError(error, OperationType.WRITE, `${collectionName}/${docId}`);
     throw error;
   }
 };
@@ -86,7 +142,7 @@ export const updateDocument = async (collectionName: string, docId: string, data
     const docRef = doc(db, collectionName, docId);
     return await updateDoc(docRef, sanitized);
   } catch (error) {
-    console.error(`Error updating document ${docId}:`, error);
+    handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${docId}`);
     throw error;
   }
 };
@@ -96,7 +152,7 @@ export const deleteDocument = async (collectionName: string, docId: string) => {
     const docRef = doc(db, collectionName, docId);
     return await deleteDoc(docRef);
   } catch (error) {
-    console.error(`Error deleting document ${docId}:`, error);
+    handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${docId}`);
     throw error;
   }
 };
