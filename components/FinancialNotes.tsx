@@ -11,6 +11,7 @@ interface FinancialNotesProps {
   patients: Patient[];
   vendors: Vendor[];
   invoices: Invoice[];
+  inventory: HearingAid[];
   onSave: (note: FinancialNote) => void;
   onDelete: (noteId: string) => void;
   logo: string;
@@ -18,7 +19,7 @@ interface FinancialNotesProps {
   userRole: UserRole;
 }
 
-export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, onSave, onDelete, logo, signature, userRole }) => {
+export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, inventory, onSave, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -35,6 +36,11 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
   const [showInvoiceResults, setShowInvoiceResults] = useState(false);
+
+  // Hearing Aid Selection
+  const [selectedHearingAids, setSelectedHearingAids] = useState<HearingAid[]>([]);
+  const [haSearchTerm, setHaSearchTerm] = useState('');
+  const [showHaResults, setShowHaResults] = useState(false);
   
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState('');
@@ -76,6 +82,20 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       if (type === 'DEBIT') setAmount(inv.balanceDue);
   };
 
+  const handleAddHearingAid = (ha: HearingAid) => {
+    if (!selectedHearingAids.find(item => item.id === ha.id)) {
+      setSelectedHearingAids([...selectedHearingAids, ha]);
+      // Optionally update amount based on HA price if needed, or leave it to user
+      // setAmount(prev => prev + ha.price);
+    }
+    setHaSearchTerm('');
+    setShowHaResults(false);
+  };
+
+  const handleRemoveHearingAid = (id: string) => {
+    setSelectedHearingAids(selectedHearingAids.filter(ha => ha.id !== id));
+  };
+
   const handleSave = () => {
     if (targetType === 'PATIENT' && (!selectedPatient || amount <= 0 || !reason)) { 
         alert("Please select a patient, enter an amount, and provide a reason."); 
@@ -97,7 +117,8 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         vendorDetails: targetType === 'VENDOR' ? selectedVendor! : undefined,
         referenceInvoiceId: selectedInvoice?.id,
         amount, 
-        reason 
+        reason,
+        selectedHearingAids: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined
     };
     onSave(newNote); 
     setViewMode('list');
@@ -112,6 +133,8 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setVendorSearchTerm('');
       setSelectedInvoice(null);
       setInvoiceSearchTerm('');
+      setSelectedHearingAids([]);
+      setHaSearchTerm('');
       setAmount(0);
       setReason('');
   };
@@ -157,6 +180,32 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                 </div>
             </div>
         </div>
+
+        {note.selectedHearingAids && note.selectedHearingAids.length > 0 && (
+            <div className="mb-10">
+                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 border-b-2 border-slate-200 pb-1 tracking-widest">Hearing Aids Returned/Adjusted</h4>
+                <div className="bg-slate-50 rounded-3xl overflow-hidden border-2 border-slate-100">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-200 text-slate-600 font-black uppercase tracking-widest">
+                            <tr>
+                                <th className="p-4">Brand/Model</th>
+                                <th className="p-4">Serial Number</th>
+                                <th className="p-4 text-right">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {note.selectedHearingAids.map(ha => (
+                                <tr key={ha.id}>
+                                    <td className="p-4 font-bold">{ha.brand} - {ha.model}</td>
+                                    <td className="p-4 font-mono">{ha.serialNumber}</td>
+                                    <td className="p-4 text-right font-black">₹{ha.price.toLocaleString('en-IN')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        )}
 
         <div className="bg-slate-50 p-10 rounded-[2.5rem] border-2 border-slate-100 mb-12 shadow-inner">
             <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 border-b-2 border-slate-200 pb-1 tracking-widest">Adjustment Reason / Professional Remarks</h4>
@@ -441,6 +490,71 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                         </div>
                     </div>
                 </div>
+
+                {/* Hearing Aid Selection for Debit Notes to Vendors */}
+                {type === 'DEBIT' && targetType === 'VENDOR' && selectedVendor && (
+                    <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 animate-fade-in">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Select Hearing Aids for Return/Debit</label>
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input 
+                                className="w-full pl-12 pr-4 py-3 border-2 border-white rounded-2xl focus:border-blue-600 outline-none transition-all font-bold text-gray-700 bg-white shadow-sm" 
+                                placeholder="Search by Model or Serial Number..." 
+                                value={haSearchTerm} 
+                                onChange={e => { setHaSearchTerm(e.target.value); setShowHaResults(true); }}
+                                onFocus={() => setShowHaResults(true)}
+                            />
+                            {showHaResults && haSearchTerm && (
+                                <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                                    {inventory
+                                        .filter(item => item.status === 'Available' && (
+                                            item.model.toLowerCase().includes(haSearchTerm.toLowerCase()) || 
+                                            item.serialNumber.toLowerCase().includes(haSearchTerm.toLowerCase())
+                                        ))
+                                        .map(item => (
+                                            <button 
+                                                key={item.id} 
+                                                type="button"
+                                                onClick={() => handleAddHearingAid(item)} 
+                                                className="w-full text-left p-3 hover:bg-blue-50 rounded-xl border-b border-gray-50 last:border-0 transition flex justify-between items-center"
+                                            >
+                                                <div>
+                                                    <p className="font-black text-slate-800 uppercase text-xs">{item.brand} - {item.model}</p>
+                                                    <p className="text-[9px] text-gray-400 font-bold uppercase">S/N: {item.serialNumber} • {item.location}</p>
+                                                </div>
+                                                <p className="font-black text-blue-600 text-xs">₹{item.price.toLocaleString()}</p>
+                                            </button>
+                                        ))
+                                    }
+                                    {inventory.filter(item => item.status === 'Available' && (
+                                        item.model.toLowerCase().includes(haSearchTerm.toLowerCase()) || 
+                                        item.serialNumber.toLowerCase().includes(haSearchTerm.toLowerCase())
+                                    )).length === 0 && (
+                                        <div className="p-4 text-center text-gray-400 text-xs font-bold uppercase italic">No available units found</div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Selected Hearing Aids List */}
+                        {selectedHearingAids.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                                {selectedHearingAids.map(ha => (
+                                    <div key={ha.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-100 shadow-sm animate-fade-in">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-blue-50 p-2 rounded-lg text-blue-600"><Package size={16}/></div>
+                                            <div>
+                                                <p className="font-black text-slate-800 uppercase text-[10px]">{ha.brand} - {ha.model}</p>
+                                                <p className="text-[9px] text-gray-400 font-bold uppercase">S/N: {ha.serialNumber}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => handleRemoveHearingAid(ha.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition"><X size={16}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="space-y-4">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Professional Reason for Issuance *</label>

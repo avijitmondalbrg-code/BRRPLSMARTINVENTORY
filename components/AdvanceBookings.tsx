@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AdvanceBooking, Patient, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear, COMPANY_BANK_ACCOUNTS } from '../constants';
-import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, X, Printer, IndianRupee, Phone, Briefcase, Trash2, MapPin, Download, Settings2, Clock, CheckCircle2, Wallet } from 'lucide-react';
 
 interface AdvanceBookingsProps {
   bookings: AdvanceBooking[];
@@ -186,6 +186,9 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
               <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-500"><Phone size={14} className="text-primary"/> {booking.phone}</div>
               <div className={`flex items-center gap-3 text-2xl font-black px-5 py-4 rounded-2xl tracking-tighter border-2 shadow-inner ${booking.status === 'Consumed' ? 'bg-gray-50 text-gray-400 border-gray-100 line-through' : 'bg-blue-50/50 text-primary border-blue-50'}`}>
                 <IndianRupee size={20} strokeWidth={3}/> {booking.amount.toLocaleString()}
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
+                <Wallet size={12} className="text-primary"/> Mode: {booking.paymentMethod}
               </div>
               {booking.status === 'Consumed' && (
                   <p className="text-[9px] font-black uppercase tracking-widest text-orange-500 flex items-center gap-1">

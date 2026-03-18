@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
+import { LogIn, Sparkles, ShieldCheck, User, Lock } from 'lucide-react';
 import { UserRole } from '../types';
 import { COMPANY_LOGO_BASE64 } from '../constants';
+import { auth } from '../services/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 interface LoginProps {
   logo: string;
@@ -10,46 +12,59 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [userId, setUserId] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
-  const handleLoginProcess = async (uid: string, pass: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      const cleanUserId = uid.trim().toLowerCase();
-      const cleanPassword = pass.trim();
+      // Hardcoded credentials as requested by user ("admin/user")
+      let role: UserRole | null = null;
       
-      if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
-          (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
-          onLogin('admin');
-      } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
-          onLogin('user');
+      if (username === 'admin' && password === 'brrpl9874') {
+        role = 'admin';
+      } else if (username === 'user' && password === 'user123') {
+        role = 'user';
+      }
+
+      if (role) {
+        try {
+          // Sign in anonymously to Firebase to allow Firestore access via rules
+          await signInAnonymously(auth);
+          onLogin(role);
+        } catch (authErr: any) {
+          if (authErr.code === 'auth/admin-restricted-operation') {
+            console.warn("Anonymous Auth is disabled in Firebase Console. Proceeding without auth as rules are currently public.");
+            onLogin(role);
+          } else {
+            console.error("Firebase Auth error:", authErr);
+            setError("Warning: Database connection failed. Error: " + (authErr.message || "Unknown"));
+            setTimeout(() => onLogin(role), 2000);
+          }
+        }
       } else {
-         throw new Error("Invalid User ID or Password. Please check and try again.");
+        setError('Invalid username or password');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error("Login error:", err);
+      if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/admin-restricted-operation') {
+        setError("Login failed: Anonymous authentication is not enabled in Firebase Console. Please enable it in the Authentication > Sign-in method tab.");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Login failed: Network error. Please check your internet connection.");
+      } else {
+        setError("System error during login: " + (err.message || "Please try again."));
+      }
       setLoading(false);
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleLoginProcess(userId, password);
-  };
-
-  const handleQuickLogin = () => {
-    setUserId('admin');
-    setPassword('admin');
-    handleLoginProcess('admin', 'admin');
   };
 
   return (
@@ -85,43 +100,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {/* Form Section */}
-        <div className="p-10 bg-gray-50/50 flex-1">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Access Identity</label>
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
-                <input 
-                  type="text" 
-                  required
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
-                  placeholder="admin"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Secure Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  required
-                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button 
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#3159a6]"
-                >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+        <form onSubmit={handleSubmit} className="p-10 bg-gray-50/50 flex-1">
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-bold text-gray-700">Login to System</h2>
+              <p className="text-gray-500 text-sm">Enter your credentials to access the dashboard.</p>
             </div>
 
             {error && (
@@ -131,20 +114,50 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </div>
             )}
 
-            <div className="space-y-3 pt-2">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-[#3159a6] hover:bg-[#254687] text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
-                >
-                  {loading ? 'Authorizing...' : 'Unlock System'}
-                  {!loading && <ArrowRight size={18} />}
-                </button>
-                
-                
+            <div className="space-y-4">
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] focus:ring-0 transition outline-none text-gray-700 font-medium"
+                  required
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] focus:ring-0 transition outline-none text-gray-700 font-medium"
+                  required
+                />
+              </div>
             </div>
-          </form>
-        </div>
+
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#3159a6] hover:bg-[#254480] text-white font-bold py-4 rounded-2xl transition duration-200 shadow-lg flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <LogIn size={20} />
+              )}
+              {loading ? 'Authenticating...' : 'Login Now'}
+            </button>
+
+            <div className="flex items-center gap-2 justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">
+              <ShieldCheck size={14} />
+              <span>Secure Enterprise Access</span>
+            </div>
+          </div>
+        </form>
       </div>
         
       <style>{`
