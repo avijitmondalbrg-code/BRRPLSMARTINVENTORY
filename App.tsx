@@ -22,11 +22,56 @@ import { Login } from './components/Login';
 import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 // Firebase Services
-import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
+import { fetchCollection, setDocument, updateDocument, deleteDocument, auth, db } from './services/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let errorMessage = "An unexpected error occurred.";
+      try {
+        const parsedError = JSON.parse(this.state.error.message);
+        errorMessage = `Firestore Error: ${parsedError.error} during ${parsedError.operationType} at ${parsedError.path}`;
+      } catch (e) {
+        errorMessage = this.state.error.message || errorMessage;
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border-2 border-red-100">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <ShieldAlert size={32} />
+              <h2 className="text-xl font-bold uppercase tracking-tight">System Error</h2>
+            </div>
+            <p className="text-gray-600 mb-6 font-medium">{errorMessage}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition"
+            >
+              Restart Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
   const [companySignature, setCompanySignature] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
@@ -117,28 +162,72 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    refreshData();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        // Default admin check
+        if (user.email === "avijitmondal.brg@gmail.com") {
+          setUserRole('admin');
+        } else {
+          // Check Firestore for role
+          try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              setUserRole(userDoc.data().role as UserRole);
+            } else {
+              setUserRole('user'); // Default role
+            }
+          } catch (e) {
+            setUserRole('user');
+          }
+        }
+      } else {
+        setIsAuthenticated(false);
+        setUserRole(null);
+      }
+      setIsAuthReady(true);
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && isAuthReady) {
+      refreshData();
+    }
+  }, [isAuthenticated, isAuthReady]);
+
   const handleLogin = (role: UserRole) => {
-      setUserRole(role);
-      setIsAuthenticated(true);
+      // This is now handled by onAuthStateChanged
   };
 
-  const handleLogout = () => {
-      setIsAuthenticated(false);
-      setUserRole(null);
-      setActiveView('front-cover');
+  const handleLogout = async () => {
+      try {
+        await signOut(auth);
+        setIsAuthenticated(false);
+        setUserRole(null);
+        setActiveView('front-cover');
+      } catch (e) {
+        console.error("Logout failed:", e);
+      }
   };
 
   const handleAddVendor = async (v: Vendor) => {
     setVendors([v, ...vendors]);
-    try { await setDocument('vendors', v.id, v); } catch(e) {}
+    try { 
+      await setDocument('vendors', v.id, v); 
+    } catch(e) {
+      console.error("Failed to add vendor:", e);
+    }
   };
 
   const handleDeleteVendor = async (id: string) => {
     setVendors(vendors.filter(v => v.id !== id));
-    try { await deleteDocument('vendors', id); } catch(e) {}
+    try { 
+      await deleteDocument('vendors', id); 
+    } catch(e) {
+      console.error("Failed to delete vendor:", e);
+    }
   };
 
   const handleAddPurchase = async (p: PurchaseRecord) => {
@@ -478,102 +567,50 @@ const App: React.FC = () => {
 
   const handleAddAdvanceBooking = async (b: AdvanceBooking) => {
     setAdvanceBookings([b, ...advanceBookings]);
-    try { await setDocument('advanceBookings', b.id, b); } catch(e) {}
+    try { 
+      await setDocument('advanceBookings', b.id, b); 
+    } catch(e) {
+      console.error("Failed to add advance booking:", e);
+    }
   };
 
   const handleDeleteAdvanceBooking = async (id: string) => {
     setAdvanceBookings(prev => prev.filter(b => b.id !== id));
-    try { await deleteDocument('advanceBookings', id); } catch(e) {}
+    try { 
+      await deleteDocument('advanceBookings', id); 
+    } catch(e) {
+      console.error("Failed to delete advance booking:", e);
+    }
   };
 
-  if (loading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-white">
-      <div className="h-16 w-16 border-4 border-[#3159a6] border-t-transparent rounded-full animate-spin mb-6"></div>
-      <p className="text-[#3159a6] font-black uppercase tracking-widest text-sm animate-pulse">Establishing Secure Connection...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center overflow-y-auto">
-      {error.code === 'PERMISSION_DENIED' ? (
-        <div className="max-w-2xl w-full animate-fade-in py-10">
-          <div className="bg-red-50 p-8 rounded-[3rem] text-red-600 mb-8 border-4 border-red-100 flex flex-col items-center shadow-xl">
-            <ShieldAlert size={64} className="mb-4" />
-            <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-red-800 text-center">Firebase Rules Conflict</h2>
-            <p className="font-bold text-red-700/70 mb-6 text-center">Your database is currently rejecting all requests due to restricted permissions.</p>
-            
-            <div className="bg-white p-8 rounded-3xl text-left w-full border-2 border-red-200 shadow-inner">
-               <h3 className="font-black uppercase text-xs tracking-[0.2em] mb-6 flex items-center gap-2 text-gray-400">
-                 <CheckCircle2 size={16} className="text-green-500" /> Mandatory Fix Steps:
-               </h3>
-               <ol className="space-y-6 text-sm text-gray-700 font-medium">
-                 <li className="flex gap-4">
-                   <span className="bg-red-600 text-white h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg">1</span>
-                   <span>Open your <a href="https://console.firebase.google.com" target="_blank" rel="noopener" className="text-blue-600 underline font-bold hover:text-blue-800">Firebase Console</a> and select project: <b>"brg-smart-inventory"</b>.</span>
-                 </li>
-                 <li className="flex gap-4">
-                   <span className="bg-red-600 text-white h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg">2</span>
-                   <span>Navigate to <b>"Firestore Database"</b> &rarr; <b>"Rules"</b> tab at the top.</span>
-                 </li>
-                 <li className="flex gap-4">
-                   <span className="bg-red-600 text-white h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg">3</span>
-                   <div className="flex-1">
-                      <span>Replace the existing rules with this configuration and click <b>Publish</b>:</span>
-                      <div className="relative group mt-3">
-                        <pre className="block bg-slate-900 p-5 rounded-xl font-mono text-[11px] text-teal-400 border-2 border-slate-700 shadow-xl overflow-x-auto">
-{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}`}
-                        </pre>
-                        <button 
-                          onClick={() => navigator.clipboard.writeText("rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}")}
-                          className="absolute top-2 right-2 p-2 bg-white/10 hover:bg-white/20 rounded text-white transition-colors"
-                        >
-                          <Clipboard size={14} />
-                        </button>
-                      </div>
-                   </div>
-                 </li>
-                 <li className="flex gap-4">
-                   <span className="bg-red-600 text-white h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg">4</span>
-                   <span>Wait 30 seconds for the rules to propagate, then click <b>Retry</b> below.</span>
-                 </li>
-               </ol>
-            </div>
-          </div>
-          <button onClick={refreshData} className="bg-[#3159a6] text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-[#254687] transition shadow-2xl shadow-blue-900/40 flex items-center gap-3 mx-auto">
-            <RefreshCw size={24} /> Sync & Retry Connection
-          </button>
-        </div>
-      ) : (
-        <div className="animate-fade-in flex flex-col items-center">
-          <div className="bg-orange-50 p-8 rounded-full text-orange-500 mb-6 shadow-sm">
-            <AlertTriangle size={64} />
-          </div>
-          <h2 className="text-3xl font-black text-gray-800 mb-2 uppercase tracking-tighter">Connection Interrupted</h2>
-          <p className="text-gray-500 max-w-md mb-8 font-medium">{error.message}</p>
-          <button onClick={refreshData} className="bg-[#3159a6] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#254687] transition shadow-xl flex items-center gap-3">
-            <RefreshCw size={20} /> Force Re-Sync
-          </button>
-        </div>
-      )}
-      <div className="mt-12 text-[10px] text-gray-300 font-black uppercase tracking-[0.4em] select-none">
-          Bengal Rehabilitation & Research Pvt. Ltd. | v2.8.2
+  if (!isAuthReady) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#3159a6]">
+        <div className="h-16 w-16 border-4 border-white border-t-transparent rounded-full animate-spin mb-6"></div>
+        <p className="text-white font-black uppercase tracking-widest text-sm animate-pulse">Initializing Secure Session...</p>
       </div>
-    </div>
-  );
-
-  if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
-  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {!isAuthenticated ? (
+          <Login logo={companyLogo} onLogin={handleLogin} />
+        ) : (
+          <>
+            {loading && (
+              <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center">
+                <div className="h-12 w-12 border-4 border-[#3159a6] border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-[#3159a6] font-black uppercase tracking-widest text-[10px]">Syncing Database...</p>
+              </div>
+            )}
+            
+            {activeView === 'front-cover' ? (
+              <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />
+            ) : (
+              <div className="flex h-screen bg-gray-100 overflow-hidden">
+                <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
           <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.8.2 Cloud Node</p>
@@ -640,9 +677,14 @@ service cloud.firestore {
           {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
-        </div>
-      </main>
-    </div>
-  );
+          </div>
+        </main>
+      </div>
+    )}
+  </>
+)}
+</div>
+</ErrorBoundary>
+);
 };
 export default App;

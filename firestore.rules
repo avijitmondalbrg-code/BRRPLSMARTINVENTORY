@@ -1,3 +1,6 @@
+
+rules_version = '2';
+
 // ===============================================================
 // Assumed Data Model
 // ===============================================================
@@ -11,171 +14,199 @@
 //   - price: number (required)
 //   - location: string (required)
 //   - status: string (required, enum: Available, Sold, In-Transit)
-//   - addedDate: string (required, format: ISO 8601)
+//   - addedDate: string (format: date)
 //
 // Collection: patients
 // Fields:
 //   - id: string (required)
 //   - name: string (required)
-//   - address: string (required)
 //   - phone: string (required)
-//   - referDoctor: string (required)
-//   - audiologist: string (required)
-//   - addedDate: string (optional, format: ISO 8601)
+//   - address: string
+//   - email: string (format: email)
 //
 // Collection: invoices
 // Fields:
 //   - id: string (required)
 //   - patientId: string (required)
-//   - patientName: string (required)
 //   - finalTotal: number (required)
-//   - date: string (required, format: ISO 8601)
-//   - paymentStatus: string (required, enum: Paid, Partial, Unpaid)
-//
-// Collection: advanceBookings
-// Fields:
-//   - id: string (required)
-//   - patientId: string (required)
-//   - patientName: string (required)
-//   - amount: number (required)
-//   - date: string (required, format: ISO 8601)
-//   - status: string (required, enum: Active, Consumed, Refunded)
+//   - date: string (required, format: date)
 //
 // ===============================================================
 
-rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
+    
     function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     function isAdmin() {
       return isAuthenticated() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
           (request.auth.token.email == "avijitmondal.brg@gmail.com" && request.auth.token.email_verified == true));
     }
-
+    
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function isValidString(field, minLen, maxLen) {
-      return request.resource.data[field] is string &&
-        request.resource.data[field].size() >= minLen &&
-        request.resource.data[field].size() <= maxLen;
-    }
-
-    function isValidNumber(field, minVal) {
-      return request.resource.data[field] is number &&
-        request.resource.data[field] >= minVal;
+    
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
     function isValidDateString(dateStr) {
       return dateStr is string &&
-        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}.*$");
     }
 
     // ===============================================================
     // Domain Validators
     // ===============================================================
 
-    function isValidInventory(data) {
-      return hasRequiredFields(['id', 'brand', 'model', 'serialNumber', 'price', 'location', 'status', 'addedDate']) &&
-        isValidString('id', 1, 100) &&
-        isValidString('brand', 1, 100) &&
-        isValidString('model', 1, 100) &&
-        isValidString('serialNumber', 1, 100) &&
-        isValidNumber('price', 0) &&
-        isValidString('location', 1, 100) &&
-        data.status in ['Available', 'Sold', 'In-Transit'] &&
-        isValidDateString(data.addedDate);
+    function isValidHearingAid(data) {
+      return data.id is string &&
+             data.brand is string && data.brand.size() > 0 && data.brand.size() < 100 &&
+             data.model is string && data.model.size() > 0 && data.model.size() < 100 &&
+             data.serialNumber is string && data.serialNumber.size() > 0 && data.serialNumber.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.location is string && data.location.size() > 0 &&
+             data.status in ['Available', 'Sold', 'In-Transit'];
     }
 
     function isValidPatient(data) {
-      return hasRequiredFields(['id', 'name', 'address', 'phone', 'referDoctor', 'audiologist']) &&
-        isValidString('id', 1, 100) &&
-        isValidString('name', 1, 100) &&
-        isValidString('address', 1, 500) &&
-        isValidString('phone', 1, 20) &&
-        isValidString('referDoctor', 1, 100) &&
-        isValidString('audiologist', 1, 100);
+      return data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 15 &&
+             (!('email' in data) || isValidEmail(data.email));
     }
 
     function isValidInvoice(data) {
-      return hasRequiredFields(['id', 'patientId', 'patientName', 'finalTotal', 'date', 'paymentStatus']) &&
-        isValidString('id', 1, 100) &&
-        isValidString('patientId', 1, 100) &&
-        isValidString('patientName', 1, 100) &&
-        isValidNumber('finalTotal', 0) &&
-        isValidDateString(data.date) &&
-        data.paymentStatus in ['Paid', 'Partial', 'Unpaid'];
-    }
-
-    function isValidAdvanceBooking(data) {
-      return hasRequiredFields(['id', 'patientId', 'patientName', 'amount', 'date', 'status']) &&
-        isValidString('id', 1, 100) &&
-        isValidString('patientId', 1, 100) &&
-        isValidString('patientName', 1, 100) &&
-        isValidNumber('amount', 0) &&
-        isValidDateString(data.date) &&
-        data.status in ['Active', 'Consumed', 'Refunded'];
+      return data.id is string &&
+             data.patientId is string &&
+             data.finalTotal is number && data.finalTotal >= 0 &&
+             isValidDateString(data.date);
     }
 
     // ===============================================================
-    // Rules
+    // Collection Rules
     // ===============================================================
 
-    match /test/connection {
-      allow read: if true;
-    }
-
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin();
-    }
-
-    match /inventory/{itemId} {
+    match /inventory/{id} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidInventory(request.resource.data);
-      allow update: if isAuthenticated() && isValidInventory(request.resource.data);
+      allow create: if isAuthenticated() && isValidHearingAid(request.resource.data);
+      allow update: if isAuthenticated() && isValidHearingAid(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    match /patients/{patientId} {
+    match /patients/{id} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidPatient(request.resource.data);
       allow update: if isAuthenticated() && isValidPatient(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    match /invoices/{invoiceId} {
+    match /invoices/{id} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidInvoice(request.resource.data);
       allow update: if isAuthenticated() && isValidInvoice(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    match /advanceBookings/{bookingId} {
+    match /demoInvoices/{id} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidAdvanceBooking(request.resource.data);
-      allow update: if isAuthenticated() && isValidAdvanceBooking(request.resource.data);
+      allow create: if isAuthenticated() && isValidInvoice(request.resource.data);
+      allow update: if isAuthenticated() && isValidInvoice(request.resource.data);
       allow delete: if isAdmin();
     }
 
-    // Catch-all for other collections used in App.tsx
-    match /{path=**} {
+    match /serviceInvoices/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidInvoice(request.resource.data);
+      allow update: if isAuthenticated() && isValidInvoice(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /financialNotes/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasRequiredFields(['id', 'type', 'amount', 'reason']);
+      allow update: if isAuthenticated() && hasRequiredFields(['id', 'type', 'amount', 'reason']);
+      allow delete: if isAdmin();
+    }
+
+    match /vendors/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasRequiredFields(['id', 'name']);
+      allow update: if isAuthenticated() && hasRequiredFields(['id', 'name']);
+      allow delete: if isAdmin();
+    }
+
+    match /purchases/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && hasRequiredFields(['id', 'vendorId', 'serialNumber']);
+      allow update: if isAuthenticated() && hasRequiredFields(['id', 'vendorId', 'serialNumber']);
+      allow delete: if isAdmin();
+    }
+
+    match /hospitals/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /quotations/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /leads/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /stockTransfers/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /assetTransfers/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /advanceBookings/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /companyAssets/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{id} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId && !('role' in request.resource.data));
+    }
+
+    match /test/connection {
+      allow read: if isAuthenticated();
     }
   }
 }

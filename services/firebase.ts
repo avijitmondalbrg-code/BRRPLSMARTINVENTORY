@@ -11,9 +11,12 @@ import {
   getDocFromServer,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import firebaseConfig from "../firebase-applet-config.json";
+
+// Import the Firebase configuration
+import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
 
 /**
  * Optimized Firestore configuration for high-latency or restricted networks.
@@ -23,9 +26,21 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 }, firebaseConfig.firestoreDatabaseId);
 
-export const auth = getAuth(app);
+/**
+ * Validate Connection to Firestore
+ */
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration. ");
+    }
+  }
+}
+testConnection();
 
-export enum OperationType {
+enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
@@ -34,7 +49,7 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export interface FirestoreErrorInfo {
+interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
@@ -53,7 +68,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -75,17 +90,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
-
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
-    }
-  }
-}
-testConnection();
 
 /**
  * Utility to remove undefined values recursively from an object/array.
@@ -121,7 +125,6 @@ export const fetchCollection = async (collectionName: string) => {
     }));
   } catch (error: any) {
     handleFirestoreError(error, OperationType.LIST, collectionName);
-    throw error;
   }
 };
 
@@ -132,7 +135,6 @@ export const setDocument = async (collectionName: string, docId: string, data: a
     return await setDoc(docRef, sanitized, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${collectionName}/${docId}`);
-    throw error;
   }
 };
 
@@ -143,7 +145,6 @@ export const updateDocument = async (collectionName: string, docId: string, data
     return await updateDoc(docRef, sanitized);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${docId}`);
-    throw error;
   }
 };
 
@@ -153,6 +154,5 @@ export const deleteDocument = async (collectionName: string, docId: string) => {
     return await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${docId}`);
-    throw error;
   }
 };
