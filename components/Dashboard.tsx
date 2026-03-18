@@ -26,9 +26,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
-  const availableItems = React.useMemo(() => inventory.filter(i => i.status === 'Available'), [inventory]);
-  const totalStockValue = React.useMemo(() => availableItems.reduce((acc, item) => acc + item.price, 0), [availableItems]);
-  const totalRevenue = React.useMemo(() => invoices.reduce((acc, inv) => acc + inv.finalTotal, 0), [invoices]);
+  const availableItems = inventory.filter(i => i.status === 'Available');
+  const totalStockValue = availableItems.reduce((acc, item) => acc + item.price, 0);
+  const totalRevenue = invoices.reduce((acc, inv) => acc + inv.finalTotal, 0);
   const availableCount = availableItems.length;
 
   const stockByBrand = React.useMemo(() => {

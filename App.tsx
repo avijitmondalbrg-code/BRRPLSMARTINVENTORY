@@ -19,7 +19,7 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -30,7 +30,6 @@ const App: React.FC = () => {
   const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
   const [companySignature, setCompanySignature] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -556,25 +555,9 @@ service cloud.firestore {
   if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden relative">
-      {/* Mobile Sidebar Toggle */}
-      <button 
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed bottom-6 right-6 z-50 bg-[#3159a6] text-white p-4 rounded-full shadow-2xl print:hidden"
-      >
-        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
-      {/* Overlay for mobile sidebar */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col shadow-xl z-40 transition-transform duration-300 ease-in-out print:hidden`}>
-        <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => { setActiveView('front-cover'); setIsSidebarOpen(false); }}>
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
+        <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
           <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.8.2 Cloud Node</p>
         </div>
@@ -599,13 +582,13 @@ service cloud.firestore {
             { id: 'receipts', label: 'Receipts', icon: Receipt, roles: ['admin', 'user'] },
             { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'user'] }
           ].filter(item => item.roles.includes(userRole!)).map(item => (
-            <button key={item.id} onClick={() => { setActiveView(item.id as any); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+            <button key={item.id} onClick={() => setActiveView(item.id as any)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
               <item.icon size={18} /> <span className="text-sm font-medium">{item.label}</span>
             </button>
           ))}
           
           <div className="pt-4 mt-4 border-t border-slate-800">
-            <button onClick={() => { refreshData(); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-blue-300 hover:bg-slate-800 hover:text-white transition">
+            <button onClick={refreshData} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-blue-300 hover:bg-slate-800 hover:text-white transition">
                 <RefreshCw size={18} /> <span className="text-sm font-medium">Sync Data</span>
             </button>
             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-red-400 hover:bg-red-900/20 mt-1 transition">
@@ -615,14 +598,14 @@ service cloud.firestore {
         </nav>
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <header className="bg-white border-b px-4 lg:px-8 py-4 flex justify-between items-center print:hidden">
+        <header className="bg-white border-b px-8 py-4 flex justify-between items-center print:hidden">
           <div className="flex items-center gap-4">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-800 capitalize">{activeView.replace('-', ' ')}</h2>
-              <span className="text-[10px] lg:text-xs font-bold uppercase text-[#3159a6] bg-blue-50 px-2 py-1 rounded border border-blue-200">{userRole}</span>
+              <h2 className="text-xl font-bold text-gray-800 capitalize">{activeView.replace('-', ' ')}</h2>
+              <span className="text-xs font-bold uppercase text-[#3159a6] bg-blue-50 px-2 py-1 rounded border border-blue-200">{userRole}</span>
           </div>
-          <div className="text-right text-[10px] lg:text-xs text-gray-400 hidden sm:block">Bengal Rehabilitation & Research Pvt. Ltd.</div>
+          <div className="text-right text-xs text-gray-400 hidden sm:block">Bengal Rehabilitation & Research Pvt. Ltd.</div>
         </header>
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto print:p-0">
+        <div className="p-8 max-w-7xl mx-auto print:p-0">
           {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} />}
           {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
           {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}

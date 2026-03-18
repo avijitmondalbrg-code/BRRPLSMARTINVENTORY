@@ -260,14 +260,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                           />
                       </div>
 
-                      <button onClick={() => { 
-                        if (editingId) {
-                          onUpdatePatient(formData);
-                        } else {
-                          onAddPatient({...formData, id: `P-${Date.now()}`});
-                        }
-                        setShowModal(false); 
-                      }} className="w-full bg-[#3159a6] text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all uppercase tracking-[0.3em] text-[10px]">Save Clinical Profile</button>
+                      <button onClick={() => { editingId ? onUpdatePatient(formData) : onAddPatient({...formData, id: `P-${Date.now()}`}); setShowModal(false); }} className="w-full bg-[#3159a6] text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all uppercase tracking-[0.3em] text-[10px]">Save Clinical Profile</button>
                   </div>
               </div>
           </div>

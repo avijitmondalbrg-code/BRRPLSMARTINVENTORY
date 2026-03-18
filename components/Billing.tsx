@@ -80,13 +80,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [paymentBank, setPaymentBank] = useState<string>('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const generateNextId = React.useCallback(() => {
+  const generateNextId = () => {
     const fy = getFinancialYear();
     const prefix = `BRRPL-IM-HA-${fy}-`;
     const fyInvoices = (invoices || []).filter(inv => inv.id.startsWith(prefix));
     const maxSeq = fyInvoices.length === 0 ? 0 : Math.max(...fyInvoices.map(inv => parseInt(inv.id.split('-').pop() || '0', 10)));
     return `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
-  }, [invoices]);
+  };
 
   const resetForm = () => { 
     setStep('patient'); 
@@ -172,54 +172,40 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const isInterState = patient.state && patient.state !== 'West Bengal';
   const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
   
-  const { 
-    allInvoiceItems, 
-    runningTaxableTotal, 
-    runningCGST, 
-    runningSGST, 
-    runningIGST, 
-    totalSubtotal 
-  } = React.useMemo(() => {
-    let rTT = 0, rCGST = 0, rSGST = 0, rIGST = 0, tS = 0;
-    
-    const invItems: InvoiceItem[] = [];
-    selectedInventoryItems.forEach(item => {
+  let runningTaxableTotal: number = 0;
+  let runningCGST: number = 0;
+  let runningSGST: number = 0;
+  let runningIGST: number = 0;
+  let totalSubtotal: number = 0;
+
+  const invInvoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
       const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
       const itemTaxable: number = Math.max(0, item.price - itemDisc);
       const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
       const totalTax = itemTaxable * (gstRate / 100);
       let cgst = 0, sgst = 0, igst = 0;
-      if (isInterState) { igst = totalTax; rIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; rCGST += cgst; rSGST += sgst; }
-      rTT += itemTaxable; 
-      tS += item.price;
-      invItems.push({ 
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
+      runningTaxableTotal += itemTaxable; 
+      totalSubtotal += item.price;
+      return { 
           hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, 
           price: item.price, qty: 1, discount: itemDisc, gstRate, taxableValue: itemTaxable, 
           cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: itemTaxable + totalTax, 
           hsnCode: item.hsnCode || '90214090' 
-      });
-    });
+      };
+  });
 
-    const manualProcItems: InvoiceItem[] = [];
-    manualItems.forEach(item => {
+  const processedManualItems: InvoiceItem[] = manualItems.map(item => {
       const totalTax = item.taxableValue * (item.gstRate / 100);
       let cgst = 0, sgst = 0, igst = 0;
-      if (isInterState) { igst = totalTax; rIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; rCGST += cgst; rSGST += sgst; }
-      rTT += item.taxableValue;
-      tS += item.price * (item.qty || 1);
-      manualProcItems.push({ ...item, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: item.taxableValue + totalTax });
-    });
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
+      runningTaxableTotal += item.taxableValue;
+      totalSubtotal += item.price * (item.qty || 1);
+      return { ...item, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: item.taxableValue + totalTax };
+  });
 
-    return { 
-      allInvoiceItems: [...invItems, ...manualProcItems], 
-      runningTaxableTotal: rTT, 
-      runningCGST: rCGST, 
-      runningSGST: rSGST, 
-      runningIGST: rIGST, 
-      totalSubtotal: tS 
-    };
-  }, [selectedInventoryItems, itemDiscounts, gstOverrides, isInterState, manualItems]);
-
+  const allInvoiceItems = [...invInvoiceItems, ...processedManualItems];
+  
   // Explicit Round Off Logic
   const rawFinalTotal = (runningTaxableTotal + runningCGST + runningSGST + runningIGST) - totalAdjustment;
   const finalTotal: number = Math.round(Math.max(0, rawFinalTotal));
@@ -240,7 +226,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     return summary;
   }, [allInvoiceItems]);
 
-  const handleSaveInvoice = React.useCallback(() => {
+  const handleSaveInvoice = () => {
     const finalId = editingInvoiceId || generateNextId();
     const currentPayments = [...existingPayments];
     if (initialPayment > 0) {
@@ -264,7 +250,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setLastSavedInvoice(invData);
     setShowSuccessModal(true);
     setViewMode('list');
-  }, [editingInvoiceId, generateNextId, existingPayments, initialPayment, paymentMethod, paymentBank, finalTotal, patient, allInvoiceItems, totalSubtotal, totalAdjustment, totalItemDiscounts, isInterState, runningTaxableTotal, runningCGST, runningSGST, runningIGST, invoiceDate, warranty, entryBy, invoiceNotes, onCreateInvoice, selectedItemIds]);
+  };
 
   const handleSendWhatsAppThankYou = () => {
     if (!lastSavedInvoice) return;
@@ -281,13 +267,13 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setShowSuccessModal(false);
   };
 
-  const handleApplyAdvance = React.useCallback((adv: AdvanceBooking) => {
+  const handleApplyAdvance = (adv: AdvanceBooking) => {
       const newPayment: PaymentRecord = {
           id: `PAY-ADV-${Date.now()}`, date: new Date().toISOString().split('T')[0],
-          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id} (${adv.paymentMethod})`, bankDetails: 'N/A'
+          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id}`, bankDetails: 'N/A'
       };
       setExistingPayments([...existingPayments, newPayment]);
-  }, [existingPayments]);
+  };
 
   const handleConfirmCollection = () => {
       if (!collectingInvoice || !onUpdateInvoice || newPaymentAmount <= 0) return;
@@ -720,17 +706,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         {patientAdvances.length > 0 && (
                             <div className="bg-amber-50/50 rounded-3xl border-2 border-amber-100 p-8">
                                 <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.3em] mb-5 ml-1">Unclaimed Advance Tokens</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {patientAdvances.map(adv => (
-                                        <div key={adv.id} className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-sm transition-all hover:border-amber-400">
-                                            <div>
-                                                <p className="font-black text-amber-900 text-lg">₹{adv.amount.toLocaleString()}</p>
-                                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">{adv.date} • {adv.paymentMethod}</p>
-                                            </div>
-                                            <button onClick={() => handleApplyAdvance(adv)} className="px-6 py-2 bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-amber-700 transition active:scale-95 shadow-lg shadow-amber-900/10">Apply</button>
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{patientAdvances.map(adv => (<div key={adv.id} className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-sm transition-all hover:border-amber-400"><div><p className="font-black text-amber-900 text-lg">₹{adv.amount.toLocaleString()}</p><p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">{adv.date}</p></div><button onClick={() => handleApplyAdvance(adv)} className="px-6 py-2 bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-amber-700 transition active:scale-95 shadow-lg shadow-amber-900/10">Apply</button></div>))}</div>
                             </div>
                         )}
                         {existingPayments.length > 0 && (
@@ -932,7 +908,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     <div className="space-y-1 text-[10px] text-left">
                                         {existingPayments.map(p => (
                                             <div key={p.id} className={`flex justify-between font-bold uppercase ${p.method === 'Advance' ? 'text-[#3159a6]' : 'text-slate-700'}`}>
-                                                <span>{p.method} {p.method === 'Advance' ? `[${p.note}]` : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
+                                                <span>{p.method} {p.method === 'Advance' ? '(Applied Token)' : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
                                                 <span>₹{p.amount.toLocaleString()}</span>
                                             </div>
                                         ))}

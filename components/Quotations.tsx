@@ -56,7 +56,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
   const [inventorySearchTerm, setInventorySearchTerm] = useState('');
 
-  const generateNextId = React.useCallback(() => {
+  const generateNextId = () => {
     const fy = getFinancialYear();
     const prefix = `BRRPL/QT/${fy}/`;
     const sameFyQuotations = quotations.filter(q => q.id.startsWith(prefix));
@@ -64,7 +64,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     const numbers = sameFyQuotations.map(q => parseInt(q.id.split('/').pop() || '0', 10));
     const nextNo = Math.max(...numbers) + 1;
     return `${prefix}${nextNo.toString().padStart(3, '0')}`;
-  }, [quotations]);
+  };
 
   const resetForm = () => { 
     setStep('patient'); 
@@ -179,7 +179,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const finalTotal = Math.round(Math.max(0, rawFinalTotal));
   const roundOffAmount = finalTotal - rawFinalTotal;
 
-  const handleSaveQuotation = React.useCallback(() => {
+  const handleSaveQuotation = () => {
     const finalId = editingId || generateNextId();
     const quotationData: Quotation = { 
       id: finalId, 
@@ -201,7 +201,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     };
     if (editingId) onUpdateQuotation(quotationData); else onCreateQuotation(quotationData);
     setViewMode('list');
-  }, [editingId, generateNextId, patient, processedItems, subtotal, discountValue, totalTax, finalTotal, quoteDate, warranty, quotationNotes, entryBy, onUpdateQuotation, onCreateQuotation]);
+  };
 
   const filteredInventory = useMemo(() => {
     return inventory

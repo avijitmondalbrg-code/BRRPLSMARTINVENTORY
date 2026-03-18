@@ -16,5 +16,5 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "index.tsx", "App.tsx", "constants.ts", "types.ts"]
+  "include": ["src"]
 }

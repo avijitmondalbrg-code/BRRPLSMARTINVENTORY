@@ -229,7 +229,6 @@ export interface FinancialNote {
   reason: string;
   patientDetails?: Patient;
   vendorDetails?: Vendor;
-  selectedHearingAids?: HearingAid[];
 }
 
 export interface StockTransfer {
