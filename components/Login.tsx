@@ -1,10 +1,8 @@
 
 import React, { useState } from 'react';
-import { LogIn, Sparkles, ShieldCheck } from 'lucide-react';
+import { User, Lock, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
 import { UserRole } from '../types';
 import { COMPANY_LOGO_BASE64 } from '../constants';
-import { auth } from '../services/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 interface LoginProps {
   logo: string;
@@ -12,27 +10,46 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
-  const handleGoogleLogin = async () => {
+  const handleLoginProcess = async (uid: string, pass: string) => {
     setError('');
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Role will be handled by App.tsx onAuthStateChanged
-        // But we can trigger a success state here if needed
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const cleanUserId = uid.trim().toLowerCase();
+      const cleanPassword = pass.trim();
+      
+      if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
+          (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
+          onLogin('admin');
+      } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
+          onLogin('user');
+      } else {
+         throw new Error("Invalid User ID or Password. Please check and try again.");
       }
     } catch (err: any) {
-      console.error("Login error:", err);
-      setError(err.message || "Failed to sign in with Google. Please try again.");
+      setError(err.message);
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleLoginProcess(userId, password);
+  };
+
+  const handleQuickLogin = () => {
+    setUserId('admin');
+    setPassword('admin');
+    handleLoginProcess('admin', 'admin');
   };
 
   return (
@@ -69,10 +86,42 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         {/* Form Section */}
         <div className="p-10 bg-gray-50/50 flex-1">
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-bold text-gray-700">Welcome Back</h2>
-              <p className="text-gray-500 text-sm">Please sign in with your Google account to access the system.</p>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Access Identity</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
+                <input 
+                  type="text" 
+                  required
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
+                  placeholder="admin"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Secure Password</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
+                <input 
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#3159a6]"
+                >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -84,24 +133,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <div className="space-y-3 pt-2">
                 <button 
-                  onClick={handleGoogleLogin}
+                  type="submit" 
                   disabled={loading}
-                  className="w-full bg-white hover:bg-gray-50 text-gray-700 font-bold py-4 rounded-2xl transition duration-200 shadow-lg flex items-center justify-center gap-3 border-2 border-gray-100 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-[#3159a6] hover:bg-[#254687] text-white font-black py-4 rounded-2xl transition duration-200 shadow-xl flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-[0.2em] text-sm"
                 >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-[#3159a6] border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                  )}
-                  {loading ? 'Authorizing...' : 'Sign in with Google'}
+                  {loading ? 'Authorizing...' : 'Unlock System'}
+                  {!loading && <ArrowRight size={18} />}
                 </button>
+                
+                
             </div>
-
-            <div className="flex items-center gap-2 justify-center text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">
-              <ShieldCheck size={14} />
-              <span>Secure Enterprise Access</span>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
         
