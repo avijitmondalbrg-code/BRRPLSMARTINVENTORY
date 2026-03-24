@@ -229,6 +229,7 @@ export interface FinancialNote {
   reason: string;
   patientDetails?: Patient;
   vendorDetails?: Vendor;
+  hearingAidIds?: string[]; // Added for Debit Notes linked to stock removal
 }
 
 export interface StockTransfer {
