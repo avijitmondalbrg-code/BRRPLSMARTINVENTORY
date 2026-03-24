@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { FinancialNote, Patient, Invoice, UserRole, Vendor } from '../types';
+import { FinancialNote, Patient, Invoice, UserRole, Vendor, HearingAid } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear } from '../constants';
 // Added CheckCircle2 and IndianRupee to imports to fix "Cannot find name" errors on lines 309 and 356
-import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2 } from 'lucide-react';
+import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2, Package } from 'lucide-react';
 
 interface FinancialNotesProps {
   type: 'CREDIT' | 'DEBIT';
@@ -11,6 +11,7 @@ interface FinancialNotesProps {
   patients: Patient[];
   vendors: Vendor[];
   invoices: Invoice[];
+  inventory: HearingAid[];
   onSave: (note: FinancialNote) => void;
   onDelete: (noteId: string) => void;
   logo: string;
@@ -18,7 +19,7 @@ interface FinancialNotesProps {
   userRole: UserRole;
 }
 
-export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, onSave, onDelete, logo, signature, userRole }) => {
+export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, inventory, onSave, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -35,6 +36,11 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
   const [showInvoiceResults, setShowInvoiceResults] = useState(false);
+
+  // Hearing Aid Selection for Debit Notes
+  const [selectedHearingAids, setSelectedHearingAids] = useState<string[]>([]);
+  const [haSearchTerm, setHaSearchTerm] = useState('');
+  const [showHaResults, setShowHaResults] = useState(false);
   
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState('');
@@ -97,7 +103,8 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         vendorDetails: targetType === 'VENDOR' ? selectedVendor! : undefined,
         referenceInvoiceId: selectedInvoice?.id,
         amount, 
-        reason 
+        reason,
+        hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined
     };
     onSave(newNote); 
     setViewMode('list');
@@ -112,8 +119,16 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setVendorSearchTerm('');
       setSelectedInvoice(null);
       setInvoiceSearchTerm('');
+      setSelectedHearingAids([]);
+      setHaSearchTerm('');
       setAmount(0);
       setReason('');
+  };
+
+  const toggleHearingAid = (id: string) => {
+    setSelectedHearingAids(prev => 
+        prev.includes(id) ? prev.filter(haId => haId !== id) : [...prev, id]
+    );
   };
 
   const renderDocument = (note: FinancialNote) => (
@@ -425,6 +440,57 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                             </div>
                         )}
                     </div>
+
+                    {/* Hearing Aid Selection for Debit Note */}
+                    {type === 'DEBIT' && targetType === 'VENDOR' && (
+                        <div className="space-y-4 md:col-span-2">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Select Hearing Aids to Remove from Inventory (Optional)</label>
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input 
+                                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-purple-600 outline-none transition-all font-bold text-gray-700 bg-gray-50 focus:bg-white shadow-sm" 
+                                    placeholder="Search by Model or Serial Number..." 
+                                    value={haSearchTerm} 
+                                    onChange={e => { setHaSearchTerm(e.target.value); setShowHaResults(true); }}
+                                    onFocus={() => setShowHaResults(true)}
+                                />
+                                {showHaResults && haSearchTerm && (
+                                    <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar p-2">
+                                        {inventory.filter(item => 
+                                            item.status === 'Available' && 
+                                            (item.model.toLowerCase().includes(haSearchTerm.toLowerCase()) || 
+                                             item.serialNumber.toLowerCase().includes(haSearchTerm.toLowerCase()))
+                                        ).map(item => (
+                                            <button 
+                                                key={item.id} 
+                                                type="button"
+                                                onClick={() => { toggleHearingAid(item.id); setHaSearchTerm(''); setShowHaResults(false); }} 
+                                                className={`w-full text-left p-3 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase text-xs tracking-tighter transition ${selectedHearingAids.includes(item.id) ? 'bg-purple-100 text-purple-700' : 'hover:bg-purple-50 text-slate-700'}`}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <span>{item.brand} {item.model} <span className="text-[9px] text-gray-400 ml-2">S/N: {item.serialNumber}</span></span>
+                                                    {selectedHearingAids.includes(item.id) && <CheckCircle2 size={14} />}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            {selectedHearingAids.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {selectedHearingAids.map(id => {
+                                        const item = inventory.find(i => i.id === id);
+                                        return (
+                                            <div key={id} className="flex items-center gap-2 bg-purple-50 text-purple-600 px-3 py-1.5 rounded-xl border border-purple-100 text-[10px] font-black uppercase animate-fade-in">
+                                                <Package size={12} /> {item?.model} ({item?.serialNumber})
+                                                <button onClick={() => toggleHearingAid(id)} className="hover:text-red-500 transition"><X size={12}/></button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Amount Input */}
                     <div className="space-y-4">
