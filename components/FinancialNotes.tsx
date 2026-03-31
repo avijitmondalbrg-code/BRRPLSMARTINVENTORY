@@ -104,7 +104,8 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         referenceInvoiceId: selectedInvoice?.id,
         amount, 
         reason,
-        hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined
+        hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined,
+        linkedItems: type === 'DEBIT' && targetType === 'VENDOR' ? inventory.filter(i => selectedHearingAids.includes(i.id)) : undefined
     };
     onSave(newNote); 
     setViewMode('list');
