@@ -297,7 +297,22 @@ const App: React.FC = () => {
   };
 
   const handleDeleteFinancialNote = async (id: string) => {
+    const noteToDelete = financialNotes.find(n => n.id === id);
     setFinancialNotes(financialNotes.filter(n => n.id !== id));
+    
+    // Restock items if it's a Debit Note with linked items
+    if (noteToDelete && noteToDelete.type === 'DEBIT' && noteToDelete.linkedItems && noteToDelete.linkedItems.length > 0) {
+        setInventory(prev => [...prev, ...(noteToDelete.linkedItems || [])]);
+        try {
+            for (const item of noteToDelete.linkedItems) {
+                await setDocument('inventory', item.id, item);
+            }
+            alert(`Debit Note ${id} deleted and ${noteToDelete.linkedItems.length} items restocked in inventory.`);
+        } catch (e) {
+            console.error("Failed to restock items during Debit Note deletion:", e);
+        }
+    }
+
     try { await deleteDocument('financialNotes', id); } catch(e) {}
   };
 
