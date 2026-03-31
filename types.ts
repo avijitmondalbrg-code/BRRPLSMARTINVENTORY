@@ -230,6 +230,7 @@ export interface FinancialNote {
   patientDetails?: Patient;
   vendorDetails?: Vendor;
   hearingAidIds?: string[]; // Added for Debit Notes linked to stock removal
+  linkedItems?: HearingAid[]; // Added to store full item data for restocking if note is deleted
 }
 
 export interface StockTransfer {
