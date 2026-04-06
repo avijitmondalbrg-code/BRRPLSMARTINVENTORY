@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Hospital, ServiceInvoice, ServiceInvoiceLine, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, CLINIC_GSTIN } from '../constants';
-import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2, IndianRupee, Percent } from 'lucide-react';
+import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2, IndianRupee, Percent, Edit } from 'lucide-react';
 
 interface ServiceBillingProps {
   hospitals: Hospital[];
@@ -35,6 +35,7 @@ const numberToWords = (num: number): string => {
 
 export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoices, onAddHospital, onSaveInvoice, onDeleteInvoice, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'review'>('list');
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Create Form State
@@ -61,11 +62,12 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setGlobalAdjustment(0);
     setNotes('');
+    setEditingInvoiceId(null);
   };
 
   const generateInvoiceId = () => {
     const fy = getFinancialYear();
-    const prefix = `BRRPL-IM-SR-${fy}-`;
+    const prefix = `BRRPL-SR-${fy}-`;
     const fyInvs = invoices.filter(i => i.id.startsWith(prefix));
     const nextSeq = fyInvs.length === 0 ? 1 : Math.max(...fyInvs.map(i => parseInt(i.id.split('-').pop() || '0'))) + 1;
     return `${prefix}${nextSeq.toString().padStart(3, '0')}`;
@@ -115,7 +117,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
   const handleFinalSave = () => {
     if(!selectedHospital || invoiceLines.length === 0) return;
     const inv: ServiceInvoice = {
-      id: generateInvoiceId(),
+      id: editingInvoiceId || generateInvoiceId(),
       hospitalId: selectedHospital.id,
       hospitalName: selectedHospital.name,
       hospitalDetails: selectedHospital,
@@ -174,9 +176,30 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                   <td className="p-5 text-right font-black text-lg">₹{inv.totalAmount.toLocaleString('en-IN')}</td>
                   <td className="p-5 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => { setSelectedHospital(inv.hospitalDetails); setInvoiceLines(inv.items); setInvoiceDate(inv.date); setNotes(inv.notes || ''); setGlobalAdjustment(inv.globalAdjustment || 0); setSelectedBank(inv.bankAccountName || selectedBank); setViewMode('review'); }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition"><Printer size={18}/></button>
+                      <button onClick={() => { 
+                        setSelectedHospital(inv.hospitalDetails); 
+                        setInvoiceLines(inv.items); 
+                        setInvoiceDate(inv.date); 
+                        setNotes(inv.notes || ''); 
+                        setGlobalAdjustment(inv.globalAdjustment || 0); 
+                        setSelectedBank(inv.bankAccountName || selectedBank); 
+                        setEditingInvoiceId(inv.id);
+                        setViewMode('create'); 
+                      }} className="p-2 text-blue-400 hover:bg-blue-50 rounded-xl transition" title="Edit Invoice"><Edit size={18}/></button>
+                      
+                      <button onClick={() => { 
+                        setSelectedHospital(inv.hospitalDetails); 
+                        setInvoiceLines(inv.items); 
+                        setInvoiceDate(inv.date); 
+                        setNotes(inv.notes || ''); 
+                        setGlobalAdjustment(inv.globalAdjustment || 0); 
+                        setSelectedBank(inv.bankAccountName || selectedBank); 
+                        setEditingInvoiceId(inv.id);
+                        setViewMode('review'); 
+                      }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition" title="Print/Review"><Printer size={18}/></button>
+                      
                       {userRole === 'admin' && (
-                        <button onClick={() => onDeleteInvoice(inv.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
+                        <button onClick={() => onDeleteInvoice(inv.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition" title="Delete Invoice"><Trash2 size={18}/></button>
                       )}
                     </div>
                   </td>
@@ -355,7 +378,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
               <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
                 <h2 className="text-lg font-black uppercase tracking-widest text-center">Service Invoice</h2>
               </div>
-              <p className="text-sm font-black text-slate-900 uppercase"># {generateInvoiceId()}</p>
+              <p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateInvoiceId()}</p>
               <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
             </div>
           </div>
@@ -424,29 +447,29 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                </div>
             </div>
             
-            <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5"><Landmark size={120}/></div>
+            <div className="bg-white text-slate-900 p-8 rounded-3xl shadow-xl border-2 border-slate-100 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4 opacity-5 text-slate-900"><Landmark size={120}/></div>
                <div className="space-y-3 relative z-10">
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-60">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <span>Gross Subtotal</span>
                     <span>₹{lineSubtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-400">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-500">
                     <span>Line Item Discount</span>
                     <span>-₹{totalItemDiscount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-400">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-500">
                     <span>Special Consideration</span>
                     <span>-₹{globalAdjustment.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-60">
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <span>GST Applied (0%)</span>
                     <span>₹0.00</span>
                   </div>
-                  <div className="h-0.5 bg-white/10 my-4"></div>
+                  <div className="h-0.5 bg-slate-100 my-4"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-[#3159a6]">Net Total</span>
-                    <span className="text-4xl font-black tracking-tighter">₹{total.toLocaleString()}</span>
+                    <span className="text-4xl font-black tracking-tighter text-slate-900">₹{total.toLocaleString()}</span>
                   </div>
                </div>
             </div>
