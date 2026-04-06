@@ -65,7 +65,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   const generateInvoiceId = () => {
     const fy = getFinancialYear();
-    const prefix = `BRRPL-SR-${fy}-`;
+    const prefix = `BRRPL-IM-SR-${fy}-`;
     const fyInvs = invoices.filter(i => i.id.startsWith(prefix));
     const nextSeq = fyInvs.length === 0 ? 1 : Math.max(...fyInvs.map(i => parseInt(i.id.split('-').pop() || '0'))) + 1;
     return `${prefix}${nextSeq.toString().padStart(3, '0')}`;
@@ -281,12 +281,12 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                       <input type="number" className="w-full border-2 border-gray-100 rounded-2xl p-4 font-black text-red-600 bg-gray-50 shadow-inner outline-none focus:border-red-300" value={globalAdjustment || ''} onChange={e => setGlobalAdjustment(Number(e.target.value))} placeholder="0.00" />
                    </div>
                 </div>
-                <div className="bg-blue-50/50 p-4 rounded-2xl border-2 border-blue-50">
+                <div className="bg-white p-4 rounded-2xl border-2 border-blue-50">
                     <label className="block text-[10px] font-black text-primary uppercase tracking-widest ml-1 mb-2">Invoice Remarks</label>
                     <textarea className="w-full bg-white border-2 border-gray-50 p-3 rounded-xl text-xs h-20 resize-none font-bold" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Enter details..." />
                 </div>
             </div>
-            <div className="bg-gray-50 p-8 rounded-3xl border-2 border-gray-100 text-right">
+            <div className="bg-white p-8 rounded-3xl border-2 border-gray-100 text-right">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Net Payable Amount</p>
               <p className="text-5xl font-black text-gray-900 tracking-tighter">₹{total.toLocaleString('en-IN')}</p>
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -338,7 +338,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
     const bank = COMPANY_BANK_ACCOUNTS.find(b => b.name === selectedBank) || COMPANY_BANK_ACCOUNTS[0];
 
     return (
-      <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen print:bg-white print:p-0">
+      <div className="flex flex-col items-center bg-white p-4 sm:p-10 min-h-screen print:bg-white print:p-0">
         <div className="mb-8 flex gap-4 print:hidden">
           <button onClick={() => setViewMode('create')} className="bg-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow transition hover:bg-gray-50 border-2 border-gray-100">Edit Details</button>
           <button onClick={handleFinalSave} className="bg-primary text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-2xl hover:bg-secondary transition flex items-center gap-2"><Save size={16}/> Save to Database</button>
@@ -361,7 +361,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
           </div>
 
           <div className="grid grid-cols-2 gap-8 mb-8">
-            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100">
+            <div className="bg-white p-6 rounded-2xl border-2 border-slate-200">
               <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest border-b pb-1">Bill To:</h4>
               <p className="font-black text-2xl text-slate-900 uppercase tracking-tight mb-2">{selectedHospital.name}</p>
               <p className="text-xs text-slate-700 font-bold uppercase leading-relaxed min-h-[60px] italic">"{selectedHospital.address}"</p>
@@ -370,7 +370,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 {selectedHospital.pan && <p className="text-[10px] font-black text-slate-600 uppercase">PAN: {selectedHospital.pan}</p>}
               </div>
             </div>
-            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 flex flex-col justify-between">
               <div>
                 <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Clinic Identity</h4>
                 <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
@@ -404,7 +404,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                     <td className="p-4 text-center border-r-2 border-slate-900 font-mono">{line.hsn}</td>
                     <td className="p-4 text-center border-r-2 border-slate-900">{line.qty}</td>
                     <td className="p-4 text-right border-r-2 border-slate-900">₹{line.rate.toLocaleString('en-IN')}</td>
-                    <td className="p-4 text-right font-black bg-slate-50">₹{line.amount.toLocaleString('en-IN')}</td>
+                    <td className="p-4 text-right font-black bg-white">₹{line.amount.toLocaleString('en-IN')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -414,7 +414,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
           <div className="grid grid-cols-2 gap-8 mb-12">
             <div className="space-y-6">
                {notes && (
-                  <div className="bg-blue-50/50 p-6 rounded-3xl border-2 border-dashed border-blue-200">
+                  <div className="bg-white p-6 rounded-3xl border-2 border-dashed border-blue-200">
                     <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-2 border-b border-blue-100 pb-1 tracking-widest">Invoicing Remarks:</h4>
                     <p className="text-xs text-slate-800 italic leading-relaxed font-semibold uppercase">"{notes}"</p>
                   </div>
@@ -454,7 +454,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
           <div className="mt-auto">
             {/* Bank Details */}
-            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 mb-8 w-full">
+            <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 mb-8 w-full">
               <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-[0.2em] mb-2 border-b border-slate-200 pb-1">Bank Settlement Node:</h5>
               <div className="grid grid-cols-4 text-[10px] uppercase font-black text-slate-800">
                 <p><span className="text-slate-400 mr-2">Bank:</span>{bank.name}</p>
