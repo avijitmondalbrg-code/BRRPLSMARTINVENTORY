@@ -190,8 +190,14 @@ const App: React.FC = () => {
   };
 
   const handleSaveServiceInvoice = async (inv: ServiceInvoice) => {
-    setServiceInvoices([inv, ...serviceInvoices]);
-    try { await setDocument('serviceInvoices', inv.id, inv); } catch(e) {}
+    setServiceInvoices(prev => {
+      const exists = prev.find(i => i.id === inv.id);
+      if (exists) return prev.map(i => i.id === inv.id ? inv : i);
+      return [inv, ...prev];
+    });
+    try { await setDocument('serviceInvoices', inv.id, inv); } catch(e) {
+      console.error("Failed to save service invoice:", e);
+    }
   };
 
   const handleDeleteServiceInvoice = async (id: string) => {
