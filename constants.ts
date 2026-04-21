@@ -73,6 +73,25 @@ export const COMPANY_BANK_ACCOUNTS = [
   { name: "Indian Bank", accountNumber: "7364388282", ifsc: "IDIB000N601", branch: "Nischintapur" }
 ];
 
+export const HOSPITAL_OPTIONS = [
+  "Fortis", 
+  "AM Medical", 
+  "CMRI", 
+  "Woodland", 
+  "NHS", 
+  "NMH", 
+  "NH Barasat", 
+  "RN Tagore", 
+  "Bata Mall", 
+  "Home Visit", 
+  "Nidan Clinic", 
+  "Manipal Dhakuria", 
+  "Manipal Saltlake", 
+  "Manipal Broadway", 
+  "Clinic", 
+  "Others"
+];
+
 export const INITIAL_INVENTORY: HearingAid[] = [];
 export const INITIAL_INVOICES: Invoice[] = [];
 export const INITIAL_QUOTATIONS: Quotation[] = [];
