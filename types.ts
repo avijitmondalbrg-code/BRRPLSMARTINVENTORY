@@ -171,6 +171,8 @@ export interface Invoice {
   warranty?: string;
   patientDetails?: Patient; // Snapshot of patient details
   entryBy?: string; // Staff member who created invoice
+  hospitalId?: string; // Linked hospital/clinic
+  hospitalName?: string;
   
   // Payment Tracking
   payments: PaymentRecord[];
