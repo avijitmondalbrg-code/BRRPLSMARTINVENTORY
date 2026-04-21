@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking } from '../types';
+import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info } from 'lucide-react';
 
@@ -7,6 +7,7 @@ interface BillingProps {
   inventory: HearingAid[];
   invoices?: Invoice[];
   patients: Patient[];
+  hospitals: Hospital[];
   advanceBookings?: AdvanceBooking[];
   onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
   onUpdateInvoice?: (invoice: Invoice) => void;
@@ -34,7 +35,7 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
+export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
   const [invoiceNotes, setInvoiceNotes] = useState<string>(''); 
   const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
   const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
   const [existingPayments, setExistingPayments] = useState<PaymentRecord[]>([]);
   const [initialPayment, setInitialPayment] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
@@ -100,6 +102,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setWarranty('2 Years Standard Warranty'); 
     setEntryBy(STAFF_NAMES[0]);
+    setSelectedHospitalId('');
     setEditingInvoiceId(null); 
     setPatientSearchTerm(''); 
     setProductSearchTerm(''); 
@@ -127,6 +130,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     setInvoiceNotes(inv.notes || '');
     setWarranty(inv.warranty || '2 Years Standard Warranty');
     setEntryBy(inv.entryBy || STAFF_NAMES[0]);
+    setSelectedHospitalId(inv.hospitalId || '');
     setExistingPayments(inv.payments || []);
     setInitialPayment(0);
     setProductSearchTerm('');
@@ -237,11 +241,17 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     }
     const totalPaid = currentPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
     const balanceDue = Math.max(0, finalTotal - totalPaid);
+    
+    const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
+
     const invData: Invoice = { 
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
       subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
       placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
-      finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, patientDetails: patient, notes: invoiceNotes,
+      finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, 
+      hospitalId: selectedHospitalId || undefined,
+      hospitalName: selectedHospital?.name || undefined,
+      patientDetails: patient, notes: invoiceNotes,
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
     onCreateInvoice(invData, selectedItemIds); 
@@ -579,6 +589,15 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">State (Supply Destination)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.state} onChange={e => setPatient({...patient, state: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Name" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Entry By (Staff) *</label><select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={entryBy} onChange={e => setEntryBy(e.target.value)}>{STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Hospital / Clinic Selection</label>
+                        <select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={selectedHospitalId} onChange={e => setSelectedHospitalId(e.target.value)}>
+                          <option value="">-- Direct Patient (No Hospital) --</option>
+                          {hospitals.map(h => (
+                            <option key={h.id} value={h.id}>{h.name}</option>
+                          ))}
+                        </select>
+                      </div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
                     </div>
                 </div>
