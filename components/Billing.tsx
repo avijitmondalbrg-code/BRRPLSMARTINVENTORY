@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
-import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info } from 'lucide-react';
 
 interface BillingProps {
@@ -243,6 +243,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     const balanceDue = Math.max(0, finalTotal - totalPaid);
     
     const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
+    const isPredefinedHospital = HOSPITAL_OPTIONS.includes(selectedHospitalId);
 
     const invData: Invoice = { 
       id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
@@ -250,7 +251,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
       finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, 
       hospitalId: selectedHospitalId || undefined,
-      hospitalName: selectedHospital?.name || undefined,
+      hospitalName: isPredefinedHospital ? selectedHospitalId : (selectedHospital?.name || undefined),
       patientDetails: patient, notes: invoiceNotes,
       payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
     };
@@ -592,10 +593,19 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Hospital / Clinic Selection</label>
                         <select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={selectedHospitalId} onChange={e => setSelectedHospitalId(e.target.value)}>
-                          <option value="">-- Direct Patient (No Hospital) --</option>
-                          {hospitals.map(h => (
-                            <option key={h.id} value={h.id}>{h.name}</option>
-                          ))}
+                          <option value="">-- Self Patient --</option>
+                          <optgroup label="Standard Options">
+                            {HOSPITAL_OPTIONS.map(name => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </optgroup>
+                          {hospitals.length > 0 && (
+                            <optgroup label="Database Hospitals">
+                              {hospitals.map(h => (
+                                <option key={h.id} value={h.id}>{h.name}</option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                       </div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
