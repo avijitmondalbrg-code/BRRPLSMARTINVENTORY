@@ -67,7 +67,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   const generateInvoiceId = () => {
     const fy = getFinancialYear();
-    const prefix = `BR-SR-${fy}-`;
+    const prefix = `BRRPL-SR-${fy}-`;
     const fyInvs = invoices.filter(i => i.id.startsWith(prefix));
     const nextSeq = fyInvs.length === 0 ? 1 : Math.max(...fyInvs.map(i => parseInt(i.id.split('-').pop() || '0'))) + 1;
     return `${prefix}${nextSeq.toString().padStart(3, '0')}`;
