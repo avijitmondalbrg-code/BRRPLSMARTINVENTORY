@@ -975,7 +975,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <div className="h-0.5 bg-slate-900 mb-3"></div>
                                 <div className="flex justify-between items-center text-slate-900">
                                     <span className="text-xs font-black uppercase tracking-[0.2em]">Net Payable</span>
-                                    <span className="text-4xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
+                                    <span className="text-xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
                                 </div>
                             </div>
 
