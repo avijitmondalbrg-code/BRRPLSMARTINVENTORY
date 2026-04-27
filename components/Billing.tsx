@@ -829,6 +829,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-[#3159a6] uppercase">{patient.audiologist || 'Internal'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Staff Code</p><p className="text-xs font-black text-slate-700 uppercase">{entryBy || 'N/A'}</p></div>
                                 <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
+                                {selectedHospitalId && (
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Hospital / Clinic</p>
+                                        <p className="text-xs font-black text-blue-600 uppercase">
+                                            {HOSPITAL_OPTIONS.includes(selectedHospitalId) ? selectedHospitalId : (hospitals.find(h => h.id === selectedHospitalId)?.name || 'Direct')}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
