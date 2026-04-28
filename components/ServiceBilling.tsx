@@ -395,11 +395,11 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
             </div>
             <div className="bg-white p-6 rounded-2xl border-2 border-slate-200 flex flex-col justify-between">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Clinic Identity</h4>
-                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
-                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight leading-tight">{COMPANY_ADDRESS}</p>
-                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight mt-2">PH: {COMPANY_PHONES}</p>
-                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL} | GSTIN: {CLINIC_GSTIN}</p>
+                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billed By</h4>
+                <p className="font-black text-[20x] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                <p className="text-[12px] text-slate-800 font-bold uppercase tracking-tight leading-tight">{COMPANY_ADDRESS}</p>
+                <p className="text-[12px] text-slate-800 font-bold uppercase tracking-tight mt-2">PH: {COMPANY_PHONES}</p>
+                <p className="text-[12px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL} | GSTIN: {CLINIC_GSTIN}</p>
               </div>
             </div>
           </div>
@@ -469,7 +469,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                   <div className="h-0.5 bg-slate-100 my-4"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-[#3159a6]">Net Total</span>
-                    <span className="text-4xl font-black tracking-tighter text-slate-900">₹{total.toLocaleString()}</span>
+                    <span className="text-1xl font-black tracking-tighter text-slate-900">₹{total.toLocaleString()}</span>
                   </div>
                </div>
             </div>
