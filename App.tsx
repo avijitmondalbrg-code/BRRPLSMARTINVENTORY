@@ -189,6 +189,11 @@ const App: React.FC = () => {
     try { await setDocument('hospitals', h.id, h); } catch(e) {}
   };
 
+  const handleUpdateHospital = async (h: Hospital) => {
+    setHospitals(hospitals.map(item => item.id === h.id ? h : item));
+    try { await updateDocument('hospitals', h.id, h); } catch(e) {}
+  };
+
   const handleSaveServiceInvoice = async (inv: ServiceInvoice) => {
     setServiceInvoices(prev => {
       const exists = prev.find(i => i.id === inv.id);
@@ -649,7 +654,7 @@ service cloud.firestore {
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
-          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} userRole={userRole!} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
