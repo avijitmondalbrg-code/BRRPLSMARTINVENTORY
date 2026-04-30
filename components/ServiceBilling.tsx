@@ -8,6 +8,7 @@ interface ServiceBillingProps {
   hospitals: Hospital[];
   invoices: ServiceInvoice[];
   onAddHospital: (h: Hospital) => void;
+  onUpdateHospital: (h: Hospital) => void;
   onSaveInvoice: (inv: ServiceInvoice) => void;
   onDeleteInvoice: (id: string) => void;
   logo: string;
@@ -33,7 +34,7 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoices, onAddHospital, onSaveInvoice, onDeleteInvoice, logo, signature, userRole }) => {
+export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoices, onAddHospital, onUpdateHospital, onSaveInvoice, onDeleteInvoice, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'review'>('list');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +54,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   // Modal for adding new hospital
   const [showAddHospitalModal, setShowAddHospitalModal] = useState(false);
+  const [editingHospitalId, setEditingHospitalId] = useState<string | null>(null);
   const [newHospital, setNewHospital] = useState<Partial<Hospital>>({ name: '', address: '', gstin: '', pan: '' });
 
   const resetForm = () => {
@@ -95,17 +97,34 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   const handleAddHospitalSubmit = () => {
     if(!newHospital.name || !newHospital.address) return;
-    const h: Hospital = {
-      id: `HOSP-${Date.now()}`,
-      name: newHospital.name,
-      address: newHospital.address,
-      gstin: newHospital.gstin,
-      pan: newHospital.pan
-    };
-    onAddHospital(h);
-    setSelectedHospital(h);
-    setHospitalSearch(h.name);
+    
+    if (editingHospitalId) {
+      const h: Hospital = {
+        id: editingHospitalId,
+        name: newHospital.name,
+        address: newHospital.address,
+        gstin: newHospital.gstin || '',
+        pan: newHospital.pan || ''
+      };
+      onUpdateHospital(h);
+      if (selectedHospital?.id === editingHospitalId) {
+        setSelectedHospital(h);
+        setHospitalSearch(h.name);
+      }
+    } else {
+      const h: Hospital = {
+        id: `HOSP-${Date.now()}`,
+        name: newHospital.name,
+        address: newHospital.address,
+        gstin: newHospital.gstin || '',
+        pan: newHospital.pan || ''
+      };
+      onAddHospital(h);
+      setSelectedHospital(h);
+      setHospitalSearch(h.name);
+    }
     setShowAddHospitalModal(false);
+    setEditingHospitalId(null);
     setNewHospital({ name: '', address: '', gstin: '', pan: '' });
   };
 
@@ -231,13 +250,21 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
               <div className="relative">
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl outline-none focus:border-primary focus:bg-white transition-all font-bold" placeholder="Find Hospital..." value={hospitalSearch} onChange={e => { setHospitalSearch(e.target.value); setShowHospResults(true); }} onFocus={() => setShowHospResults(true)} />
-                  <button onClick={() => setShowAddHospitalModal(true)} className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-secondary"><PlusCircle size={20}/></button>
+                  <input className="w-full pl-12 pr-12 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl outline-none focus:border-primary focus:bg-white transition-all font-bold" placeholder="Find Hospital..." value={hospitalSearch} onChange={e => { setHospitalSearch(e.target.value); setShowHospResults(true); }} onFocus={() => setShowHospResults(true)} />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {selectedHospital && (
+                      <button onClick={() => { setEditingHospitalId(selectedHospital.id); setNewHospital(selectedHospital); setShowAddHospitalModal(true); }} className="text-gray-400 hover:text-primary transition" title="Edit current hospital"><Edit size={18}/></button>
+                    )}
+                    <button onClick={() => setShowAddHospitalModal(true)} className="text-primary hover:text-secondary"><PlusCircle size={20}/></button>
+                  </div>
                 </div>
                 {showHospResults && hospitalSearch && (
-                  <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto p-2">
+                  <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto p-2">
                     {hospitals.filter(h => h.name.toLowerCase().includes(hospitalSearch.toLowerCase())).map(h => (
-                      <button key={h.id} type="button" onClick={() => { setSelectedHospital(h); setHospitalSearch(h.name); setShowHospResults(false); }} className="w-full text-left p-4 hover:bg-blue-50 rounded-xl transition font-bold uppercase text-xs">{h.name}</button>
+                      <div key={h.id} className="flex items-center gap-2 group">
+                        <button type="button" onClick={() => { setSelectedHospital(h); setHospitalSearch(h.name); setShowHospResults(false); }} className="flex-1 text-left p-4 hover:bg-blue-50 rounded-xl transition font-bold uppercase text-xs">{h.name}</button>
+                        <button type="button" onClick={() => { setEditingHospitalId(h.id); setNewHospital(h); setShowAddHospitalModal(true); setShowHospResults(false); }} className="p-2 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition opacity-0 group-hover:opacity-100 mr-2"><Edit size={16}/></button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -321,13 +348,13 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
           <button onClick={() => setViewMode('review')} disabled={!selectedHospital || invoiceLines.length === 0} className="w-full bg-primary text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-slate-800 transition active:scale-95 text-[10px] disabled:opacity-50">Generate Service Invoice Preview &rarr;</button>
         </div>
 
-        {/* Add Hospital Modal */}
+        {/* Add/Edit Hospital Modal */}
         {showAddHospitalModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[150] p-4 backdrop-blur-sm">
             <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in border-4 border-white">
               <div className="bg-[#3159a6] p-5 text-white flex justify-between items-center font-black uppercase tracking-widest">
-                <h3>Register New Hospital</h3>
-                <button onClick={() => setShowAddHospitalModal(false)}><X size={24}/></button>
+                <h3>{editingHospitalId ? 'Edit Hospital Details' : 'Register New Hospital'}</h3>
+                <button onClick={() => { setShowAddHospitalModal(false); setEditingHospitalId(null); setNewHospital({ name: '', address: '', gstin: '', pan: '' }); }}><X size={24}/></button>
               </div>
               <div className="p-8 space-y-4">
                 <div className="space-y-1.5">
@@ -348,7 +375,9 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                   <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Full Address *</label>
                   <textarea className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold h-24 resize-none text-gray-700 outline-none focus:border-primary" value={newHospital.address} onChange={e => setNewHospital({...newHospital, address: e.target.value})} placeholder="Enter hospital full address..." />
                 </div>
-                <button onClick={handleAddHospitalSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl active:scale-95 transition-all">Confirm Registration</button>
+                <button onClick={handleAddHospitalSubmit} className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest mt-4 shadow-xl active:scale-95 transition-all">
+                  {editingHospitalId ? 'Update Hospital Records' : 'Confirm Registration'}
+                </button>
               </div>
             </div>
           </div>
