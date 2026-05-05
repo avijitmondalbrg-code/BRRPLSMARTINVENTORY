@@ -11,6 +11,8 @@ interface FinancialNotesProps {
   patients: Patient[];
   vendors: Vendor[];
   invoices: Invoice[];
+  serviceInvoices: ServiceInvoice[];
+  hospitals: Hospital[];
   inventory: HearingAid[];
   onSave: (note: FinancialNote) => void;
   onDelete: (noteId: string) => void;
@@ -19,12 +21,12 @@ interface FinancialNotesProps {
   userRole: UserRole;
 }
 
-export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, inventory, onSave, onDelete, logo, signature, userRole }) => {
+export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, serviceInvoices, hospitals, inventory, onSave, onDelete, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
-  const [targetType, setTargetType] = useState<'PATIENT' | 'VENDOR'>('PATIENT');
+  const [targetType, setTargetType] = useState<'PATIENT' | 'VENDOR' | 'HOSPITAL'>('PATIENT');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [showPatientResults, setShowPatientResults] = useState(false);
@@ -32,10 +34,18 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [vendorSearchTerm, setVendorSearchTerm] = useState('');
   const [showVendorResults, setShowVendorResults] = useState(false);
+
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [hospitalSearchTerm, setHospitalSearchTerm] = useState('');
+  const [showHospitalResults, setShowHospitalResults] = useState(false);
   
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
   const [showInvoiceResults, setShowInvoiceResults] = useState(false);
+
+  const [selectedServiceInvoice, setSelectedServiceInvoice] = useState<ServiceInvoice | null>(null);
+  const [serviceInvoiceSearchTerm, setServiceInvoiceSearchTerm] = useState('');
+  const [showServiceInvoiceResults, setShowServiceInvoiceResults] = useState(false);
 
   // Hearing Aid Selection for Debit Notes
   const [selectedHearingAids, setSelectedHearingAids] = useState<string[]>([]);
@@ -82,6 +92,20 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       if (type === 'DEBIT') setAmount(inv.balanceDue);
   };
 
+  const handleSelectServiceInvoice = (inv: ServiceInvoice) => {
+    setSelectedServiceInvoice(inv);
+    setServiceInvoiceSearchTerm(inv.id);
+    setShowServiceInvoiceResults(false);
+    setTargetType('HOSPITAL');
+    
+    // Auto-set hospital from invoice
+    setSelectedHospital(inv.hospitalDetails);
+    setHospitalSearchTerm(inv.hospitalName);
+    
+    // Suggest amount
+    setAmount(inv.totalAmount);
+  };
+
   const handleSave = () => {
     if (targetType === 'PATIENT' && (!selectedPatient || amount <= 0 || !reason)) { 
         alert("Please select a patient, enter an amount, and provide a reason."); 
@@ -91,17 +115,22 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         alert("Please select a vendor, enter an amount, and provide a reason."); 
         return; 
     }
+    if (targetType === 'HOSPITAL' && (!selectedHospital || amount <= 0 || !reason)) {
+        alert("Please select a hospital, enter an amount, and provide a reason.");
+        return;
+    }
 
     const newNote: FinancialNote = { 
         id: generateNextId(), 
         type, 
         date: new Date().toISOString().split('T')[0], 
         targetType,
-        targetId: targetType === 'PATIENT' ? selectedPatient!.id : selectedVendor!.id,
-        targetName: targetType === 'PATIENT' ? selectedPatient!.name : selectedVendor!.name,
+        targetId: targetType === 'PATIENT' ? selectedPatient!.id : targetType === 'VENDOR' ? selectedVendor!.id : selectedHospital!.id,
+        targetName: targetType === 'PATIENT' ? selectedPatient!.name : targetType === 'VENDOR' ? selectedVendor!.name : selectedHospital!.name,
         patientDetails: targetType === 'PATIENT' ? selectedPatient! : undefined,
         vendorDetails: targetType === 'VENDOR' ? selectedVendor! : undefined,
-        referenceInvoiceId: selectedInvoice?.id,
+        hospitalDetails: targetType === 'HOSPITAL' ? selectedHospital! : undefined,
+        referenceInvoiceId: selectedInvoice?.id || selectedServiceInvoice?.id,
         amount, 
         reason,
         hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined,
@@ -118,8 +147,12 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setPatientSearchTerm('');
       setSelectedVendor(null);
       setVendorSearchTerm('');
+      setSelectedHospital(null);
+      setHospitalSearchTerm('');
       setSelectedInvoice(null);
       setInvoiceSearchTerm('');
+      setSelectedServiceInvoice(null);
+      setServiceInvoiceSearchTerm('');
       setSelectedHearingAids([]);
       setHaSearchTerm('');
       setAmount(0);
@@ -160,6 +193,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">({note.targetType || 'PATIENT'})</p>
                 {(note.targetType === 'PATIENT' || !note.targetType) && note.patientDetails?.phone && <p className="text-sm font-bold text-slate-600 mt-1">{note.patientDetails.phone}</p>}
                 {note.targetType === 'VENDOR' && note.vendorDetails?.gstin && <p className="text-sm font-bold text-slate-600 mt-1">GSTIN: {note.vendorDetails.gstin}</p>}
+                {note.targetType === 'HOSPITAL' && note.hospitalDetails?.gstin && <p className="text-sm font-bold text-slate-600 mt-1">GSTIN: {note.hospitalDetails.gstin}</p>}
                 {note.referenceInvoiceId && (
                     <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-200 flex items-center gap-2 text-[#3159a6] font-black uppercase text-[10px] tracking-widest">
                         <Link size={12}/> Ref Invoice: {note.referenceInvoiceId}
@@ -244,7 +278,11 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                     <td className="p-5 font-bold text-slate-400">{new Date(n.date).toLocaleDateString('en-IN')}</td>
                                     <td className="p-5 font-black text-slate-800 uppercase tracking-tight">{n.targetName || n.patientName}</td>
                                     <td className="p-5">
-                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg border ${(n.targetType || 'PATIENT') === 'PATIENT' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg border ${
+                                            (n.targetType || 'PATIENT') === 'PATIENT' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                                            (n.targetType === 'HOSPITAL') ? 'bg-green-50 text-green-600 border-green-100' :
+                                            'bg-purple-50 text-purple-600 border-purple-100'
+                                        }`}>
                                             {n.targetType || 'PATIENT'}
                                         </span>
                                     </td>
@@ -302,55 +340,102 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
               </div>
           </div>
 
-          <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-50 space-y-8 animate-fade-in">
+          <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-50 space-y-8 animate-fade-in shadow-inner overflow-visible">
                 {/* Invoice Linking Section */}
-                <div className="space-y-4">
-                    <label className="block text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] ml-1">Link to Invoice (Optional)</label>
-                    <div className="relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] ml-1 text-center">Link to Patient Invoice</label>
                         <div className="relative">
-                            <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input 
-                                className="w-full pl-12 pr-4 py-4 bg-blue-50/50 border-2 border-blue-50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all font-bold text-gray-700 shadow-inner" 
-                                placeholder="Search by Invoice # or Patient..." 
-                                value={invoiceSearchTerm} 
-                                onChange={e => { setInvoiceSearchTerm(e.target.value); setShowInvoiceResults(true); }}
-                                onFocus={() => setShowInvoiceResults(true)}
-                            />
-                            {selectedInvoice && (
-                                <button onClick={() => { setSelectedInvoice(null); setInvoiceSearchTerm(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600"><X size={18}/></button>
+                            <div className="relative">
+                                <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input 
+                                    className="w-full pl-12 pr-12 py-4 bg-blue-50/50 border-2 border-blue-50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all font-bold text-gray-700 shadow-inner text-sm" 
+                                    placeholder="Search Patient Invoice..." 
+                                    value={invoiceSearchTerm} 
+                                    onChange={e => { setInvoiceSearchTerm(e.target.value); setShowInvoiceResults(true); }}
+                                    onFocus={() => setShowInvoiceResults(true)}
+                                    disabled={!!selectedServiceInvoice}
+                                />
+                                {selectedInvoice && (
+                                    <button onClick={() => { setSelectedInvoice(null); setInvoiceSearchTerm(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600"><X size={18}/></button>
+                                )}
+                            </div>
+                            {showInvoiceResults && invoiceSearchTerm && !selectedServiceInvoice && (
+                                <div className="absolute z-[100] w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar p-2">
+                                    {invoices.filter(i => 
+                                        i.id.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) || 
+                                        i.patientName.toLowerCase().includes(invoiceSearchTerm.toLowerCase())
+                                    ).map(inv => (
+                                        <button 
+                                            key={inv.id} 
+                                            type="button"
+                                            onClick={() => handleSelectInvoice(inv)} 
+                                            className="w-full text-left p-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 transition flex justify-between items-center group"
+                                        >
+                                            <div>
+                                                <p className="font-black text-slate-800 uppercase tracking-tight">{inv.id}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase">{inv.patientName} • {inv.date}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-[#3159a6]">₹{inv.finalTotal.toLocaleString()}</p>
+                                                <p className="text-[9px] text-red-400 font-black uppercase">Due: ₹{inv.balanceDue}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             )}
                         </div>
-                        {showInvoiceResults && invoiceSearchTerm && (
-                            <div className="absolute z-20 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar p-2">
-                                {invoices.filter(i => 
-                                    i.id.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) || 
-                                    i.patientName.toLowerCase().includes(invoiceSearchTerm.toLowerCase())
-                                ).map(inv => (
-                                    <button 
-                                        key={inv.id} 
-                                        type="button"
-                                        onClick={() => handleSelectInvoice(inv)} 
-                                        className="w-full text-left p-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 transition flex justify-between items-center group"
-                                    >
-                                        <div>
-                                            <p className="font-black text-slate-800 uppercase tracking-tight">{inv.id}</p>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase">{inv.patientName} • {inv.date}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-black text-[#3159a6]">₹{inv.finalTotal.toLocaleString()}</p>
-                                            <p className="text-[9px] text-red-400 font-black uppercase">Due: ₹{inv.balanceDue}</p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
-                    {selectedInvoice && (
-                        <div className="flex items-center gap-2 text-[10px] font-black text-green-600 uppercase bg-green-50 px-4 py-2 rounded-xl border border-green-100 self-start animate-fade-in">
-                            <CheckCircle2 size={12}/> Successfully Linked: {selectedInvoice.id}
+
+                    <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-green-600 uppercase tracking-[0.2em] ml-1 text-center">Link to Service Invoice</label>
+                        <div className="relative">
+                            <div className="relative">
+                                <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <input 
+                                    className="w-full pl-12 pr-12 py-4 bg-green-50/50 border-2 border-green-50 rounded-2xl outline-none focus:border-green-600 focus:bg-white transition-all font-bold text-gray-700 shadow-inner text-sm" 
+                                    placeholder="Search Service Invoice..." 
+                                    value={serviceInvoiceSearchTerm} 
+                                    onChange={e => { setServiceInvoiceSearchTerm(e.target.value); setShowServiceInvoiceResults(true); }}
+                                    onFocus={() => setShowServiceInvoiceResults(true)}
+                                    disabled={!!selectedInvoice}
+                                />
+                                {selectedServiceInvoice && (
+                                    <button onClick={() => { setSelectedServiceInvoice(null); setServiceInvoiceSearchTerm(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600"><X size={18}/></button>
+                                )}
+                            </div>
+                            {showServiceInvoiceResults && serviceInvoiceSearchTerm && !selectedInvoice && (
+                                <div className="absolute z-[100] w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar p-2">
+                                    {serviceInvoices.filter(i => 
+                                        i.id.toLowerCase().includes(serviceInvoiceSearchTerm.toLowerCase()) || 
+                                        i.hospitalName.toLowerCase().includes(serviceInvoiceSearchTerm.toLowerCase())
+                                    ).map(inv => (
+                                        <button 
+                                            key={inv.id} 
+                                            type="button"
+                                            onClick={() => handleSelectServiceInvoice(inv)} 
+                                            className="w-full text-left p-4 hover:bg-green-50 rounded-2xl border-b border-gray-50 last:border-0 transition flex justify-between items-center group"
+                                        >
+                                            <div>
+                                                <p className="font-black text-slate-800 uppercase tracking-tight">{inv.id}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase">{inv.hospitalName} • {inv.date}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-green-600">₹{inv.totalAmount.toLocaleString()}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
+
+                {(selectedInvoice || selectedServiceInvoice) && (
+                    <div className="flex items-center gap-2 text-[10px] font-black text-green-600 uppercase bg-green-50 px-4 py-2 rounded-xl border border-green-100 self-start animate-fade-in mx-auto w-fit">
+                        <CheckCircle2 size={12}/> {selectedInvoice ? `Linked Patient Invoice: ${selectedInvoice.id}` : `Linked Service Invoice: ${selectedServiceInvoice?.id}`}
+                    </div>
+                )}
 
                 <hr className="border-dashed border-gray-100" />
 
@@ -361,19 +446,27 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                         <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl mb-4">
                             <button 
                                 type="button"
-                                onClick={() => { setTargetType('PATIENT'); setSelectedVendor(null); setVendorSearchTerm(''); }}
+                                onClick={() => { setTargetType('PATIENT'); setSelectedVendor(null); setVendorSearchTerm(''); setSelectedHospital(null); setHospitalSearchTerm(''); }}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition ${targetType === 'PATIENT' ? 'bg-white text-[#3159a6] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                disabled={!!selectedInvoice}
+                                disabled={!!selectedInvoice || !!selectedServiceInvoice}
                             >
                                 <User size={14} /> Patient
                             </button>
                             <button 
                                 type="button"
-                                onClick={() => { setTargetType('VENDOR'); setSelectedPatient(null); setPatientSearchTerm(''); }}
+                                onClick={() => { setTargetType('VENDOR'); setSelectedPatient(null); setPatientSearchTerm(''); setSelectedHospital(null); setHospitalSearchTerm(''); }}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition ${targetType === 'VENDOR' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                disabled={!!selectedInvoice}
+                                disabled={!!selectedInvoice || !!selectedServiceInvoice}
                             >
                                 <Building2 size={14} /> Vendor
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => { setTargetType('HOSPITAL'); setSelectedPatient(null); setPatientSearchTerm(''); setSelectedVendor(null); setVendorSearchTerm(''); }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase transition ${targetType === 'HOSPITAL' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                disabled={!!selectedInvoice || !!selectedServiceInvoice}
+                            >
+                                <Building2 size={14} /> Hospital
                             </button>
                         </div>
 
@@ -386,9 +479,9 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                     value={patientSearchTerm} 
                                     onChange={e => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }}
                                     onFocus={() => setShowPatientResults(true)}
-                                    disabled={!!selectedInvoice}
+                                    disabled={!!selectedInvoice || !!selectedServiceInvoice}
                                 />
-                                {showPatientResults && patientSearchTerm && !selectedInvoice && (
+                                {showPatientResults && patientSearchTerm && !selectedInvoice && !selectedServiceInvoice && (
                                     <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
                                         {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
                                             <button 
@@ -403,7 +496,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                     </div>
                                 )}
                             </div>
-                        ) : (
+                        ) : targetType === 'VENDOR' ? (
                             <div className="relative">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                 <input 
@@ -428,6 +521,32 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                     </div>
                                 )}
                             </div>
+                        ) : (
+                            <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input 
+                                    className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 rounded-2xl focus:border-green-600 outline-none transition-all font-bold text-gray-700 bg-gray-50 focus:bg-white shadow-sm" 
+                                    placeholder="Search by hospital name..." 
+                                    value={hospitalSearchTerm} 
+                                    onChange={e => { setHospitalSearchTerm(e.target.value); setShowHospitalResults(true); }}
+                                    onFocus={() => setShowHospitalResults(true)}
+                                    disabled={!!selectedInvoice || !!selectedServiceInvoice}
+                                />
+                                {showHospitalResults && hospitalSearchTerm && !selectedInvoice && !selectedServiceInvoice && (
+                                    <div className="absolute z-10 w-full mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                                        {hospitals.filter(h=>h.name.toLowerCase().includes(hospitalSearchTerm.toLowerCase())).map(h=>(
+                                            <button 
+                                                key={h.id} 
+                                                type="button"
+                                                onClick={()=>{setSelectedHospital(h); setShowHospitalResults(false); setHospitalSearchTerm(h.name);}} 
+                                                className="w-full text-left p-3 hover:bg-green-50 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase text-xs text-slate-700 tracking-tighter"
+                                            >
+                                                {h.name} <span className="text-[9px] text-gray-400 ml-2">({h.gstin})</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         )}
 
                         {selectedPatient && targetType === 'PATIENT' && !selectedInvoice && (
@@ -438,6 +557,11 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                         {selectedVendor && targetType === 'VENDOR' && (
                             <div className="text-[10px] font-black text-purple-600 bg-purple-50 px-4 py-2 rounded-xl border border-purple-100 uppercase tracking-widest inline-block animate-fade-in">
                                 Selection: {selectedVendor.name}
+                            </div>
+                        )}
+                        {selectedHospital && targetType === 'HOSPITAL' && (
+                            <div className="text-[10px] font-black text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-100 uppercase tracking-widest inline-block animate-fade-in">
+                                Selection: {selectedHospital.name}
                             </div>
                         )}
                     </div>
