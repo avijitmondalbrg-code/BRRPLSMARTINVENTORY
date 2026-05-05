@@ -59,7 +59,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const generateNextId = () => {
     const fy = getFinancialYear();
     const typeCode = type === 'CREDIT' ? 'CN' : 'DN';
-    const prefix = `BRRPL-${typeCode}-${fy}-`;
+    const prefix = `BR-${typeCode}-${fy}-`;
     const sameFyNotes = notes.filter(n => n.id.startsWith(prefix) && n.type === type);
     if (sameFyNotes.length === 0) return `${prefix}001`;
     const numbers = sameFyNotes.map(n => {
