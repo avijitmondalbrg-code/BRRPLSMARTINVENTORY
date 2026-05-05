@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { FinancialNote, Patient, Invoice, UserRole, Vendor, HearingAid, Hospital, ServiceInvoice } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear } from '../constants';
 // Added CheckCircle2 and IndianRupee to imports to fix "Cannot find name" errors on lines 309 and 356
-import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2, Package, Edit, PlusCircle } from 'lucide-react';
+import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2, Package, Edit, PlusCircle, Calendar } from 'lucide-react';
 
 interface FinancialNotesProps {
   type: 'CREDIT' | 'DEBIT';
@@ -54,6 +54,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState('');
+  const [noteDate, setNoteDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [lineItems, setLineItems] = useState<FinancialNoteItem[]>([{ id: '1', description: '', amount: 0 }]);
   const [tdsAmount, setTdsAmount] = useState<number>(0);
   const [viewNote, setViewNote] = useState<FinancialNote | null>(null);
@@ -79,7 +80,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const generateNextId = () => {
     const fy = getFinancialYear();
     const typeCode = type === 'CREDIT' ? 'CN' : 'DN';
-    const prefix = `BR-${typeCode}-${fy}-`;
+    const prefix = `BRRPL-${typeCode}-${fy}-`;
     const sameFyNotes = notes.filter(n => n.id.startsWith(prefix) && n.type === type);
     if (sameFyNotes.length === 0) return `${prefix}001`;
     const numbers = sameFyNotes.map(n => {
@@ -128,6 +129,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
 
   const handleEdit = (note: FinancialNote) => {
     setEditingNoteId(note.id);
+    setNoteDate(note.date);
     setAmount(note.amount);
     setReason(note.reason);
     setLineItems(note.lineItems && note.lineItems.length > 0 ? note.lineItems : [{ id: '1', description: note.reason, amount: note.amount }]);
@@ -183,7 +185,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
     const newNote: FinancialNote = { 
         id: editingNoteId || generateNextId(), 
         type, 
-        date: notes.find(n => n.id === editingNoteId)?.date || new Date().toISOString().split('T')[0], 
+        date: noteDate, 
         targetType,
         targetId: targetType === 'PATIENT' ? selectedPatient!.id : targetType === 'VENDOR' ? selectedVendor!.id : selectedHospital!.id,
         targetName: targetType === 'PATIENT' ? selectedPatient!.name : targetType === 'VENDOR' ? selectedVendor!.name : selectedHospital!.name,
@@ -220,6 +222,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setHaSearchTerm('');
       setAmount(0);
       setReason('');
+      setNoteDate(new Date().toISOString().split('T')[0]);
       setLineItems([{ id: '1', description: '', amount: 0 }]);
       setTdsAmount(0);
       setEditingNoteId(null);
@@ -464,6 +467,19 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
           <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-50 space-y-8 animate-fade-in shadow-inner overflow-visible">
                 {/* Invoice Linking Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 text-center">Note Issuance Date</label>
+                        <div className="relative">
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                            <input 
+                                type="date"
+                                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all font-bold text-gray-700 shadow-inner" 
+                                value={noteDate}
+                                onChange={e => setNoteDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-4">
                         <label className="block text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] ml-1 text-center">Link to Patient Invoice</label>
                         <div className="relative">
