@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { FinancialNote, Patient, Invoice, UserRole, Vendor, HearingAid } from '../types';
+import { FinancialNote, Patient, Invoice, UserRole, Vendor, HearingAid, Hospital, ServiceInvoice } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear } from '../constants';
 // Added CheckCircle2 and IndianRupee to imports to fix "Cannot find name" errors on lines 309 and 356
-import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2, Package } from 'lucide-react';
+import { Search, Plus, FileMinus, FilePlus, Printer, Save, ArrowLeft, FileText, Lock, Trash2, X, Eye, Link, CheckCircle2, IndianRupee, User, Building2, Package, Edit } from 'lucide-react';
 
 interface FinancialNotesProps {
   type: 'CREDIT' | 'DEBIT';
@@ -55,11 +55,12 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState('');
   const [viewNote, setViewNote] = useState<FinancialNote | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   const generateNextId = () => {
     const fy = getFinancialYear();
     const typeCode = type === 'CREDIT' ? 'CN' : 'DN';
-    const prefix = `BR-${typeCode}-${fy}-`;
+    const prefix = `BRRPL-${typeCode}-${fy}-`;
     const sameFyNotes = notes.filter(n => n.id.startsWith(prefix) && n.type === type);
     if (sameFyNotes.length === 0) return `${prefix}001`;
     const numbers = sameFyNotes.map(n => {
@@ -106,6 +107,41 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
     setAmount(inv.totalAmount);
   };
 
+  const handleEdit = (note: FinancialNote) => {
+    setEditingNoteId(note.id);
+    setAmount(note.amount);
+    setReason(note.reason);
+    setTargetType(note.targetType || 'PATIENT');
+    
+    if (note.targetType === 'PATIENT' || !note.targetType) {
+        setSelectedPatient(note.patientDetails || null);
+        setPatientSearchTerm(note.targetName || note.patientName || '');
+    } else if (note.targetType === 'VENDOR') {
+        setSelectedVendor(note.vendorDetails || null);
+        setVendorSearchTerm(note.targetName || '');
+        if (note.hearingAidIds) setSelectedHearingAids(note.hearingAidIds);
+    } else if (note.targetType === 'HOSPITAL') {
+        setSelectedHospital(note.hospitalDetails || null);
+        setHospitalSearchTerm(note.targetName || '');
+    }
+
+    if (note.referenceInvoiceId) {
+        const inv = invoices.find(i => i.id === note.referenceInvoiceId);
+        if (inv) {
+            setSelectedInvoice(inv);
+            setInvoiceSearchTerm(inv.id);
+        } else {
+            const sInv = serviceInvoices.find(i => i.id === note.referenceInvoiceId);
+            if (sInv) {
+                setSelectedServiceInvoice(sInv);
+                setServiceInvoiceSearchTerm(sInv.id);
+            }
+        }
+    }
+
+    setViewMode('create');
+  };
+
   const handleSave = () => {
     if (targetType === 'PATIENT' && (!selectedPatient || amount <= 0 || !reason)) { 
         alert("Please select a patient, enter an amount, and provide a reason."); 
@@ -121,9 +157,9 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
     }
 
     const newNote: FinancialNote = { 
-        id: generateNextId(), 
+        id: editingNoteId || generateNextId(), 
         type, 
-        date: new Date().toISOString().split('T')[0], 
+        date: notes.find(n => n.id === editingNoteId)?.date || new Date().toISOString().split('T')[0], 
         targetType,
         targetId: targetType === 'PATIENT' ? selectedPatient!.id : targetType === 'VENDOR' ? selectedVendor!.id : selectedHospital!.id,
         targetName: targetType === 'PATIENT' ? selectedPatient!.name : targetType === 'VENDOR' ? selectedVendor!.name : selectedHospital!.name,
@@ -157,6 +193,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
       setHaSearchTerm('');
       setAmount(0);
       setReason('');
+      setEditingNoteId(null);
   };
 
   const toggleHearingAid = (id: string) => {
@@ -298,7 +335,10 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
                                         <div className="flex justify-center gap-2">
                                             <button onClick={() => { setViewNote(n); setViewMode('view'); }} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition" title="View/Print"><Eye size={20}/></button>
                                             {userRole === 'admin' && (
-                                                <button onClick={() => { if(window.confirm(`Delete note ${n.id}?`)) onDelete(n.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition" title="Remove"><Trash2 size={20}/></button>
+                                                <>
+                                                    <button onClick={() => handleEdit(n)} className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition" title="Edit"><Edit size={20}/></button>
+                                                    <button onClick={() => { if(window.confirm(`Delete note ${n.id}?`)) onDelete(n.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition" title="Remove"><Trash2 size={20}/></button>
+                                                </>
                                             )}
                                         </div>
                                     </td>
@@ -335,7 +375,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
           <div className="flex items-center gap-4 mb-8">
               <button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 rounded-full text-gray-400 hover:bg-gray-100 shadow-sm transition"><ArrowLeft size={24}/></button>
               <div>
-                  <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">Issue {type} Note</h2>
+                  <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">{editingNoteId ? 'Edit' : 'Issue'} {type} Note</h2>
                   <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Financial Adjustment Node</p>
               </div>
           </div>
@@ -645,7 +685,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
 
                 <div className="flex flex-col sm:flex-row gap-5 pt-4">
                     <button onClick={() => setViewMode('list')} className="flex-1 py-5 border-2 border-gray-100 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] text-gray-400 hover:bg-gray-50 transition active:scale-95">Cancel Entry</button>
-                    <button onClick={handleSave} className="flex-[2] py-5 bg-[#3159a6] text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition active:scale-95">Confirm & Issue {type} Note</button>
+                    <button onClick={handleSave} className="flex-[2] py-5 bg-[#3159a6] text-white rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition active:scale-95">{editingNoteId ? 'Update' : 'Confirm & Issue'} {type} Note</button>
                 </div>
           </div>
       </div>
