@@ -221,7 +221,7 @@ export interface FinancialNote {
   id: string;
   type: 'CREDIT' | 'DEBIT';
   date: string;
-  targetType?: 'PATIENT' | 'VENDOR';
+  targetType?: 'PATIENT' | 'VENDOR' | 'HOSPITAL';
   targetId?: string;
   targetName?: string;
   patientId?: string; // Legacy
@@ -231,6 +231,7 @@ export interface FinancialNote {
   reason: string;
   patientDetails?: Patient;
   vendorDetails?: Vendor;
+  hospitalDetails?: Hospital;
   hearingAidIds?: string[]; // Added for Debit Notes linked to stock removal
   linkedItems?: HearingAid[]; // Added to store full item data for restocking if note is deleted
 }
