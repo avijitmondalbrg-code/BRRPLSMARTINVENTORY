@@ -80,7 +80,7 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
   const generateNextId = () => {
     const fy = getFinancialYear();
     const typeCode = type === 'CREDIT' ? 'CN' : 'DN';
-    const prefix = `BR-${typeCode}-${fy}-`;
+    const prefix = `BRRPL-${typeCode}-${fy}-`;
     const sameFyNotes = notes.filter(n => n.id.startsWith(prefix) && n.type === type);
     if (sameFyNotes.length === 0) return `${prefix}001`;
     const numbers = sameFyNotes.map(n => {
@@ -198,8 +198,21 @@ export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, pat
         lineItems,
         tdsAmount,
         totalBeforeTds,
-        hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : undefined,
-        linkedItems: type === 'DEBIT' && targetType === 'VENDOR' ? inventory.filter(i => selectedHearingAids.includes(i.id)) : undefined
+        hearingAidIds: type === 'DEBIT' && targetType === 'VENDOR' ? selectedHearingAids : 
+                      (type === 'CREDIT' && targetType === 'PATIENT' && selectedInvoice && finalAmount >= selectedInvoice.finalTotal ? selectedInvoice.items.map(i => i.hearingAidId) : undefined),
+        linkedItems: type === 'DEBIT' && targetType === 'VENDOR' ? inventory.filter(i => selectedHearingAids.includes(i.id)) : 
+                    (type === 'CREDIT' && targetType === 'PATIENT' && selectedInvoice && finalAmount >= selectedInvoice.finalTotal ? selectedInvoice.items.map(i => ({
+                        id: i.hearingAidId,
+                        brand: i.brand,
+                        model: i.model,
+                        serialNumber: i.serialNumber,
+                        price: i.price,
+                        location: selectedInvoice.hospitalName || 'Main Stock',
+                        status: 'Available',
+                        addedDate: new Date().toISOString().split('T')[0],
+                        gstRate: i.gstRate,
+                        hsnCode: i.hsnCode
+                    } as HearingAid)) : undefined)
     };
     onSave(newNote); 
     setViewMode('list');
