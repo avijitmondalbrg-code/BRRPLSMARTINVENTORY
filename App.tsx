@@ -290,9 +290,14 @@ const App: React.FC = () => {
   };
 
   const handleAddFinancialNote = async (note: FinancialNote) => {
-    setFinancialNotes([note, ...financialNotes]);
+    setFinancialNotes(prev => {
+        const exists = prev.find(n => n.id === note.id);
+        if (exists) return prev.map(n => n.id === note.id ? note : n);
+        return [note, ...prev];
+    });
     
-    // If Debit Note has linked hearing aids, remove them from inventory
+    // If Debit Note has linked hearing aids, remove them from inventory (only if it's a new note or newly added items)
+    // For simplicity, we only trigger this when items are actually in the note.
     if (note.type === 'DEBIT' && note.hearingAidIds && note.hearingAidIds.length > 0) {
         setInventory(prev => prev.filter(item => !note.hearingAidIds?.includes(item.id)));
         try {
@@ -304,6 +309,23 @@ const App: React.FC = () => {
         }
     }
 
+    // If Credit Note has linked items (from a returned invoice), add them back to inventory
+    if (note.type === 'CREDIT' && note.linkedItems && note.linkedItems.length > 0) {
+        // Prevent duplicates in state if adding multiple times (though handleAdd is called once)
+        setInventory(prev => {
+            const existingIds = new Set(prev.map(i => i.id));
+            const itemsToAdd = (note.linkedItems || []).filter(i => !existingIds.has(i.id));
+            return [...prev, ...itemsToAdd];
+        });
+        try {
+            for (const item of note.linkedItems) {
+                await setDocument('inventory', item.id, item);
+            }
+        } catch (e) {
+            console.error("Failed to restock items during Credit Note save:", e);
+        }
+    }
+
     try { await setDocument('financialNotes', note.id, note); } catch(e) {}
   };
 
@@ -311,7 +333,8 @@ const App: React.FC = () => {
     const noteToDelete = financialNotes.find(n => n.id === id);
     setFinancialNotes(financialNotes.filter(n => n.id !== id));
     
-    // Restock items if it's a Debit Note with linked items
+    // If Debit Note was deleted, it means the items should NOT have been removed from inventory.
+    // So we add them back to inventory.
     if (noteToDelete && noteToDelete.type === 'DEBIT' && noteToDelete.linkedItems && noteToDelete.linkedItems.length > 0) {
         setInventory(prev => [...prev, ...(noteToDelete.linkedItems || [])]);
         try {
@@ -321,6 +344,20 @@ const App: React.FC = () => {
             alert(`Debit Note ${id} deleted and ${noteToDelete.linkedItems.length} items restocked in inventory.`);
         } catch (e) {
             console.error("Failed to restock items during Debit Note deletion:", e);
+        }
+    }
+
+    // If Credit Note was deleted, it means the items should NOT have been restocked. (Mistake return)
+    // So we remove them from inventory.
+    if (noteToDelete && noteToDelete.type === 'CREDIT' && noteToDelete.linkedItems && noteToDelete.linkedItems.length > 0) {
+        setInventory(prev => prev.filter(item => !noteToDelete.linkedItems?.map(li => li.id).includes(item.id)));
+        try {
+            for (const item of noteToDelete.linkedItems) {
+                await deleteDocument('inventory', item.id);
+            }
+            alert(`Credit Note ${id} deleted and ${noteToDelete.linkedItems.length} items removed from inventory.`);
+        } catch (e) {
+            console.error("Failed to remove items during Credit Note deletion:", e);
         }
     }
 
