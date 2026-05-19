@@ -19,7 +19,7 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -711,6 +711,18 @@ service cloud.firestore {
             </button>
           ))}
           
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <h3 className="px-4 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Enterprise Apps</h3>
+            <a href="https://brg-hpms.vercel.app/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-2 rounded text-emerald-400 hover:bg-emerald-950/30 hover:text-emerald-300 transition group mb-1">
+                <Activity size={16} /> <span className="text-xs font-bold truncate">Hospital Management</span>
+                <ExternalLink size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+            <a href="https://brg-rota.vercel.app/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-2 rounded text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 transition group">
+                <CalendarDays size={16} /> <span className="text-xs font-bold truncate">Rota Management</span>
+                <ExternalLink size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          </div>
+
           <div className="pt-4 mt-4 border-t border-slate-800">
             <button onClick={refreshData} className="w-full flex items-center gap-3 px-4 py-2.5 rounded text-blue-300 hover:bg-slate-800 hover:text-white transition">
                 <RefreshCw size={18} /> <span className="text-sm font-medium">Sync Data</span>
