@@ -1,5 +1,4 @@
-import React from 'react';
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag, ShieldCheck, ExternalLink, Activity, CalendarDays } from 'lucide-react';
 import { ViewState, UserRole } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -26,6 +25,12 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
     { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200', roles: ['admin', 'user'] }
   ];
 
+  // Define external partner apps
+  const externalApps = [
+    { name: 'Hospital Patient Management', url: 'https://brg-hpms.vercel.app/', icon: Activity, color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+    { name: 'Rota Management', url: 'https://brg-rota.vercel.app/', icon: CalendarDays, color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' }
+  ];
+
   // Filter items based on user role
   const visibleNavItems = allNavItems.filter(item => item.roles.includes(userRole));
 
@@ -44,7 +49,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
         </div>
       </div>
 
-      <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center pb-20">
+      <div className="max-w-6xl w-full z-10 flex flex-col items-center text-center pb-20 mt-10">
         
         {/* Logo Container with Solid White Background */}
         <div className="bg-white p-10 rounded-[3rem] inline-block mb-12 shadow-[0_25px_60px_rgba(0,0,0,0.4)] border-8 border-white/20 ring-1 ring-black/5 animate-fade-in-up">
@@ -55,7 +60,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
           />
         </div>
 
-        <div className="mb-16 animate-fade-in">
+        <div className="mb-12 animate-fade-in">
           <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 uppercase drop-shadow-lg">
             BRG Smart Inventory System V2.0
           </h1>
@@ -64,12 +69,38 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
           </p>
         </div>
 
+        {/* External Apps Section */}
+        <div className="w-full max-w-4xl mb-12 flex flex-col sm:flex-row justify-center gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="w-full flex flex-col items-center">
+            <h2 className="text-[10px] font-black text-blue-200/50 uppercase tracking-[0.4em] mb-4">Connected Enterprise Apps</h2>
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+              {externalApps.map((app) => (
+                <a 
+                  key={app.name} 
+                  href={app.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`flex-1 flex items-center justify-between p-4 px-6 rounded-2xl border-2 transition-all hover:scale-[1.02] active:scale-95 group backdrop-blur-sm ${app.color}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-white/10 rounded-xl">
+                      <app.icon size={20} />
+                    </div>
+                    <span className="font-black uppercase tracking-widest text-[11px] truncate max-w-[200px]">{app.name}</span>
+                  </div>
+                  <ExternalLink size={16} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5 w-full max-w-7xl px-4">
           {visibleNavItems.map((item, idx) => (
             <button 
               key={item.id}
               onClick={() => onNavigate(item.id as any)}
-              style={{ animationDelay: `${idx * 50}ms` }}
+              style={{ animationDelay: `${idx * 50 + 200}ms` }}
               className="group bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up"
             >
               <div className={`p-3 rounded-2xl mb-3 bg-white/10 group-hover:bg-white/20 transition-all ${item.color} group-hover:scale-110`}>
@@ -80,7 +111,7 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
           ))}
         </div>
 
-        <div className="mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <div className="mt-16 animate-fade-in" style={{ animationDelay: '600ms' }}>
             <button 
               onClick={() => onNavigate('dashboard')} 
               className="flex items-center gap-4 bg-white text-[#3159a6] text-xl font-black py-6 px-16 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all hover:scale-105 active:scale-95 hover:bg-blue-50 uppercase tracking-[0.2em]"
