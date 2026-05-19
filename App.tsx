@@ -468,25 +468,43 @@ const App: React.FC = () => {
 
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
+    const updatedInvoiceToSave = { ...invoice, status: invoice.status || 'Active' } as Invoice;
     
     // Automation: Identify applied Advance Bookings
-    const appliedAdvanceIds = invoice.payments
+    const appliedAdvanceIds = updatedInvoiceToSave.payments
         .filter(p => p.method === 'Advance' && p.note?.includes('Ref: '))
         .map(p => p.note?.replace('Ref: ', '').trim())
         .filter(id => id);
 
     if (exists) {
-      setInvoices(prev => prev.map(i => i.id === invoice.id ? invoice : i));
-      try { await setDocument('invoices', invoice.id, invoice); } catch ( e) {}
+      // Find removed items to restock and new items to mark as sold
+      const oldItemIds = exists.items.map(i => i.hearingAidId).filter(id => id && !id.startsWith('MAN-'));
+      const newItemIds = soldItemIds;
+
+      const itemsToRestock = oldItemIds.filter(id => !newItemIds.includes(id));
+      const itemsToMarkSold = newItemIds.filter(id => !oldItemIds.includes(id));
+
+      setInvoices(prev => prev.map(i => i.id === invoice.id ? updatedInvoiceToSave : i));
+      setInventory(prev => prev.map(item => {
+          if (itemsToMarkSold.includes(item.id)) return { ...item, status: 'Sold' };
+          if (itemsToRestock.includes(item.id)) return { ...item, status: 'Available' };
+          return item;
+      }));
+
+      try {
+          await setDocument('invoices', invoice.id, updatedInvoiceToSave);
+          for (const id of itemsToMarkSold) { await updateDocument('inventory', id, { status: 'Sold' }); }
+          for (const id of itemsToRestock) { await updateDocument('inventory', id, { status: 'Available' }); }
+      } catch ( e) {}
     } else {
-      setInvoices([...invoices, invoice]);
+      setInvoices([...invoices, updatedInvoiceToSave]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
       
       // Update local AdvanceBookings state
       setAdvanceBookings(prev => prev.map(b => appliedAdvanceIds.includes(b.id) ? { ...b, status: 'Consumed' } : b));
 
       try {
-          await setDocument('invoices', invoice.id, invoice);
+          await setDocument('invoices', invoice.id, updatedInvoiceToSave);
           for (const id of soldItemIds) { await updateDocument('inventory', id, { status: 'Sold' }); }
           
           // Update applied advances in Firebase
@@ -496,6 +514,36 @@ const App: React.FC = () => {
       } catch(e) {}
     }
     setActiveView('billing');
+  };
+
+  const handleCancelInvoice = async (invoiceId: string) => {
+    const invoice = invoices.find(i => i.id === invoiceId);
+    if (!invoice) return;
+    
+    if (!window.confirm(`Are you sure you want to CANCEL invoice ${invoiceId}? Hearing aids will be restocked and record will be marked as Cancelled.`)) return;
+
+    try {
+        const inventoryItemIds = invoice.items
+            .map(i => i.hearingAidId)
+            .filter(id => id && !id.startsWith('MAN-'));
+
+        const updatedInvoice: Invoice = { ...invoice, status: 'Cancelled', paymentStatus: 'Unpaid', balanceDue: 0 };
+
+        await Promise.all([
+            ...inventoryItemIds.map(id => updateDocument('inventory', id, { status: 'Available' })),
+            updateDocument('invoices', invoiceId, updatedInvoice)
+        ]);
+
+        setInventory(prev => prev.map(item => 
+            inventoryItemIds.includes(item.id) ? { ...item, status: 'Available' } : item
+        ));
+        setInvoices(prev => prev.map(i => i.id === invoiceId ? (i.id === invoiceId ? updatedInvoice : i) : i));
+        
+        alert(`Invoice ${invoiceId} cancelled and stock updated.`);
+    } catch (err: any) {
+        console.error("Cancel operation failed:", err);
+        alert(`Failed to cancel invoice: ${err.message}`);
+    }
   };
 
   const handleUpdateInvoice = async (updatedInvoice: Invoice) => {
@@ -689,7 +737,7 @@ service cloud.firestore {
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
+          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} userRole={userRole!} />}
