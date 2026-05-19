@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -12,6 +12,7 @@ interface BillingProps {
   onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
   onUpdateInvoice?: (invoice: Invoice) => void;
   onDelete?: (invoiceId: string) => void;
+  onCancelInvoice?: (invoiceId: string) => void;
   logo: string;
   signature: string | null;
   userRole: UserRole;
@@ -35,7 +36,7 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, logo, signature, userRole }) => {
+export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, onCancelInvoice, logo, signature, userRole }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -332,6 +333,7 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
     let totalReceived = 0;
 
     filteredInvoices.forEach(inv => {
+      if (inv.status === 'Cancelled') return;
       totalSales += inv.finalTotal;
       totalOutstanding += (inv.balanceDue || 0);
       const collectedForInv = inv.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -453,13 +455,31 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                                     </td>
                                     <td className="p-5 text-right font-black">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
                                     <td className="p-5 text-right font-black text-red-600">₹{(inv.balanceDue || 0).toLocaleString('en-IN')}</td>
-                                    <td className="p-5 text-center"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 'bg-red-50 text-red-700 border-red-100'}`}>{inv.paymentStatus}</span></td>
+                                    <td className="p-5 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${
+                                                inv.status === 'Cancelled' ? 'bg-black text-white border-black' :
+                                                inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                                inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 
+                                                'bg-red-50 text-red-700 border-red-100'}`}>
+                                                {inv.status === 'Cancelled' ? 'Cancelled' : inv.paymentStatus}
+                                            </span>
+                                            {inv.status === 'Cancelled' && <p className="text-[8px] font-bold text-gray-400 mt-1 uppercase italic">Void Record</p>}
+                                        </div>
+                                    </td>
                                     <td className="p-5 text-center">
                                         <div className="flex justify-center items-center gap-1">
                                             <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
-                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice"><Edit size={18}/></button>
-                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5}><Wallet size={18} className={inv.balanceDue <= 0.5 ? 'opacity-20' : ''}/></button>
-                                            {userRole === 'admin' && onDelete && (<button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>)}
+                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice" disabled={inv.status === 'Cancelled'}><Edit size={18} className={inv.status === 'Cancelled' ? 'opacity-20' : ''}/></button>
+                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5 || inv.status === 'Cancelled'}><Wallet size={18} className={(inv.balanceDue <= 0.5 || inv.status === 'Cancelled') ? 'opacity-20' : ''}/></button>
+                                            
+                                            {inv.status !== 'Cancelled' && onCancelInvoice && (
+                                                <button onClick={() => onCancelInvoice(inv.id)} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition" title="Cancel Invoice"><Ban size={18}/></button>
+                                            )}
+
+                                            {userRole === 'admin' && onDelete && (
+                                                <button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
