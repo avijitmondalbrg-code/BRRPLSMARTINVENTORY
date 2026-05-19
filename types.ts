@@ -173,6 +173,7 @@ export interface Invoice {
   entryBy?: string; // Staff member who created invoice
   hospitalId?: string; // Linked hospital/clinic
   hospitalName?: string;
+  status?: 'Active' | 'Cancelled';
   
   // Payment Tracking
   payments: PaymentRecord[];
@@ -217,6 +218,12 @@ export interface Quotation {
   entryBy?: string; // Staff member who created quotation
 }
 
+export interface FinancialNoteItem {
+  id: string;
+  description: string;
+  amount: number;
+}
+
 export interface FinancialNote {
   id: string;
   type: 'CREDIT' | 'DEBIT';
@@ -227,8 +234,11 @@ export interface FinancialNote {
   patientId?: string; // Legacy
   patientName?: string; // Legacy
   referenceInvoiceId?: string;
-  amount: number;
-  reason: string;
+  amount: number; // Total net amount
+  reason: string; // Summary reason
+  lineItems?: FinancialNoteItem[];
+  tdsAmount?: number;
+  totalBeforeTds?: number;
   patientDetails?: Patient;
   vendorDetails?: Vendor;
   hospitalDetails?: Hospital;
