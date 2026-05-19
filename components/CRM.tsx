@@ -26,6 +26,8 @@ const SOURCE_OPTIONS = ['Walk-in', 'Ads', 'Referral', 'Facebook', 'Other'];
 export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConvertToPatient, onDelete, userRole }) => {
   const [viewType, setViewType] = useState<'pipeline' | 'schedule'>('pipeline');
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
@@ -53,14 +55,35 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   // Activity Form State
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({ type: 'Call', content: '' });
 
-  const filteredLeads = leads.filter(l => 
-    l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    l.phone.includes(searchTerm)
-  );
+  const filteredLeads = leads.filter(l => {
+    const matchesSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      l.phone.includes(searchTerm);
+    
+    let matchesDate = true;
+    if (startDate) matchesDate = matchesDate && l.createdAt >= startDate;
+    if (endDate) matchesDate = matchesDate && l.createdAt <= endDate;
+
+    return matchesSearch && matchesDate;
+  });
 
   const scheduleLeads = useMemo(() => {
     return leads.filter(l => l.nextFollowUp === scheduleDate);
   }, [leads, scheduleDate]);
+
+  const exportFilteredToCSV = () => {
+    const headers = ['Entry Date', 'Patient Name', 'Phone', 'Address', 'Status', 'Inquiry Source', 'Problem', 'Potential Value', 'Next F/U', 'Assigned Staff', 'Hospital'];
+    const rows = filteredLeads.map(l => [
+      l.createdAt, `"${l.name}"`, l.phone, `"${l.address || ''}"`, l.status, l.source, `"${l.problem || 'N/A'}"`, l.value || 0, l.nextFollowUp || 'N/A', `"${l.entryBy || ''}"`, `"${l.hospital || ''}"`
+    ]);
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `crm_leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const exportScheduleToCSV = () => {
     const headers = ['Patient Name', 'Phone', 'Status', 'Inquiry Source', 'Problem', 'Potential Value', 'Scheduled Date'];
@@ -228,6 +251,27 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                  <input type="text" placeholder="Find lead..." className="outline-none text-xs font-bold w-32" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
 
+            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border flex items-center gap-3">
+                 <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-gray-400 uppercase">From</span>
+                    <input type="date" className="outline-none text-xs font-bold text-primary" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                 </div>
+                 <div className="h-4 w-px bg-gray-200"></div>
+                 <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-gray-400 uppercase">To</span>
+                    <input type="date" className="outline-none text-xs font-bold text-primary" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                 </div>
+                 {(startDate || endDate) && (
+                    <button onClick={() => { setStartDate(''); setEndDate(''); }} className="text-red-400 hover:text-red-600 transition p-1">
+                        <XCircle size={14} />
+                    </button>
+                 )}
+            </div>
+
+            <button onClick={exportFilteredToCSV} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-xl transition-all font-black uppercase text-[10px] tracking-widest">
+              <Download size={14} /> Export CSV
+            </button>
+
             <button onClick={handleOpenAdd} className="bg-primary hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-xl transition-all font-black uppercase text-[10px] tracking-widest">
               <Plus size={18} /> New Entry
             </button>
@@ -265,7 +309,8 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
                                 </div>
                                 <div className="text-[10px] text-gray-500 space-y-2 uppercase font-bold tracking-wider">
                                     <div className="flex items-center gap-2"><Phone size={12} className="text-primary"/> {lead.phone}</div>
-                                    {lead.nextFollowUp && <div className="flex items-center gap-2 text-[#3159a6]"><Calendar size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}</div>}
+                                    <div className="flex items-center gap-2 text-gray-400"><Calendar size={12}/> Entry: {new Date(lead.createdAt).toLocaleDateString('en-IN')}</div>
+                                    {lead.nextFollowUp && <div className="flex items-center gap-2 text-[#3159a6]"><Clock size={12}/> F/U: {new Date(lead.nextFollowUp).toLocaleDateString('en-IN')}</div>}
                                     {lead.value ? <div className="flex items-center gap-2 text-teal-600 font-black"><IndianRupee size={12}/> {lead.value.toLocaleString()}</div> : null}
                                 </div>
                                 <div className="mt-4 pt-3 border-t flex justify-between items-end">
