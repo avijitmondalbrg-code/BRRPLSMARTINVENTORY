@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Patient, Invoice, UserRole } from '../types';
 import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote, Baby } from 'lucide-react';
 import { INDIAN_STATES, WEST_BENGAL_DISTRICTS } from '../constants';
@@ -13,13 +13,35 @@ interface PatientsProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
-export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPatient, onUpdatePatient, onDelete, userRole }) => {
+export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPatient, onUpdatePatient, onDelete, userRole, backHandlerRef }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (viewingHistoryId !== null) {
+        setViewingHistoryId(null);
+        return true;
+      }
+      if (showModal) {
+        setShowModal(false);
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [viewingHistoryId, showModal, backHandlerRef]);
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
