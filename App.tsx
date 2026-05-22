@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord, PurchaseOrder } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
@@ -19,7 +19,7 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
   const [companySignature, setCompanySignature] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
+  const backHandlerRef = useRef<(() => boolean) | null>(null);
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -753,6 +754,19 @@ service cloud.firestore {
       <main className="flex-1 overflow-y-auto">
         <header className="bg-white border-b px-8 py-4 flex justify-between items-center print:hidden">
           <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  if (backHandlerRef.current && backHandlerRef.current()) {
+                     return;
+                  }
+                  setActiveView('front-cover');
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-black text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-sm cursor-pointer uppercase tracking-wider scale-95 origin-left hover:scale-100 duration-150"
+                title="Return to Home Dashboard"
+              >
+                <ArrowLeft size={14} className="text-[#3159a6]" />
+                <span>Back</span>
+              </button>
               <h2 className="text-xl font-bold text-gray-800 capitalize">{activeView.replace('-', ' ')}</h2>
               <span className="text-xs font-bold uppercase text-[#3159a6] bg-blue-50 px-2 py-1 rounded border border-blue-200">{userRole}</span>
           </div>
@@ -765,15 +779,15 @@ service cloud.firestore {
           {activeView === 'asset-transfer' && <AssetTransfer assets={companyAssets} transferHistory={assetTransfers} onTransfer={handleAssetTransfer} />}
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
-          {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
-          {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
-          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
-          {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
+          {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
         </div>
