@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 /* FIX: Moved BRANDS import from ../constants to ../types as it is exported from types.ts */
 import { Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, BRANDS } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear, COMPANY_PAN } from '../constants';
@@ -12,6 +12,7 @@ interface DemoBillingProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 const numberToWords = (num: number): string => {
@@ -32,8 +33,26 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patients, onCreateInvoice, onDelete, logo, signature, userRole }) => {
+export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patients, onCreateInvoice, onDelete, logo, signature, userRole, backHandlerRef }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (viewMode !== 'list') {
+        setViewMode('list');
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [viewMode, backHandlerRef]);
+
   const [step, setStep] = useState<'patient' | 'product' | 'review'>('patient');
   const [searchTerm, setSearchTerm] = useState('');
   
