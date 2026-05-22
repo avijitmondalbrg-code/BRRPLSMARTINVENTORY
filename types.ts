@@ -39,6 +39,46 @@ export interface PurchaseRecord {
   createdAt: string;
 }
 
+export interface PurchaseOrderItem {
+  id: string;
+  brand: string;
+  model: string;
+  hsnCode: string;
+  qty: number;
+  rate: number; // Unit Purchase Cost
+  discount: number; // Item-specific flat discount
+  taxableValue: number;
+  gstRate: number; // Percentage (e.g., 18, 12, 0)
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  totalAmount: number;
+}
+
+export interface PurchaseOrder {
+  id: string; // e.g. PO-YYYYMMDD-XXXX
+  vendorId: string;
+  vendorName: string;
+  vendorDetails?: Vendor;
+  date: string;
+  expectedDeliveryDate?: string;
+  items: PurchaseOrderItem[];
+  
+  subtotal: number;
+  totalDiscount: number;
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalTax: number;
+  finalTotal: number;
+  
+  status: 'Draft' | 'Sent' | 'Approved' | 'Delivered' | 'Cancelled';
+  notes?: string;
+  entryBy?: string; // staff or admin
+  createdAt: string;
+}
+
 export interface CompanyAsset {
   id: string;
   name: string;
