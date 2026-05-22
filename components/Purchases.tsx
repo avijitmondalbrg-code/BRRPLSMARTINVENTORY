@@ -107,6 +107,7 @@ export const Purchases: React.FC<PurchasesProps> = ({
   const [poDate, setPoDate] = useState(new Date().toISOString().split('T')[0]);
   const [poExpectedDate, setPoExpectedDate] = useState('');
   const [poNotes, setPoNotes] = useState('');
+  const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [poItems, setPoItems] = useState<PurchaseOrderItem[]>([
     {
       id: 'po-item-1',
@@ -289,6 +290,8 @@ export const Purchases: React.FC<PurchasesProps> = ({
       finalTotal += item.totalAmount;
     });
 
+    finalTotal = Math.max(0, finalTotal - globalDiscount);
+
     return {
       subtotal,
       totalDiscount,
@@ -299,7 +302,7 @@ export const Purchases: React.FC<PurchasesProps> = ({
       totalTax,
       finalTotal
     };
-  }, [poItems]);
+  }, [poItems, globalDiscount]);
 
   const resetPoForm = () => {
     setPoVendor(null);
@@ -307,6 +310,7 @@ export const Purchases: React.FC<PurchasesProps> = ({
     setPoDate(new Date().toISOString().split('T')[0]);
     setPoExpectedDate('');
     setPoNotes('');
+    setGlobalDiscount(0);
     setPoItems([
       {
         id: 'po-item-1',
@@ -352,6 +356,7 @@ export const Purchases: React.FC<PurchasesProps> = ({
       items: poItems,
       subtotal: poCalculations.subtotal,
       totalDiscount: poCalculations.totalDiscount,
+      globalDiscount: globalDiscount,
       totalTaxableValue: poCalculations.totalTaxableValue,
       totalCGST: poCalculations.totalCGST,
       totalSGST: poCalculations.totalSGST,
@@ -776,10 +781,29 @@ export const Purchases: React.FC<PurchasesProps> = ({
 
            {/* TOTALS AND NOTES BLOCK */}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-              {/* Notes */}
-              <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Dispatch Remarks & Terms</label>
-                 <textarea className="w-full border rounded-xl p-4 text-xs font-medium h-32 resize-none outline-none focus:ring-1 focus:ring-primary bg-slate-50/10" value={poNotes} onChange={e => setPoNotes(e.target.value)} placeholder="e.g., Deliver to batanagar warehouse. Standard warranty applies. Goods should arrive in bubble-wrap packaging..." />
+              {/* Notes & Global Discount */}
+              <div className="space-y-4">
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Dispatch Remarks & Terms</label>
+                    <textarea className="w-full border rounded-xl p-3 text-xs font-medium h-24 resize-none outline-none focus:ring-1 focus:ring-primary bg-slate-50/10" value={poNotes} onChange={e => setPoNotes(e.target.value)} placeholder="e.g., Deliver to batanagar warehouse. Standard warranty applies. Goods should arrive in bubble-wrap packaging..." />
+                 </div>
+                 <div className="space-y-1 p-4 bg-blue-50/40 rounded-2xl border border-dashed border-blue-200">
+                    <label className="text-[10px] font-black uppercase text-[#3159a6] ml-1 flex items-center gap-1">
+                       <Tag size={12}/> Global Discount (Flat Rate)
+                    </label>
+                    <div className="relative">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">₹</span>
+                       <input 
+                          type="number" 
+                          min="0"
+                          className="w-full pl-8 border-2 border-slate-100 rounded-xl p-2.5 focus:border-[#3159a6] outline-none font-bold text-slate-800 text-sm bg-white" 
+                          placeholder="Enter flat discount amount..." 
+                          value={globalDiscount || ''} 
+                          onChange={e => setGlobalDiscount(Math.max(0, Number(e.target.value)))} 
+                       />
+                    </div>
+                    <p className="text-[9px] text-[#3159a6] font-bold uppercase tracking-wider block mt-1">This amount will be deducted from the final order total.</p>
+                 </div>
               </div>
 
               {/* Price Calculations Sheet */}
@@ -795,6 +819,12 @@ export const Purchases: React.FC<PurchasesProps> = ({
                        <span>Combined Discount</span>
                        <span>- ₹{poCalculations.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
+                    {globalDiscount > 0 && (
+                       <div className="flex justify-between text-rose-600 font-bold">
+                          <span>Global Discount (Flat)</span>
+                          <span>- ₹{globalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                       </div>
+                    )}
                     <div className="flex justify-between text-slate-700 border-t pt-2 border-slate-200/50">
                        <span>Taxable Value</span>
                        <span>₹{poCalculations.totalTaxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -1005,6 +1035,12 @@ export const Purchases: React.FC<PurchasesProps> = ({
                        <span>Combined PO Discount</span>
                        <span>- ₹{selectedPo.totalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
+                    {selectedPo.globalDiscount !== undefined && selectedPo.globalDiscount > 0 && (
+                       <div className="flex justify-between text-rose-600 font-bold">
+                          <span>Global Discount (Flat)</span>
+                          <span>- ₹{selectedPo.globalDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                       </div>
+                    )}
                     <div className="flex justify-between border-t border-slate-200/50 pt-1.5 text-slate-700">
                        <span>Taxable Value Weight (A)</span>
                        <span>₹{selectedPo.totalTaxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
