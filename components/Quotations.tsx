@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HearingAid, Patient, Quotation, InvoiceItem, UserRole } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES } from '../constants';
 import { FileQuestion, Printer, Save, Plus, ArrowLeft, Search, CheckCircle, Trash2, Edit, MessageSquare, Download, Calendar, X, UserCheck, Stethoscope, Wrench, PackagePlus } from 'lucide-react';
@@ -14,6 +14,7 @@ interface QuotationsProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 const numberToWords = (num: number): string => {
@@ -34,8 +35,26 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, patients, onCreateQuotation, onUpdateQuotation, onConvertToInvoice, onDelete, logo, signature, userRole }) => {
+export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, patients, onCreateQuotation, onUpdateQuotation, onConvertToInvoice, onDelete, logo, signature, userRole, backHandlerRef }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (viewMode !== 'list') {
+        setViewMode('list');
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [viewMode, backHandlerRef]);
+
   const [step, setStep] = useState<'patient' | 'product' | 'review'>('patient');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [listSearchTerm, setListSearchTerm] = useState('');
