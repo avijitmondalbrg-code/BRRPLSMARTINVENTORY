@@ -367,4 +367,5 @@ export const BRANDS = [
   'Battery 675',
   'Battery 312',
   'Battery 10',
+  'Instrument',
 ];
