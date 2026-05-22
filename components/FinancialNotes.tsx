@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FinancialNote, Patient, Invoice, UserRole, Vendor, HearingAid, Hospital, ServiceInvoice } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN, getFinancialYear } from '../constants';
 // Added CheckCircle2 and IndianRupee to imports to fix "Cannot find name" errors on lines 309 and 356
@@ -19,10 +19,28 @@ interface FinancialNotesProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
-export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, serviceInvoices, hospitals, inventory, onSave, onDelete, logo, signature, userRole }) => {
+export const FinancialNotes: React.FC<FinancialNotesProps> = ({ type, notes, patients, vendors, invoices, serviceInvoices, hospitals, inventory, onSave, onDelete, logo, signature, userRole, backHandlerRef }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'view'>('list');
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (viewMode !== 'list') {
+        setViewMode('list');
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [viewMode, backHandlerRef]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
