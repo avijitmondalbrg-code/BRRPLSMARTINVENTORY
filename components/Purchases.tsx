@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Vendor, PurchaseRecord, LOCATIONS, BRANDS, UserRole, PurchaseOrder, PurchaseOrderItem } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, CLINIC_GSTIN } from '../constants';
 import { 
@@ -20,6 +20,7 @@ interface PurchasesProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 // Helper to convert number to words
@@ -53,7 +54,8 @@ export const Purchases: React.FC<PurchasesProps> = ({
   onDeletePurchaseOrder,
   logo, 
   signature, 
-  userRole 
+  userRole,
+  backHandlerRef
 }) => {
   // Access Control: Block non-admin users
   if (userRole !== 'admin') {
@@ -99,6 +101,35 @@ export const Purchases: React.FC<PurchasesProps> = ({
 
   // ========== Purchase Order (PO) Form Hook States ==========
   const [viewPoMode, setViewPoMode] = useState<'list' | 'create' | 'view'>('list');
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (activeTab === 'po' && viewPoMode !== 'list') {
+        setViewPoMode('list');
+        return true;
+      }
+      if (activeTab !== 'purchases') {
+        setActiveTab('purchases');
+        return true;
+      }
+      if (showVendorModal) {
+        setShowVendorModal(false);
+        return true;
+      }
+      if (showPurchaseModal) {
+        setShowPurchaseModal(false);
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [activeTab, viewPoMode, showVendorModal, showPurchaseModal, backHandlerRef]);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
   
   const [poVendor, setPoVendor] = useState<Vendor | null>(null);
