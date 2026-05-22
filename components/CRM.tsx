@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, LeadStatus, Activity, UserRole, LOCATIONS } from '../types';
 import { COMPANY_ADDRESS, STAFF_NAMES, AUDIOLOGIST_NAMES } from '../constants';
 import { Plus, Search, Phone, Calendar, MessageCircle, User, ArrowRight, CheckCircle, XCircle, Clock, Send, MessageSquare, AlertCircle, Trash2, MapPin, Baby, UserCheck, Edit3, List, LayoutGrid, Download, Filter, CheckCircle2, StickyNote, IndianRupee, Landmark, Stethoscope } from 'lucide-react';
@@ -10,6 +10,7 @@ interface CRMProps {
   onConvertToPatient: (lead: Lead) => void;
   onDelete: (leadId: string) => void;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 const STATUS_COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
@@ -23,7 +24,7 @@ const STATUS_COLUMNS: { id: LeadStatus; label: string; color: string }[] = [
 
 const SOURCE_OPTIONS = ['Walk-in', 'Ads', 'Referral', 'Facebook', 'Other'];
 
-export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConvertToPatient, onDelete, userRole }) => {
+export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConvertToPatient, onDelete, userRole, backHandlerRef }) => {
   const [viewType, setViewType] = useState<'pipeline' | 'schedule'>('pipeline');
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -32,6 +33,28 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (selectedLead !== null) {
+        setSelectedLead(null);
+        return true;
+      }
+      if (showAddModal) {
+        setShowAddModal(false);
+        setEditingLeadId(null);
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [selectedLead, showAddModal, backHandlerRef]);
 
   // Automation State
   const [showStatusSuccessModal, setShowStatusSuccessModal] = useState(false);
