@@ -66,6 +66,7 @@ export interface PurchaseOrder {
   
   subtotal: number;
   totalDiscount: number;
+  globalDiscount?: number;
   totalTaxableValue: number;
   totalCGST: number;
   totalSGST: number;
