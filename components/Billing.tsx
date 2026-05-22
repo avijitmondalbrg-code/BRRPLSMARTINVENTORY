@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban } from 'lucide-react';
@@ -16,6 +16,7 @@ interface BillingProps {
   logo: string;
   signature: string | null;
   userRole: UserRole;
+  backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 const numberToWords = (num: number): string => {
@@ -36,11 +37,28 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, onCancelInvoice, logo, signature, userRole }) => {
+export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, onCancelInvoice, logo, signature, userRole, backHandlerRef }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (!backHandlerRef) return;
+    const handler = () => {
+      if (viewMode !== 'list') {
+        setViewMode('list');
+        return true;
+      }
+      return false;
+    };
+    backHandlerRef.current = handler;
+    return () => {
+      if (backHandlerRef.current === handler) {
+        backHandlerRef.current = null;
+      }
+    };
+  }, [viewMode, backHandlerRef]);
   
   // Post-Save Automation
   const [showSuccessModal, setShowSuccessModal] = useState(false);
