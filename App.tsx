@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord } from './types';
+import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord, PurchaseOrder } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [inventory, setInventory] = useState<HearingAid[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [demoInvoices, setDemoInvoices] = useState<Invoice[]>([]);
   const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
@@ -70,10 +71,11 @@ const App: React.FC = () => {
           fetchCollection('settings'),
           fetchCollection('companyAssets'),
           fetchCollection('vendors'),
-          fetchCollection('purchases')
+          fetchCollection('purchases'),
+          fetchCollection('purchaseOrders')
       ]);
 
-      const [inv, invs, dinvs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur] = await fetchPromise;
+      const [inv, invs, dinvs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
@@ -86,6 +88,7 @@ const App: React.FC = () => {
       setInventory((inv as HearingAid[]) || []);
       setVendors((vends as Vendor[]) || []);
       setPurchases((pur as PurchaseRecord[]) || []);
+      setPurchaseOrders((poList as PurchaseOrder[]) || []);
       setInvoices((invs as Invoice[]) || []);
       setDemoInvoices((dinvs as Invoice[]) || []);
       setServiceInvoices((sinvs as ServiceInvoice[]) || []);
@@ -168,6 +171,20 @@ const App: React.FC = () => {
   const handleDeletePurchase = async (id: string) => {
     setPurchases(purchases.filter(p => p.id !== id));
     try { await deleteDocument('purchases', id); } catch(e) {}
+  };
+ 
+  const handleSavePurchaseOrder = async (po: PurchaseOrder) => {
+    setPurchaseOrders(prev => {
+      const exists = prev.find(p => p.id === po.id);
+      if (exists) return prev.map(p => p.id === po.id ? po : p);
+      return [po, ...prev];
+    });
+    try { await setDocument('purchaseOrders', po.id, po); } catch(e) {}
+  };
+ 
+  const handleDeletePurchaseOrder = async (id: string) => {
+    setPurchaseOrders(prev => prev.filter(p => p.id !== id));
+    try { await deleteDocument('purchaseOrders', id); } catch(e) {}
   };
 
   const handleUpdateSettings = async (logo: string, signature: string | null) => {
@@ -752,7 +769,7 @@ service cloud.firestore {
           {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!}/>}
           {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
-          {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} userRole={userRole!} />}
+          {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} />}
           {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
           {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} />}
