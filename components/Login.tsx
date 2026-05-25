@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole, AppUser } from '../types';
 import { COMPANY_LOGO_BASE64 } from '../constants';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 interface LoginProps {
   logo: string;
-  onLogin: (role: UserRole) => void;
+  onLogin: (role: UserRole, userDetails: AppUser) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -23,17 +25,47 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 300));
       const cleanUserId = uid.trim().toLowerCase();
       const cleanPassword = pass.trim();
+
+      if (!cleanUserId || !cleanPassword) {
+         throw new Error("ইউজার আইডি এবং পাসওয়ার্ড দেওয়া আবশ্যক।");
+      }
+
+      // 1. Try to fetch from Firebase users collection
+      let fetchedUser: AppUser | null = null;
+      try {
+        const docRef = doc(db, 'users', cleanUserId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          fetchedUser = { id: docSnap.id, ...docSnap.data() } as AppUser;
+        }
+      } catch (dbErr) {
+        console.warn("Database check fail, using offline fallbacks:", dbErr);
+      }
+
+      // 2. If user exists in Firestore, authenticate
+      if (fetchedUser) {
+        if (fetchedUser.status === 'Blocked') {
+          throw new Error("আপনার অ্যাকাউন্টটি ব্লক বা স্থগিত করা হয়েছে। অনুগ্রহ করে অ্যাডমিনের সাথে যোগাযোগ করুন।");
+        }
+        if (fetchedUser.password === cleanPassword) {
+          onLogin(fetchedUser.role, fetchedUser);
+          return;
+        } else {
+          throw new Error("ভুল পাসওয়ার্ড। দয়া করে সঠিক পাসওয়ার্ড দিন।");
+        }
+      }
       
+      // 3. Fallback matching pre-defined local users
       if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
           (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
-          onLogin('admin');
+          onLogin('admin', { id: 'admin', username: 'admin', name: 'System Administrator', role: 'admin', status: 'Active' });
       } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
-          onLogin('user');
+          onLogin('user', { id: 'user', username: 'user', name: 'Default User', role: 'user', status: 'Active' });
       } else {
-         throw new Error("Invalid User ID or Password. Please check and try again.");
+          throw new Error("ভুল ইউজার আইডি বা পাসওয়ার্ড। দয়া করে সঠিক তথ্য দিয়ে আবার চেষ্টা করুন।");
       }
     } catch (err: any) {
       setError(err.message);
