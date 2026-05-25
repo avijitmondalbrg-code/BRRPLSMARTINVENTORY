@@ -208,7 +208,14 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 <tr><td colSpan={5} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No service invoices found</td></tr>
               ) : filtered.map(inv => (
                 <tr key={inv.id} className="hover:bg-slate-50/50 transition">
-                  <td className="p-5 font-black text-primary uppercase">{inv.id}</td>
+                  <td className="p-5 font-black text-primary uppercase">
+                    <div>{inv.id}</div>
+                    {inv.entryBy && (
+                      <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider normal-case">
+                        By: {inv.entryBy}
+                      </div>
+                    )}
+                  </td>
                   <td className="p-5 font-bold text-gray-500">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
                   <td className="p-5 font-black text-gray-800 uppercase">{inv.hospitalName}</td>
                   <td className="p-5 text-right font-black text-lg">₹{inv.totalAmount.toLocaleString('en-IN')}</td>
