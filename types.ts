@@ -9,6 +9,7 @@ export interface HearingAid {
   addedDate: string;
   hsnCode?: string;
   gstRate?: number; // Percentage (e.g., 12, 18)
+  entryBy?: string;
 }
 
 // FIX: Added missing Vendor interface to resolve import errors
@@ -37,6 +38,7 @@ export interface PurchaseRecord {
   purchaseAmount: number;
   location: string; // Where to add in stock
   createdAt: string;
+  entryBy?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -102,6 +104,7 @@ export interface AssetTransfer {
   transporter: string;
   receiver: string;
   note: string;
+  entryBy?: string;
 }
 
 export interface Patient {
@@ -119,6 +122,7 @@ export interface Patient {
   addedDate?: string; // Date patient was added to system
   notes?: string; // Paragraph notes about the patient
   dob?: string;
+  entryBy?: string;
 }
 
 export interface Hospital {
@@ -157,6 +161,7 @@ export interface ServiceInvoice {
   totalAmount: number;
   notes?: string;
   bankAccountName?: string;
+  entryBy?: string;
 }
 
 export interface PaymentRecord {
@@ -235,6 +240,7 @@ export interface AdvanceBooking {
   status: 'Active' | 'Consumed' | 'Refunded';
   notes?: string;
   bankDetails?: string;
+  entryBy?: string;
 }
 
 export interface Quotation {
@@ -285,6 +291,7 @@ export interface FinancialNote {
   hospitalDetails?: Hospital;
   hearingAidIds?: string[]; // Added for Debit Notes linked to stock removal
   linkedItems?: HearingAid[]; // Added to store full item data for restocking if note is deleted
+  entryBy?: string;
 }
 
 export interface StockTransfer {
@@ -300,6 +307,7 @@ export interface StockTransfer {
   transporter?: string;
   receiver?: string;
   note?: string;
+  entryBy?: string;
 }
 
 // FIX: Restored CRM Types to resolve Module not found errors
