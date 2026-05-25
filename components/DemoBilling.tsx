@@ -185,7 +185,14 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                           <tr><td colSpan={5} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No demo records found</td></tr>
                       ) : filteredInvoices.map(inv => (
                           <tr key={inv.id} className="hover:bg-pink-50/30 transition">
-                              <td className="p-5 font-black text-pink-600 uppercase">{inv.id}</td>
+                              <td className="p-5 font-black text-pink-600 uppercase">
+                                  <div>{inv.id}</div>
+                                  {inv.entryBy && (
+                                      <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider normal-case">
+                                          By: {inv.entryBy}
+                                      </div>
+                                  )}
+                              </td>
                               <td className="p-5 font-bold text-gray-500">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
                               <td className="p-5 font-black text-gray-800 uppercase">{inv.patientName}</td>
                               <td className="p-5 text-right font-black text-lg">₹{inv.finalTotal.toLocaleString()}</td>
