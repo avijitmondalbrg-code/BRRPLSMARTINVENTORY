@@ -158,11 +158,16 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                         <h3 className="font-black text-xl text-gray-800 leading-tight group-hover:text-[#3159a6] transition-colors uppercase tracking-tight">
                             {patient.name} {age !== null && <span className="text-[#3159a6] opacity-40 ml-1">({age}y)</span>}
                         </h3>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
                           <span className="text-[9px] bg-gray-50 text-gray-400 font-mono px-2 py-0.5 rounded-lg border border-gray-100">ID: {patient.id.slice(-6)}</span>
                           {patient.addedDate && (
                               <span className="text-[9px] bg-blue-50 text-[#3159a6] px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1">
                                 <Calendar size={10}/> {new Date(patient.addedDate).toLocaleDateString('en-IN')}
+                              </span>
+                          )}
+                          {patient.entryBy && (
+                              <span className="text-[9px] bg-teal-50 text-teal-800 px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1 border border-teal-100">
+                                BY: {patient.entryBy}
                               </span>
                           )}
                         </div>
