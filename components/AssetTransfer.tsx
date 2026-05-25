@@ -212,6 +212,12 @@ export const AssetTransfer: React.FC<AssetTransferProps> = ({ assets, transferHi
                                             <div className="flex items-center gap-1.5"><div className="w-1 h-1 bg-blue-400 rounded-full"></div><span className="text-[9px] font-black text-gray-400 uppercase">Sender:</span> <span className="text-xs font-bold text-gray-700">{log.sender}</span></div>
                                             <div className="flex items-center gap-1.5"><div className="w-1 h-1 bg-orange-400 rounded-full"></div><span className="text-[9px] font-black text-gray-400 uppercase">Via:</span> <span className="text-xs font-bold text-gray-700">{log.transporter}</span></div>
                                             <div className="flex items-center gap-1.5"><div className="w-1 h-1 bg-green-400 rounded-full"></div><span className="text-[9px] font-black text-gray-400 uppercase">Receiver:</span> <span className="text-xs font-bold text-gray-700">{log.receiver}</span></div>
+                                            {log.entryBy && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 bg-[#3159a6] rounded-full"></div>
+                                                    <span className="text-[9px] font-black text-[#3159a6] uppercase bg-blue-50 px-1 py-0.5 rounded border border-blue-100">Entered By: {log.entryBy}</span>
+                                                </div>
+                                            )}
                                             {log.note && (
                                                 <div className="mt-2 p-3 bg-gray-50 text-gray-600 rounded-xl italic text-xs border border-gray-100 font-medium">
                                                     "{log.note}"
