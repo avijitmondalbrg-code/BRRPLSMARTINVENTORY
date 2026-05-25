@@ -255,6 +255,11 @@ export const StockTransfer: React.FC<StockTransferProps> = ({ inventory, transfe
                                     <td className="p-5 text-[10px] text-gray-500 uppercase font-bold space-y-1">
                                         <div>SNDR: {log.sender || '-'} | VIA: {log.transporter || '-'}</div>
                                         <div>RECV: {log.receiver || '-'}</div>
+                                        {log.entryBy && (
+                                            <div className="text-blue-600 font-extrabold text-[9px] mt-1 tracking-wider uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">
+                                                Entered By: {log.entryBy}
+                                            </div>
+                                        )}
                                         {log.note && <div className="mt-1 p-1 bg-amber-50 text-amber-800 lowercase border border-amber-100 rounded italic">"{log.note}"</div>}
                                     </td>
                                 </tr>
