@@ -59,8 +59,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
       
       // 3. Fallback matching pre-defined local users
-      if ((cleanUserId === 'admin' && cleanPassword === 'admin') || 
-          (cleanUserId === 'admin' && cleanPassword === 'brrpl9874')) {
+      if ((cleanUserId === 'admin' && cleanPassword === '9830447176') || 
+          (cleanUserId === 'admin' && cleanPassword === 'brrpl9830')) {
           onLogin('admin', { id: 'admin', username: 'admin', name: 'System Administrator', role: 'admin', status: 'Active' });
       } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
           onLogin('user', { id: 'user', username: 'user', name: 'Default User', role: 'user', status: 'Active' });
@@ -80,8 +80,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleQuickLogin = () => {
     setUserId('admin');
-    setPassword('admin');
-    handleLoginProcess('admin', 'admin');
+    setPassword('9830447176');
+    handleLoginProcess('admin', '9830447176');
   };
 
   return (
