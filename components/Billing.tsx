@@ -457,7 +457,14 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
                         <tbody className="divide-y text-sm">
                             {filteredInvoices.map(inv => (
                                 <tr key={inv.id} className="hover:bg-blue-50/30 transition">
-                                    <td className="p-5 font-black text-[#3159a6]">{inv.id}</td>
+                                    <td className="p-5 font-black text-[#3159a6]">
+                                        <div>{inv.id}</div>
+                                        {inv.entryBy && (
+                                            <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">
+                                                By: {inv.entryBy}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
                                     <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{inv.patientName}</td>
                                     <td className="p-5">
