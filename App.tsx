@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord, PurchaseOrder } from './types';
+import { HearingAid, Invoice, ViewState, Patient, Quotation, FinancialNote, StockTransfer as StockTransferType, AssetTransfer as AssetTransferType, Lead, UserRole, AdvanceBooking, CompanyAsset, Hospital, ServiceInvoice, Vendor, PurchaseRecord, PurchaseOrder, AppUser } from './types';
 import { INITIAL_INVENTORY, INITIAL_INVOICES, INITIAL_QUOTATIONS, INITIAL_FINANCIAL_NOTES, INITIAL_LEADS, COMPANY_LOGO_BASE64 } from './constants';
 import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
@@ -19,6 +19,7 @@ import { FrontCover } from './components/FrontCover';
 import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
+import { UsersAdmin } from './components/UsersAdmin';
 import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft } from 'lucide-react';
 
 // Firebase Services
@@ -27,6 +28,7 @@ import { fetchCollection, setDocument, updateDocument, deleteDocument } from './
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
   const [companySignature, setCompanySignature] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
@@ -124,14 +126,16 @@ const App: React.FC = () => {
     refreshData();
   }, []);
 
-  const handleLogin = (role: UserRole) => {
+  const handleLogin = (role: UserRole, userDetails: AppUser) => {
       setUserRole(role);
+      setCurrentUser(userDetails);
       setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
       setIsAuthenticated(false);
       setUserRole(null);
+      setCurrentUser(null);
       setActiveView('front-cover');
   };
 
@@ -722,6 +726,7 @@ service cloud.firestore {
             { id: 'credit-note', label: 'Credit Note', icon: FileMinus, roles: ['admin', 'user'] },
             { id: 'debit-note', label: 'Debit Note', icon: FilePlus, roles: ['admin', 'user'] },
             { id: 'receipts', label: 'Receipts', icon: Receipt, roles: ['admin', 'user'] },
+            { id: 'users-admin', label: 'User Management', icon: ShieldCheck, roles: ['admin'] },
             { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'user'] }
           ].filter(item => item.roles.includes(userRole!)).map(item => (
             <button key={item.id} onClick={() => setActiveView(item.id as any)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
@@ -790,6 +795,7 @@ service cloud.firestore {
           {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
           {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
+          {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
         </div>
       </main>
     </div>
