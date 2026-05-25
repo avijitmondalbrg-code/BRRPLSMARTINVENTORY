@@ -62,7 +62,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if ((cleanUserId === 'admin' && cleanPassword === '9830447176') || 
           (cleanUserId === 'admin' && cleanPassword === 'brrpl9830')) {
           onLogin('admin', { id: 'admin', username: 'admin', name: 'System Administrator', role: 'admin', status: 'Active' });
-      } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
+      } else if (cleanUserId === 'user' && cleanPassword === 'xxxxxxxx') {
           onLogin('user', { id: 'user', username: 'user', name: 'Default User', role: 'user', status: 'Active' });
       } else {
           throw new Error("ভুল ইউজার আইডি বা পাসওয়ার্ড। দয়া করে সঠিক তথ্য দিয়ে আবার চেষ্টা করুন।");
