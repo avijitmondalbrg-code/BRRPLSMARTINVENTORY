@@ -575,7 +575,14 @@ export const Purchases: React.FC<PurchasesProps> = ({
                     ) : filteredPurchases.map(p => (
                       <tr key={p.id} className="hover:bg-slate-50/50 transition">
                         <td className="p-5 font-bold text-gray-500">{new Date(p.invoiceDate).toLocaleDateString('en-IN')}</td>
-                        <td className="p-5 font-black text-primary uppercase whitespace-nowrap">{p.invoiceNo}</td>
+                        <td className="p-5 font-black text-primary uppercase whitespace-nowrap">
+                          <div>{p.invoiceNo}</div>
+                          {p.entryBy && (
+                            <p className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wide normal-case leading-none">
+                              By: {p.entryBy}
+                            </p>
+                          )}
+                        </td>
                         <td className="p-5 font-black text-gray-800 uppercase tracking-tight">{p.vendorName}</td>
                         <td className="p-5">
                           <p className="font-black text-[10px] text-slate-600 uppercase">{p.brand} {p.model}</p>
@@ -639,7 +646,14 @@ export const Purchases: React.FC<PurchasesProps> = ({
                       <tr><td colSpan={7} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No matching Purchase Orders registered</td></tr>
                     ) : filteredPOList.map(po => (
                       <tr key={po.id} className="hover:bg-slate-50/50 transition">
-                        <td className="p-5 font-black text-[#3159a6]">{po.id}</td>
+                        <td className="p-5 font-black text-[#3159a6]">
+                          <div>{po.id}</div>
+                          {po.entryBy && (
+                            <p className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wide normal-case leading-none">
+                              By: {po.entryBy}
+                            </p>
+                          )}
+                        </td>
                         <td className="p-5 text-gray-500">{new Date(po.date).toLocaleDateString('en-IN')}</td>
                         <td className="p-5 font-black text-gray-700">{po.vendorName}</td>
                         <td className="p-5">
