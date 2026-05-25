@@ -250,6 +250,11 @@ export const Inventory: React.FC<InventoryProps> = ({ inventory, onAdd, onUpdate
                     <td className="p-4">
                       <p className="font-black text-gray-800 uppercase tracking-tighter">{item.brand}</p>
                       <p className="text-[10px] text-gray-400 font-bold">{item.model}</p>
+                      {item.entryBy && (
+                        <p className="text-[9px] font-black text-slate-400 mt-0.5 uppercase tracking-wide">
+                          By: {item.entryBy}
+                        </p>
+                      )}
                     </td>
                     <td className="p-4 text-center font-mono text-xs font-bold text-slate-500">{item.hsnCode || '90214090'}</td>
                     <td className="p-4 font-mono font-black text-[#3159a6] tracking-widest uppercase">{item.serialNumber}</td>
