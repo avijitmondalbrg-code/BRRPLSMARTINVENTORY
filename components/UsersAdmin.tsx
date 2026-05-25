@@ -157,6 +157,11 @@ export const UsersAdmin: React.FC<UsersAdminProps> = ({ userRole, currentUserId,
   };
 
   const handleDelete = async (userToDelete: AppUser) => {
+    if (currentUserId !== 'admin') {
+      alert("দুঃখিত, শুধুমাত্র মুখ্য System Administrator (admin) অ্যাকাউন্টগুলি ডিলিট করতে পারবেন।");
+      return;
+    }
+
     if (userToDelete.id === currentUserId || userToDelete.username === 'admin') {
       alert("আপনি নিজের অ্যাকাউন্ট অথবা মুখ্য সিস্টেম অ্যাডমিন অ্যাকাউন্ট ডিলিট করতে পারবেন না।");
       return;
@@ -346,13 +351,13 @@ export const UsersAdmin: React.FC<UsersAdminProps> = ({ userRole, currentUserId,
                           </button>
                           <button
                             onClick={() => handleDelete(user)}
-                            disabled={user.id === currentUserId}
+                            disabled={user.id === currentUserId || currentUserId !== 'admin'}
                             className={`p-2 rounded-lg transition ${
-                              user.id === currentUserId
-                                ? 'bg-slate-50 text-gray-300 cursor-not-allowed'
+                              user.id === currentUserId || currentUserId !== 'admin'
+                                ? 'bg-slate-50 text-gray-300 cursor-not-allowed opacity-50'
                                 : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600'
                             }`}
-                            title="Delete User"
+                            title={currentUserId !== 'admin' ? "শুধুমাত্র মুখ্য System Administrator ডিলিট করতে পারবেন" : "Delete User"}
                           >
                             <Trash2 size={13} />
                           </button>
