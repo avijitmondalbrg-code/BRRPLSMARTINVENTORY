@@ -150,7 +150,9 @@ const App: React.FC = () => {
   };
 
   const handleAddPurchase = async (p: PurchaseRecord) => {
-    setPurchases(prev => [p, ...prev]);
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedP = { ...p, entryBy: p.entryBy || userStamp };
+    setPurchases(prev => [stampedP, ...prev]);
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 7);
     const newStockItem: HearingAid = {
@@ -162,11 +164,12 @@ const App: React.FC = () => {
       hsnCode: p.hsnCode,
       location: p.location,
       status: 'Available',
-      addedDate: p.invoiceDate
+      addedDate: p.invoiceDate,
+      entryBy: userStamp
     };
     setInventory(prev => [...prev, newStockItem]);
     try { 
-      await setDocument('purchases', p.id, p); 
+      await setDocument('purchases', p.id, stampedP); 
       await setDocument('inventory', newStockItem.id, newStockItem);
     } catch(e) {
       console.error("Firebase Sync Error in Purchase:", e);
@@ -217,12 +220,14 @@ const App: React.FC = () => {
   };
 
   const handleSaveServiceInvoice = async (inv: ServiceInvoice) => {
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedInv = { ...inv, entryBy: inv.entryBy || userStamp };
     setServiceInvoices(prev => {
       const exists = prev.find(i => i.id === inv.id);
-      if (exists) return prev.map(i => i.id === inv.id ? inv : i);
-      return [inv, ...prev];
+      if (exists) return prev.map(i => i.id === inv.id ? stampedInv : i);
+      return [stampedInv, ...prev];
     });
-    try { await setDocument('serviceInvoices', inv.id, inv); } catch(e) {
+    try { await setDocument('serviceInvoices', inv.id, stampedInv); } catch(e) {
       console.error("Failed to save service invoice:", e);
     }
   };
@@ -237,6 +242,7 @@ const App: React.FC = () => {
     const item = inventory.find(i => i.id === itemId);
     if (!item) return;
 
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
     const transferLog: StockTransferType = {
       id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       hearingAidId: item.id,
@@ -246,10 +252,11 @@ const App: React.FC = () => {
       fromLocation: item.location,
       toLocation,
       date: new Date().toISOString().split('T')[0],
-      sender,
+      sender: sender || userStamp,
       transporter,
       receiver,
-      note
+      note,
+      entryBy: userStamp
     };
 
     const updatedItem = { ...item, location: toLocation };
@@ -270,6 +277,7 @@ const App: React.FC = () => {
     const asset = companyAssets.find(a => a.id === assetId);
     if (!asset) return;
 
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
     const transferLog: AssetTransferType = {
       id: `ATRF-${Date.now()}`,
       assetId: asset.id,
@@ -278,10 +286,11 @@ const App: React.FC = () => {
       fromLocation: asset.location,
       toLocation,
       date: new Date().toISOString().split('T')[0],
-      sender,
+      sender: sender || userStamp,
       transporter,
       receiver,
-      note
+      note,
+      entryBy: userStamp
     };
 
     const updatedAsset = { ...asset, location: toLocation };
@@ -297,8 +306,10 @@ const App: React.FC = () => {
   };
 
   const handleAddQuotation = async (quotation: Quotation) => {
-    setQuotations([quotation, ...quotations]);
-    try { await setDocument('quotations', quotation.id.replace(/\//g, '-'), quotation); } catch(e) {}
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedQuotation = { ...quotation, entryBy: quotation.entryBy || userStamp };
+    setQuotations([stampedQuotation, ...quotations]);
+    try { await setDocument('quotations', quotation.id.replace(/\//g, '-'), stampedQuotation); } catch(e) {}
   };
 
   const handleUpdateQuotation = async (quotation: Quotation) => {
@@ -312,10 +323,12 @@ const App: React.FC = () => {
   };
 
   const handleAddFinancialNote = async (note: FinancialNote) => {
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedNote = { ...note, entryBy: note.entryBy || userStamp };
     setFinancialNotes(prev => {
         const exists = prev.find(n => n.id === note.id);
-        if (exists) return prev.map(n => n.id === note.id ? note : n);
-        return [note, ...prev];
+        if (exists) return prev.map(n => n.id === note.id ? stampedNote : n);
+        return [stampedNote, ...prev];
     });
     
     // If Debit Note has linked hearing aids, remove them from inventory (only if it's a new note or newly added items)
@@ -348,7 +361,7 @@ const App: React.FC = () => {
         }
     }
 
-    try { await setDocument('financialNotes', note.id, note); } catch(e) {}
+    try { await setDocument('financialNotes', note.id, stampedNote); } catch(e) {}
   };
 
   const handleDeleteFinancialNote = async (id: string) => {
@@ -433,8 +446,10 @@ const App: React.FC = () => {
   };
 
   const handleCreateDemoInvoice = async (invoice: Invoice) => {
-    setDemoInvoices([invoice, ...demoInvoices]);
-    try { await setDocument('demoInvoices', invoice.id.replace(/\//g, '-'), invoice); } catch(e) {
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
+    setDemoInvoices([stampedInvoice, ...demoInvoices]);
+    try { await setDocument('demoInvoices', invoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
       console.error("Demo invoice sync failed:", e);
     }
   };
@@ -469,12 +484,15 @@ const App: React.FC = () => {
   };
 
   const handleAddInventory = async (items: HearingAid | HearingAid[]) => {
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
     if (Array.isArray(items)) {
-      setInventory([...inventory, ...items]);
-      items.forEach(item => setDocument('inventory', item.id, item).catch(e => {}));
+      const stampedItems = items.map(item => ({ ...item, entryBy: item.entryBy || userStamp }));
+      setInventory([...inventory, ...stampedItems]);
+      stampedItems.forEach(item => setDocument('inventory', item.id, item).catch(e => {}));
     } else {
-      setInventory(prev => [...prev, items]);
-      setDocument('inventory', items.id, items).catch(e => {});
+      const stampedItem = { ...items, entryBy: items.entryBy || userStamp };
+      setInventory(prev => [...prev, stampedItem]);
+      setDocument('inventory', stampedItem.id, stampedItem).catch(e => {});
     }
   };
 
@@ -490,7 +508,12 @@ const App: React.FC = () => {
 
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
-    const updatedInvoiceToSave = { ...invoice, status: invoice.status || 'Active' } as Invoice;
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const updatedInvoiceToSave = { 
+      ...invoice, 
+      status: invoice.status || 'Active',
+      entryBy: invoice.entryBy || userStamp 
+    } as Invoice;
     
     // Automation: Identify applied Advance Bookings
     const appliedAdvanceIds = updatedInvoiceToSave.payments
@@ -574,7 +597,12 @@ const App: React.FC = () => {
   };
 
   const handleAddPatient = async (p: Patient) => {
-    const patientWithDate = { ...p, addedDate: p.addedDate || new Date().toISOString().split('T')[0] };
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const patientWithDate = { 
+      ...p, 
+      addedDate: p.addedDate || new Date().toISOString().split('T')[0],
+      entryBy: p.entryBy || userStamp
+    };
     setPatients([...patients, patientWithDate]);
     try { await setDocument('patients', p.id, patientWithDate); } catch(e) {}
   };
@@ -606,8 +634,10 @@ const App: React.FC = () => {
   };
 
   const handleAddAdvanceBooking = async (b: AdvanceBooking) => {
-    setAdvanceBookings([b, ...advanceBookings]);
-    try { await setDocument('advanceBookings', b.id, b); } catch(e) {}
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedB = { ...b, entryBy: b.entryBy || userStamp };
+    setAdvanceBookings([stampedB, ...advanceBookings]);
+    try { await setDocument('advanceBookings', b.id, stampedB); } catch(e) {}
   };
 
   const handleDeleteAdvanceBooking = async (id: string) => {
