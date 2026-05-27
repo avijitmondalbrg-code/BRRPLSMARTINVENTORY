@@ -62,7 +62,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if ((cleanUserId === 'admin' && cleanPassword === '9830447176') || 
           (cleanUserId === 'admin' && cleanPassword === 'brrpl9830')) {
           onLogin('admin', { id: 'admin', username: 'admin', name: 'System Administrator', role: 'admin', status: 'Active' });
-      } else if (cleanUserId === 'user' && cleanPassword === 'xxxxxxxx') {
+      } else if (cleanUserId === 'user' && cleanPassword === 'user1234') {
           onLogin('user', { id: 'user', username: 'user', name: 'Default User', role: 'user', status: 'Active' });
       } else {
           throw new Error("ভুল ইউজার আইডি বা পাসওয়ার্ড। দয়া করে সঠিক তথ্য দিয়ে আবার চেষ্টা করুন।");
@@ -118,13 +118,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         {/* Form Section */}
         <div className="p-10 bg-gray-50/50 flex-1">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Access Identity</label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
                 <input 
                   type="text" 
+                  name="username_brg"
+                  autoComplete="off"
                   required
                   className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
                   placeholder="admin"
@@ -140,6 +142,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
                 <input 
                   type={showPassword ? "text" : "password"}
+                  name="password_brg"
+                  autoComplete="new-password"
                   required
                   className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
                   placeholder="••••••••"
