@@ -372,7 +372,8 @@ export const LOCATIONS = [
   'MANIPAL SALTLAKE',
   'NIDAN',
   'Kasba Clinic',
-  'Home Visit'
+  'Home Visit',
+  'Manipal Broadway'
 ];
 
 export const BRANDS = [
