@@ -5,6 +5,7 @@ import { Inventory } from './components/Inventory';
 import { Billing } from './components/Billing';
 import { DemoBilling } from './components/DemoBilling';
 import { ServiceBilling } from './components/ServiceBilling';
+import { ProformaBilling } from './components/ProformaBilling';
 import { StockTransfer } from './components/StockTransfer';
 import { AssetTransfer } from './components/AssetTransfer';
 import { Dashboard } from './components/Dashboard';
@@ -40,6 +41,8 @@ const App: React.FC = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [demoInvoices, setDemoInvoices] = useState<Invoice[]>([]);
+  const [proformaInvoices, setProformaInvoices] = useState<Invoice[]>([]);
+  const [prefilledProforma, setPrefilledProforma] = useState<Invoice | null>(null);
   const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -63,6 +66,7 @@ const App: React.FC = () => {
           fetchCollection('invoices'),
           fetchCollection('demoInvoices'),
           fetchCollection('serviceInvoices'),
+          fetchCollection('proformaInvoices'),
           fetchCollection('hospitals'),
           fetchCollection('patients'),
           fetchCollection('quotations'),
@@ -78,7 +82,7 @@ const App: React.FC = () => {
           fetchCollection('purchaseOrders')
       ]);
 
-      const [inv, invs, dinvs, sinvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList] = await fetchPromise;
+      const [inv, invs, dinvs, sinvs, profInvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
@@ -94,6 +98,7 @@ const App: React.FC = () => {
       setPurchaseOrders((poList as PurchaseOrder[]) || []);
       setInvoices((invs as Invoice[]) || []);
       setDemoInvoices((dinvs as Invoice[]) || []);
+      setProformaInvoices((profInvs as Invoice[]) || []);
       setServiceInvoices((sinvs as ServiceInvoice[]) || []);
       setHospitals((hosps as Hospital[]) || []);
       setPatients((pats as Patient[]) || []);
@@ -461,6 +466,31 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCreateProformaInvoice = async (invoice: Invoice) => {
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    const stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
+    setProformaInvoices(prev => {
+      const exists = prev.find(i => i.id === invoice.id);
+      if (exists) return prev.map(i => i.id === invoice.id ? stampedInvoice : i);
+      return [stampedInvoice, ...prev];
+    });
+    try { await setDocument('proformaInvoices', invoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
+      console.error("Proforma invoice sync failed:", e);
+    }
+  };
+
+  const handleDeleteProformaInvoice = async (id: string) => {
+    setProformaInvoices(prev => prev.filter(i => i.id !== id));
+    try { await deleteDocument('proformaInvoices', id.replace(/\//g, '-')); } catch(e) {
+      console.error("Proforma invoice delete failed:", e);
+    }
+  };
+
+  const handleConvertProformaToTax = (invoice: Invoice) => {
+    setPrefilledProforma(invoice);
+    setActiveView('billing');
+  };
+
   const handleDeleteReceipt = async (invoiceId: string, paymentId: string) => {
     const inv = invoices.find(i => i.id === invoiceId);
     if (!inv) return;
@@ -751,6 +781,7 @@ service cloud.firestore {
             { id: 'quotation', label: 'Quotations', icon: FileQuestion, roles: ['admin', 'user'] },
             { id: 'billing', label: 'Patient Billing', icon: FileText, roles: ['admin', 'user'] },
             { id: 'demo-billing', label: 'Demo Invoice', icon: ShieldCheck, roles: ['admin', 'user'] },
+            { id: 'proforma-billing', label: 'Proforma Invoice', icon: Clipboard, roles: ['admin', 'user'] },
             { id: 'service-billing', label: 'Service Billing', icon: Landmark, roles: ['admin', 'user'] },
             { id: 'patients', label: 'Patients', icon: Users, roles: ['admin', 'user'] },
             { id: 'credit-note', label: 'Credit Note', icon: FileMinus, roles: ['admin', 'user'] },
@@ -815,8 +846,9 @@ service cloud.firestore {
           {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
           {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
           {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} prefilledInvoiceData={prefilledProforma} setPrefilledInvoiceData={setPrefilledProforma} />}
           {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+          {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
