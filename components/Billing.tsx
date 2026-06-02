@@ -17,6 +17,8 @@ interface BillingProps {
   signature: string | null;
   userRole: UserRole;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  prefilledInvoiceData?: Invoice | null;
+  setPrefilledInvoiceData?: (invoice: Invoice | null) => void;
 }
 
 const numberToWords = (num: number): string => {
@@ -37,7 +39,23 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], patients, hospitals, advanceBookings = [], onCreateInvoice, onUpdateInvoice, onDelete, onCancelInvoice, logo, signature, userRole, backHandlerRef }) => {
+export const Billing: React.FC<BillingProps> = ({ 
+  inventory, 
+  invoices = [], 
+  patients, 
+  hospitals, 
+  advanceBookings = [], 
+  onCreateInvoice, 
+  onUpdateInvoice, 
+  onDelete, 
+  onCancelInvoice, 
+  logo, 
+  signature, 
+  userRole, 
+  backHandlerRef,
+  prefilledInvoiceData,
+  setPrefilledInvoiceData
+}) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -59,6 +77,56 @@ export const Billing: React.FC<BillingProps> = ({ inventory, invoices = [], pati
       }
     };
   }, [viewMode, backHandlerRef]);
+
+  useEffect(() => {
+    if (prefilledInvoiceData) {
+      setViewMode('create');
+      setStep('review');
+      
+      const pat = prefilledInvoiceData.patientDetails || { 
+        id: prefilledInvoiceData.patientId || `P-${Date.now()}`, 
+        name: prefilledInvoiceData.patientName, 
+        address: '', 
+        phone: '', 
+        referDoctor: '', 
+        audiologist: '' 
+      };
+      setPatient({
+        ...pat,
+        state: pat.state || 'West Bengal',
+        district: pat.district || 'Kolkata',
+        country: pat.country || 'India'
+      });
+      setPatientSearchTerm(pat.name || '');
+      setInvoiceDate(new Date().toISOString().split('T')[0]);
+      
+      const PI_items = prefilledInvoiceData.items || [];
+      const standardItems = PI_items.map(item => ({
+        ...item,
+        hearingAidId: item.hearingAidId && item.hearingAidId.startsWith('PI-') ? `MAN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` : item.hearingAidId
+      }));
+      setManualItems(standardItems);
+      
+      setTotalAdjustment(prefilledInvoiceData.discountValue || 0);
+      setInvoiceNotes(prefilledInvoiceData.notes || `CONVERTED FROM PROFORMA INVOICE: ${prefilledInvoiceData.id}`);
+      setWarranty(prefilledInvoiceData.warranty || '2 Years Standard Warranty');
+      setEntryBy(prefilledInvoiceData.entryBy || STAFF_NAMES[0]);
+      setSelectedHospitalId(prefilledInvoiceData.hospitalId || '');
+      setExistingPayments([]);
+      
+      if (prefilledInvoiceData.payments && prefilledInvoiceData.payments.length > 0) {
+        setInitialPayment(prefilledInvoiceData.payments[0].amount);
+        setPaymentMethod(prefilledInvoiceData.payments[0].method);
+        setPaymentBank(prefilledInvoiceData.payments[0].bankDetails || '');
+      } else {
+        setInitialPayment(0);
+      }
+      
+      if (setPrefilledInvoiceData) {
+        setPrefilledInvoiceData(null);
+      }
+    }
+  }, [prefilledInvoiceData, setPrefilledInvoiceData]);
   
   // Post-Save Automation
   const [showSuccessModal, setShowSuccessModal] = useState(false);
