@@ -176,10 +176,12 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
   };
 
   if (viewMode === 'list') {
-    const filtered = invoices.filter(i => 
-      i.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      i.hospitalName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = [...invoices]
+      .filter(i => 
+        i.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        i.hospitalName.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
 
     return (
       <div className="space-y-6">
