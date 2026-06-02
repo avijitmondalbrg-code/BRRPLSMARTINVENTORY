@@ -35,6 +35,7 @@ const numberToWords = (num: number): string => {
 
 export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [], patients, onCreateInvoice, onDelete, onConvertToTaxInvoice, logo, signature, userRole, backHandlerRef }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [gstMode, setGstMode] = useState<boolean>(true);
 
   useEffect(() => {
     if (!backHandlerRef) return;
@@ -109,8 +110,9 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
   const handleAddLine = () => {
     if (!tempManual.model || tempManual.price <= 0) return;
     const qty = tempManual.qty || 1;
+    const gstRate = tempManual.gst;
     const taxableValue = tempManual.price * qty;
-    const totalTax = taxableValue * (tempManual.gst / 100);
+    const totalTax = taxableValue * (gstRate / 100);
     const isInterState = patient.state && patient.state !== 'West Bengal';
 
     const newItem: InvoiceItem = {
@@ -121,7 +123,7 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
         price: tempManual.price,
         qty: qty,
         hsnCode: tempManual.hsn,
-        gstRate: tempManual.gst,
+        gstRate: gstRate,
         discount: 0,
         taxableValue: taxableValue,
         cgstAmount: isInterState ? 0 : totalTax / 2,
@@ -133,19 +135,50 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
     setTempManual({ brand: BRANDS[0], model: '', hsn: '90214090', price: 0, gst: 0, qty: 1, serial: '' });
   };
 
-  const lineSubtotal = manualItems.reduce((sum, item) => sum + item.taxableValue, 0);
-  const totalTax = manualItems.reduce((sum, item) => sum + (item.cgstAmount + item.sgstAmount + item.igstAmount), 0);
+  const isInterState = patient.state && patient.state !== 'West Bengal';
+
+  const processedItems = useMemo(() => {
+    return manualItems.map(item => {
+      const actualGst = gstMode ? item.gstRate : 0;
+      const totalTax = item.taxableValue * (actualGst / 100);
+      return {
+        ...item,
+        gstRate: actualGst,
+        cgstAmount: isInterState ? 0 : totalTax / 2,
+        sgstAmount: isInterState ? 0 : totalTax / 2,
+        igstAmount: isInterState ? totalTax : 0,
+        totalAmount: item.taxableValue + totalTax
+      };
+    });
+  }, [manualItems, gstMode, isInterState]);
+
+  const lineSubtotal = processedItems.reduce((sum, item) => sum + item.taxableValue, 0);
+  const totalTax = processedItems.reduce((sum, item) => sum + (item.cgstAmount + item.sgstAmount + item.igstAmount), 0);
   const finalTotal = Math.round(Math.max(0, (lineSubtotal + totalTax) - totalAdjustment));
   const roundOff = finalTotal - ((lineSubtotal + totalTax) - totalAdjustment);
+
+  const gstSummary = React.useMemo(() => {
+    const summary: Record<number, { taxable: number, cgst: number, sgst: number, igst: number }> = {};
+    processedItems.forEach(item => {
+      const rate = item.gstRate;
+      if (!summary[rate]) summary[rate] = { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+      summary[rate].taxable += item.taxableValue;
+      summary[rate].cgst += item.cgstAmount;
+      summary[rate].sgst += item.sgstAmount;
+      summary[rate].igst += item.igstAmount;
+    });
+    return summary;
+  }, [processedItems]);
 
   const handleSaveInvoice = () => {
     const isEdit = viewMode === 'edit';
     const invoiceId = isEdit ? invoices.find(i => i.date === invoiceDate)?.id || generateNextId() : generateNextId();
     
     const invData: Invoice = { 
-      id: invoiceId, patientId: patient.id || `P-PI`, patientName: patient.name, items: manualItems, 
+      id: invoiceId, patientId: patient.id || `P-PI`, patientName: patient.name, items: processedItems, 
       subtotal: lineSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalAdjustment, 
-      placeOfSupply: (patient.state !== 'West Bengal') ? 'Inter-State' : 'Intra-State', totalTaxableValue: lineSubtotal, totalCGST: 0, totalSGST: 0, totalIGST: 0, totalTax: totalTax, 
+      placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: lineSubtotal, 
+      totalCGST: isInterState ? 0 : totalTax / 2, totalSGST: isInterState ? 0 : totalTax / 2, totalIGST: isInterState ? totalTax : 0, totalTax: totalTax, 
       finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, patientDetails: patient, notes: invoiceNotes,
       payments: [{ id: 'P1', amount: finalTotal, method: paymentMethod, date: invoiceDate }], balanceDue: 0, paymentStatus: 'Paid' 
     };
@@ -308,6 +341,12 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                     <div className="flex items-center gap-2 border-b pb-3 mb-2"><PackagePlus className="text-[#3159a6]"/><h3 className="text-xs font-black uppercase tracking-widest text-[#3159a6]">Add Quotation Items</h3></div>
                     
                     <div className="space-y-4 font-semibold text-slate-800 text-sm">
+                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border">
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">GST Mode</span>
+                            <button onClick={() => setGstMode(!gstMode)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${gstMode ? 'bg-[#3159a6]' : 'bg-gray-300'}`}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${gstMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
                         <div>
                             <label className="text-[9px] font-black uppercase text-slate-400">Equipment Brand</label>
                             <select className="w-full p-2.5 border rounded-xl bg-white" value={tempManual.brand} onChange={e => setTempManual({ ...tempManual, brand: e.target.value })}>
@@ -324,7 +363,12 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div><label className="text-[9px] font-black uppercase text-slate-400">HSN Code</label><input type="text" className="w-full p-2.5 border rounded-xl text-center font-mono" value={tempManual.hsn} onChange={e => setTempManual({ ...tempManual, hsn: e.target.value })} /></div>
-                            <div><label className="text-[9px] font-black uppercase text-slate-400">GST rate %</label><input type="number" className="w-full p-2.5 border rounded-xl text-center font-mono" value={tempManual.gst} onChange={e => setTempManual({ ...tempManual, gst: Number(e.target.value) })} /></div>
+                            <div>
+                                <label className="text-[9px] font-black uppercase text-slate-400">GST rate %</label>
+                                <select disabled={!gstMode} className="w-full p-2.5 border rounded-xl bg-white disabled:opacity-50 font-mono text-center" value={gstMode ? tempManual.gst : 0} onChange={e => setTempManual({ ...tempManual, gst: Number(e.target.value) })}>
+                                    <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                                </select>
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <div><label className="text-[9px] font-black uppercase text-slate-400">Quantity</label><input type="number" className="w-full p-2.5 border rounded-xl text-center font-mono" value={tempManual.qty} onChange={e => setTempManual({ ...tempManual, qty: Number(e.target.value) })} /></div>
@@ -350,7 +394,7 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                         ) : (
                             <div className="space-y-4">
                                 <div className="divide-y max-h-96 overflow-y-auto pr-3">
-                                    {manualItems.map((item, idx) => (
+                                    {processedItems.map((item, idx) => (
                                         <div key={item.hearingAidId} className="flex justify-between items-center py-4 bg-slate-50/50 hover:bg-slate-50 p-4 rounded-2xl border-2 border-slate-50 mb-2 transition">
                                             <div>
                                                  <p className="font-black text-gray-800 uppercase tracking-tight text-sm">{item.brand} {item.model}</p>
@@ -359,7 +403,7 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                                             <div className="flex items-center gap-6">
                                                 <div className="text-right">
                                                     <p className="font-black text-slate-900">₹{item.totalAmount.toLocaleString()}</p>
-                                                    <p className="text-[10px] text-gray-400 font-bold mt-0.5">Qty {item.qty} x rate ₹{item.price.toLocaleString()}</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold mt-0.5">Qty {item.qty} x rate ₹{item.price.toLocaleString()} {gstMode && `(${item.gstRate}% GST)`}</p>
                                                 </div>
                                                 <button onClick={() => setManualItems(manualItems.filter((_, i) => i !== idx))} className="p-2 bg-white hover:bg-red-50 text-red-500 border border-slate-100 rounded-xl transition shadow-sm"><X size={14}/></button>
                                             </div>
@@ -391,7 +435,13 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
         {step === 'review' && (
             <div className="animate-fade-in flex flex-col items-center py-6">
                  <div className="bg-white p-6 rounded-3xl shadow-xl mb-8 flex flex-wrap items-center gap-8 border border-gray-100 print:hidden w-full max-w-[900px]">
-                     <div className="flex items-center gap-3"><Settings2 size={18} className="text-[#3159a6]"/><h4 className="text-xs font-black uppercase tracking-widest text-gray-500">Document Settings</h4></div>
+                    <div className="flex items-center gap-3"><Settings2 size={18} className="text-[#3159a6]"/><h4 className="text-xs font-black uppercase tracking-widest text-gray-500">Document Settings</h4></div>
+                    <div className="flex items-center gap-2 border-l pl-4 border-gray-200">
+                        <span className="text-[10px] font-black uppercase text-gray-550 tracking-wider">GST Mode</span>
+                        <button onClick={() => setGstMode(!gstMode)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${gstMode ? 'bg-[#3159a6]' : 'bg-gray-300'}`}>
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${gstMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
                      <div className="flex-1 flex justify-end gap-3 flex-wrap">
                          <button onClick={() => setStep('product')} className="bg-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-gray-100 hover:bg-slate-50 transition">Modify Draft</button>
                          <button 
@@ -400,16 +450,16 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                                      id: viewMode === 'edit' ? invoices.find(i => i.date === invoiceDate)?.id || generateNextId() : generateNextId(), 
                                      patientId: patient.id || `P-PI`, 
                                      patientName: patient.name, 
-                                     items: manualItems, 
+                                     items: processedItems, 
                                      subtotal: lineSubtotal, 
                                      discountType: 'flat', 
                                      discountValue: totalAdjustment, 
                                      totalDiscount: totalAdjustment, 
-                                     placeOfSupply: (patient.state !== 'West Bengal') ? 'Inter-State' : 'Intra-State', 
+                                     placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', 
                                      totalTaxableValue: lineSubtotal, 
-                                     totalCGST: 0, 
-                                     totalSGST: 0, 
-                                     totalIGST: 0, 
+                                     totalCGST: isInterState ? 0 : totalTax / 2, 
+                                     totalSGST: isInterState ? 0 : totalTax / 2, 
+                                     totalIGST: isInterState ? totalTax : 0, 
                                      totalTax: totalTax, 
                                      finalTotal: finalTotal, 
                                      date: invoiceDate, 
@@ -492,12 +542,21 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                                     <th className="p-3 text-center border-r-2 border-white/20">HSN</th>
                                     <th className="p-3 text-center border-r-2 border-white/20">Qty</th>
                                     <th className="p-3 text-right border-r-2 border-white/20">Rate</th>
-                                    <th className="p-3 text-center border-r-2 border-white/20">GST %</th>
+                                    {gstMode && (
+                                        <>
+                                            <th className="p-3 text-center border-r-2 border-white/20">GST %</th>
+                                            {isInterState ? (
+                                                <th className="p-3 text-right border-r-2 border-white/20">IGST</th>
+                                            ) : (
+                                                <th className="p-3 text-right border-r-2 border-white/20">C+S GST</th>
+                                            )}
+                                        </>
+                                    )}
                                     <th className="p-3 text-right">Total Proposal</th>
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-900">
-                                {manualItems.map(item => (
+                                {processedItems.map(item => (
                                     <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-4 last:border-slate-900">
                                         <td className="p-2 border-r-2 border-slate-900">
                                             <p className="font-black uppercase text-[12px]">{item.brand} {item.model}</p>
@@ -506,7 +565,14 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                                         <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode}</td>
                                         <td className="p-2 text-center border-r-2 border-slate-900">{item.qty}</td>
                                         <td className="p-2 text-right border-r-2 border-slate-900">₹{item.price.toLocaleString()}</td>
-                                        <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                        {gstMode && (
+                                            <>
+                                                <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                                <td className="p-2 text-right border-r-2 border-slate-900 text-slate-500">
+                                                    {isInterState ? `₹${item.igstAmount.toFixed(2)}` : `₹${(item.cgstAmount + item.sgstAmount).toFixed(2)}`}
+                                                </td>
+                                            </>
+                                        )}
                                         <td className="p-2 text-right font-black bg-slate-50/50">₹{item.totalAmount.toLocaleString()}</td>
                                     </tr>
                                 ))}
@@ -516,6 +582,44 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
 
                     <div className="grid grid-cols-2 gap-8 mb-6 items-start">
                         <div className="space-y-4">
+                           {gstMode && (
+                            <div className="mb-4">
+                                <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-1 tracking-[0.2em]">GST Analysis ({isInterState ? 'Inter-State' : 'Intra-State'})</h4>
+                                <table className="w-full border-collapse border-2 border-slate-900 text-[10px] text-center">
+                                    <thead className="bg-slate-100 font-black text-slate-800">
+                                        <tr className="border-b-2 border-slate-900">
+                                            <th className="p-1.5 text-left border-r-2 border-slate-900">Rate</th>
+                                            <th className="p-1.5 text-right border-r-2 border-slate-900">Taxable</th>
+                                            {isInterState ? (
+                                                <th className="p-1.5 text-right">IGST</th>
+                                            ) : (
+                                                <>
+                                                    <th className="p-1.5 text-right border-r-2 border-slate-900">CGST</th>
+                                                    <th className="p-1.5 text-right">SGST</th>
+                                                </>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="font-bold text-slate-900 uppercase">
+                                        {Object.entries(gstSummary).map(([rate, vals]: any) => (
+                                            <tr key={rate} className="border-b-2 border-slate-200 last:border-b-0">
+                                                <td className="p-1.5 text-left font-black bg-slate-50 border-r-2 border-slate-900">{rate}% GST</td>
+                                                <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.taxable.toFixed(2)}</td>
+                                                {isInterState ? (
+                                                    <td className="p-1.5 text-right font-black text-[#3159a6]">₹{vals.igst.toFixed(2)}</td>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.cgst.toFixed(2)}</td>
+                                                        <td className="p-1.5 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                           )}
+
                            <div className="bg-amber-50/45 p-4 border-2 border-dashed border-amber-200 rounded-2xl">
                                <h4 className="text-[10px] font-black uppercase text-amber-800 mb-2 border-b border-amber-100 pb-1">Quotation Remarks / Terms:</h4>
                                <p className="text-xs text-amber-950 italic leading-relaxed font-semibold uppercase">"{invoiceNotes || 'Proforma proposal valid for 30 days.'}"</p>
@@ -527,7 +631,9 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                         </div>
                         <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100 shadow-lg font-bold text-slate-900">
                             <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{lineSubtotal.toLocaleString()}</span></div>
-                            <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Estimated GST</span><span>₹{totalTax.toLocaleString()}</span></div>
+                            {gstMode && (
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Estimated GST</span><span>₹{totalTax.toLocaleString()}</span></div>
+                            )}
                             <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Discount Allowed</span><span>-₹{totalAdjustment.toLocaleString()}</span></div>
                             <div className="flex justify-between text-[11px] uppercase mb-3 text-green-600"><span>Round Off adjustment</span><span>{roundOff >= 0 ? '+' : ''}{roundOff.toFixed(2)}</span></div>
                             <div className="h-0.5 bg-slate-900 mb-3"></div>
