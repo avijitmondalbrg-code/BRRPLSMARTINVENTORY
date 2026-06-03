@@ -141,9 +141,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#3159a6] transition-colors" size={20} />
                 <input 
-                  type={showPassword ? "text" : "password"}
+                  type="text"
                   name="password_brg"
-                  autoComplete="new-password"
+                  autoComplete="off"
+                  style={{
+                    WebkitTextSecurity: showPassword ? 'none' : 'disc'
+                  } as React.CSSProperties}
                   required
                   className="w-full pl-12 pr-12 py-4 border-2 border-gray-100 rounded-2xl focus:border-[#3159a6] outline-none transition bg-white shadow-sm font-bold text-gray-700"
                   placeholder="••••••••"
