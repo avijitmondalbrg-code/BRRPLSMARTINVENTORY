@@ -21,7 +21,8 @@ import { CompanyAssets } from './components/CompanyAssets';
 import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
 import { UsersAdmin } from './components/UsersAdmin';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft } from 'lucide-react';
+import { RazorpayPayments } from './components/RazorpayPayments';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft, CreditCard } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -52,6 +53,10 @@ const App: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [advanceBookings, setAdvanceBookings] = useState<AdvanceBooking[]>([]);
+  const [razorpayPayments, setRazorpayPayments] = useState<any[]>([]);
+  const [rzpKeyId, setRzpKeyId] = useState<string>('');
+  const [rzpKeySecret, setRzpKeySecret] = useState<string>('');
+  const [rzpEnabled, setRzpEnabled] = useState<boolean>(false);
   const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
   
   const [loading, setLoading] = useState(true);
@@ -79,16 +84,20 @@ const App: React.FC = () => {
           fetchCollection('companyAssets'),
           fetchCollection('vendors'),
           fetchCollection('purchases'),
-          fetchCollection('purchaseOrders')
+          fetchCollection('purchaseOrders'),
+          fetchCollection('razorpay_payments').catch(() => [])
       ]);
 
-      const [inv, invs, dinvs, sinvs, profInvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList] = await fetchPromise;
+      const [inv, invs, dinvs, sinvs, profInvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList, rzpPays] = await fetchPromise;
 
       if (settings && settings.length > 0) {
           const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
           if (clinicAssets) {
               if (clinicAssets.logo) setCompanyLogo(clinicAssets.logo);
               if (clinicAssets.signature) setCompanySignature(clinicAssets.signature);
+              if (clinicAssets.razorpayKeyId) setRzpKeyId(clinicAssets.razorpayKeyId);
+              if (clinicAssets.razorpayKeySecret) setRzpKeySecret(clinicAssets.razorpayKeySecret);
+              if (clinicAssets.razorpayEnabled !== undefined) setRzpEnabled(clinicAssets.razorpayEnabled);
           }
       }
 
@@ -109,6 +118,7 @@ const App: React.FC = () => {
       setAssetTransfers((atrfs as AssetTransferType[]) || []);
       setAdvanceBookings((advs as AdvanceBooking[]) || []);
       setCompanyAssets((assets as CompanyAsset[]) || []);
+      setRazorpayPayments((rzpPays as any[]) || []);
       
     } catch (err: any) {
       console.error("Data refresh failed:", err);
@@ -200,13 +210,19 @@ const App: React.FC = () => {
     try { await deleteDocument('purchaseOrders', id); } catch(e) {}
   };
 
-  const handleUpdateSettings = async (logo: string, signature: string | null) => {
+  const handleUpdateSettings = async (logo: string, signature: string | null, keyId?: string, keySecret?: string, enabled?: boolean) => {
     setCompanyLogo(logo);
     setCompanySignature(signature);
+    if (keyId !== undefined) setRzpKeyId(keyId);
+    if (keySecret !== undefined) setRzpKeySecret(keySecret);
+    if (enabled !== undefined) setRzpEnabled(enabled);
     try {
         await setDocument('settings', 'clinic_assets', {
             logo,
             signature,
+            razorpayKeyId: keyId || '',
+            razorpayKeySecret: keySecret || '',
+            razorpayEnabled: enabled !== undefined ? enabled : false,
             updatedAt: new Date().toISOString()
         });
     } catch (e) {
@@ -238,7 +254,21 @@ const App: React.FC = () => {
   };
 
   const handleDeleteServiceInvoice = async (id: string) => {
-    if(!window.confirm("Delete this service invoice?")) return;
+    const invoice = serviceInvoices.find(i => i.id === id);
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    if (invoice) {
+      try {
+        await setDocument('deleted_records_backup', `invoice_service_${id}_${Date.now()}`, {
+          id: id,
+          type: 'Service Invoice',
+          deletedAt: new Date().toISOString(),
+          deletedBy: userStamp,
+          originalData: invoice
+        });
+      } catch (e) {
+        console.error("Service invoice backup failed:", e);
+      }
+    }
     setServiceInvoices(serviceInvoices.filter(i => i.id !== id));
     try { await deleteDocument('serviceInvoices', id); } catch(e) {}
   };
@@ -429,6 +459,20 @@ const App: React.FC = () => {
     if (!invoice) return;
     
     try {
+        const userStamp = currentUser?.name || currentUser?.id || 'admin';
+        // Secure Cloud Archival / Recovery Backup of Deleted Invoice
+        try {
+            await setDocument('deleted_records_backup', `invoice_tax_${invoiceId}_${Date.now()}`, {
+                id: invoiceId,
+                type: 'Patient Tax Invoice',
+                deletedAt: new Date().toISOString(),
+                deletedBy: userStamp,
+                originalData: invoice
+            });
+        } catch (backupErr) {
+            console.error("Backup operation failed:", backupErr);
+        }
+
         const inventoryItemIds = invoice.items
             .map(i => i.hearingAidId)
             .filter(id => id && !id.startsWith('MAN-'));
@@ -443,7 +487,7 @@ const App: React.FC = () => {
         ));
         setInvoices(prev => prev.filter(i => i.id !== invoiceId));
         
-        alert(`Invoice ${invoiceId} deleted and inventory restocked successfully.`);
+        alert(`Invoice ${invoiceId} backed up and deleted safely.`);
     } catch (err: any) {
         console.error("Delete operation failed:", err);
         alert(`Failed to delete invoice from server: ${err.message}. Please check your connection or permissions.`);
@@ -460,8 +504,24 @@ const App: React.FC = () => {
   };
 
   const handleDeleteDemoInvoice = async (id: string) => {
+    const backupId = id.replace(/\//g, '-');
+    const invoice = demoInvoices.find(i => i.id === id);
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    if (invoice) {
+      try {
+        await setDocument('deleted_records_backup', `invoice_demo_${backupId}_${Date.now()}`, {
+          id: id,
+          type: 'Demo Invoice',
+          deletedAt: new Date().toISOString(),
+          deletedBy: userStamp,
+          originalData: invoice
+        });
+      } catch (e) {
+        console.error("Demo invoice backup failed:", e);
+      }
+    }
     setDemoInvoices(prev => prev.filter(i => i.id !== id));
-    try { await deleteDocument('demoInvoices', id.replace(/\//g, '-')); } catch(e) {
+    try { await deleteDocument('demoInvoices', backupId); } catch(e) {
       console.error("Demo invoice delete failed:", e);
     }
   };
@@ -480,8 +540,24 @@ const App: React.FC = () => {
   };
 
   const handleDeleteProformaInvoice = async (id: string) => {
+    const backupId = id.replace(/\//g, '-');
+    const invoice = proformaInvoices.find(i => i.id === id);
+    const userStamp = currentUser?.name || currentUser?.id || 'admin';
+    if (invoice) {
+      try {
+        await setDocument('deleted_records_backup', `invoice_proforma_${backupId}_${Date.now()}`, {
+          id: id,
+          type: 'Proforma Invoice',
+          deletedAt: new Date().toISOString(),
+          deletedBy: userStamp,
+          originalData: invoice
+        });
+      } catch (e) {
+        console.error("Proforma invoice backup failed:", e);
+      }
+    }
     setProformaInvoices(prev => prev.filter(i => i.id !== id));
-    try { await deleteDocument('proformaInvoices', id.replace(/\//g, '-')); } catch(e) {
+    try { await deleteDocument('proformaInvoices', backupId); } catch(e) {
       console.error("Proforma invoice delete failed:", e);
     }
   };
@@ -787,6 +863,7 @@ service cloud.firestore {
             { id: 'credit-note', label: 'Credit Note', icon: FileMinus, roles: ['admin', 'user'] },
             { id: 'debit-note', label: 'Debit Note', icon: FilePlus, roles: ['admin', 'user'] },
             { id: 'receipts', label: 'Receipts', icon: Receipt, roles: ['admin', 'user'] },
+            { id: 'razorpay-payments', label: 'Razorpay Online', icon: CreditCard, roles: ['admin', 'user'] },
             { id: 'users-admin', label: 'User Management', icon: ShieldCheck, roles: ['admin'] },
             { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'user'] }
           ].filter(item => item.roles.includes(userRole!)).map(item => (
@@ -856,7 +933,8 @@ service cloud.firestore {
           {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
           {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
-          {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} />}
+          {activeView === 'razorpay-payments' && <RazorpayPayments patients={patients} invoices={invoices} razorpayPayments={razorpayPayments} onAddRazorpayPayment={(pay) => setRazorpayPayments(prev => [pay, ...prev])} onUpdateInvoice={handleUpdateInvoice} rzpKeyId={rzpKeyId} rzpKeySecret={rzpKeySecret} rzpEnabled={rzpEnabled} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
+          {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} />}
           {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
         </div>
       </main>
