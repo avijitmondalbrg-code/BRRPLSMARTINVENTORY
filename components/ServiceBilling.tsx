@@ -246,7 +246,17 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                       }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition" title="Print/Review"><Printer size={18}/></button>
                       
                       {userRole === 'admin' && (
-                        <button onClick={() => onDeleteInvoice(inv.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition" title="Delete Invoice"><Trash2 size={18}/></button>
+                        <button 
+                          onClick={() => { 
+                            if (window.confirm(`Are you sure you want to delete Service Invoice "${inv.id}"? This action has been backed up in the database.`)) {
+                              onDeleteInvoice(inv.id);
+                            }
+                          }} 
+                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition" 
+                          title="Permanently Delete Service Invoice"
+                        >
+                          <Trash2 size={18}/>
+                        </button>
                       )}
                     </div>
                   </td>
