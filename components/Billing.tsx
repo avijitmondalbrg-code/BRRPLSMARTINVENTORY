@@ -571,7 +571,20 @@ export const Billing: React.FC<BillingProps> = ({
                                             )}
 
                                             {userRole === 'admin' && onDelete && (
-                                                <button onClick={() => { if(window.confirm(`Delete invoice ${inv.id}? Items will be restocked.`)) onDelete(inv.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete"><Trash2 size={18}/></button>
+                                                <button 
+                                                    onClick={() => { 
+                                                        const userConfirmation = window.prompt(`To permanently delete invoice "${inv.id}" and return items to stock, please type the invoice ID to confirm:`);
+                                                        if (userConfirmation === inv.id) {
+                                                            onDelete(inv.id);
+                                                        } else if (userConfirmation !== null) {
+                                                            alert("Invoice ID mismatch. Deletion cancelled.");
+                                                        }
+                                                    }} 
+                                                    className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition" 
+                                                    title="Permanently Delete Invoice"
+                                                >
+                                                    <Trash2 size={18}/>
+                                                </button>
                                             )}
                                         </div>
                                     </td>
