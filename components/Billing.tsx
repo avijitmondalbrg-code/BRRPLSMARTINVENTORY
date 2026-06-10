@@ -101,11 +101,38 @@ export const Billing: React.FC<BillingProps> = ({
       setInvoiceDate(new Date().toISOString().split('T')[0]);
       
       const PI_items = prefilledInvoiceData.items || [];
-      const standardItems = PI_items.map(item => ({
-        ...item,
-        hearingAidId: item.hearingAidId && item.hearingAidId.startsWith('PI-') ? `MAN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` : item.hearingAidId
-      }));
-      setManualItems(standardItems);
+      const realInventoryItemIds: string[] = [];
+      const remainingManualItems: any[] = [];
+      const discounts: Record<string, number> = {};
+      const overrides: Record<string, number> = {};
+
+      PI_items.forEach(item => {
+        const hAidId = item.hearingAidId;
+        const isRealInventory = hAidId && 
+                               !hAidId.startsWith('PI-') && 
+                               !hAidId.startsWith('MAN-') && 
+                               inventory.some(i => i.id === hAidId);
+                               
+        if (isRealInventory) {
+          realInventoryItemIds.push(hAidId);
+          discounts[hAidId] = item.discount || 0;
+          if (item.gstRate !== undefined) {
+            overrides[hAidId] = item.gstRate;
+          }
+        } else {
+          remainingManualItems.push({
+            ...item,
+            hearingAidId: hAidId && hAidId.startsWith('PI-') 
+              ? `MAN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` 
+              : hAidId
+          });
+        }
+      });
+
+      setSelectedItemIds(realInventoryItemIds);
+      setManualItems(remainingManualItems);
+      setItemDiscounts(discounts);
+      setGstOverrides(overrides);
       
       setTotalAdjustment(prefilledInvoiceData.discountValue || 0);
       setInvoiceNotes(prefilledInvoiceData.notes || `CONVERTED FROM PROFORMA INVOICE: ${prefilledInvoiceData.id}`);
@@ -126,7 +153,7 @@ export const Billing: React.FC<BillingProps> = ({
         setPrefilledInvoiceData(null);
       }
     }
-  }, [prefilledInvoiceData, setPrefilledInvoiceData]);
+  }, [prefilledInvoiceData, setPrefilledInvoiceData, inventory]);
   
   // Post-Save Automation
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -261,7 +288,32 @@ export const Billing: React.FC<BillingProps> = ({
   };
 
   const isInterState = patient.state && patient.state !== 'West Bengal';
-  const selectedInventoryItems = inventory.filter(i => selectedItemIds.includes(i.id));
+  
+  const editingInvoice = editingInvoiceId ? invoices.find(inv => inv.id === editingInvoiceId) : null;
+  const selectedInventoryItems = selectedItemIds.map(id => {
+      // 1. Try to find in the main inventory
+      const foundInInv = (inventory || []).find(i => i.id === id);
+      if (foundInInv) return foundInInv;
+
+      // 2. Fallback to editing/prefilled invoice items snapshot
+      const sourceInvoiceItems = editingInvoice?.items || prefilledInvoiceData?.items || [];
+      const foundInInvoiceItems = sourceInvoiceItems.find(i => i.hearingAidId === id);
+      if (foundInInvoiceItems) {
+          return {
+              id: foundInInvoiceItems.hearingAidId,
+              brand: foundInInvoiceItems.brand || 'N/A',
+              model: foundInInvoiceItems.model || 'N/A',
+              serialNumber: foundInInvoiceItems.serialNumber || 'N/A',
+              price: foundInInvoiceItems.price || 0,
+              hsnCode: foundInInvoiceItems.hsnCode || '90214090',
+              gstRate: foundInInvoiceItems.gstRate || 0,
+              location: 'N/A',
+              status: 'Sold',
+              addedDate: ''
+          } as HearingAid;
+      }
+      return null;
+  }).filter((i): i is HearingAid => i !== null);
   
   let runningTaxableTotal: number = 0;
   let runningCGST: number = 0;
