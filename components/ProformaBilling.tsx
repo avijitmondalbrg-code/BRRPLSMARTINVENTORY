@@ -364,7 +364,7 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                             </select>
                         </div>
                         <div>
-                             <label className="text-[9px] font-black uppercase text-slate-400">Equipment model & specifications</label>
+                             <label className="text-[9px] font-black uppercase text-slate-400">Equipment model & specifications or Details</label>
                              <input type="text" placeholder="Signia Active Pro / Phonak Paradise" className="w-full p-2.5 border rounded-xl" value={tempManual.model} onChange={e => setTempManual({ ...tempManual, model: e.target.value })} />
                         </div>
                         <div>
@@ -502,7 +502,7 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
                     </div>
 
                     <div className="hidden print:block text-slate-500 text-[10px] italic border-2 border-dashed border-slate-300 p-2.5 rounded-xl text-center mb-6 font-bold uppercase tracking-wider">
-                         Proforma Quote Notice: This is a quotation proposal. No actual delivery of hearing aids or sales booking took place under this draft.
+                         Proforma Invoice Notice: This is a Proforma Invoice for Sales/Service.
                     </div>
 
                     {/* Header exact display */}
