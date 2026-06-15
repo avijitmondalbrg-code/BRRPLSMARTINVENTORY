@@ -64,6 +64,7 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [showPatientResults, setShowPatientResults] = useState(false);
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', phone: '', referDoctor: '', audiologist: '' });
+  const [isDemoPhoneMatched, setIsDemoPhoneMatched] = useState(false);
   
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
   const [tempManual, setTempManual] = useState({ brand: BRANDS[0], model: '', hsn: '90214090', price: 0, gst: 0, qty: 1, serial: '' });
@@ -97,6 +98,7 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
     setEntryBy(STAFF_NAMES[0]);
     setPatientSearchTerm(''); 
     setTempManual({ brand: BRANDS[0], model: '', hsn: '90214090', price: 0, gst: 0, qty: 1, serial: '' });
+    setIsDemoPhoneMatched(false);
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -105,6 +107,44 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
     setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata' }); 
     setPatientSearchTerm(p.name); 
     setShowPatientResults(false); 
+    setIsDemoPhoneMatched(true);
+  };
+
+  const handleDemoPhoneChange = (inputVal: string) => {
+    const updatedPatient = { ...patient, phone: inputVal };
+    setPatient(updatedPatient);
+
+    const cleanedInput = inputVal.replace(/\D/g, '');
+
+    if (cleanedInput.length >= 10) {
+      const match = patients.find(p => {
+        const cleanedExisting = p.phone.replace(/\D/g, '');
+        return cleanedExisting === cleanedInput || 
+               (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
+                cleanedExisting.slice(-10) === cleanedInput.slice(-10));
+      });
+
+      if (match) {
+        setPatient({
+          ...match,
+          phone: inputVal,
+          state: match.state || 'West Bengal',
+          district: match.district || 'Kolkata',
+          referDoctor: match.referDoctor || ''
+        });
+        setIsDemoPhoneMatched(true);
+        setPatientSearchTerm(match.name);
+        return;
+      }
+    }
+
+    if (isDemoPhoneMatched) {
+      setIsDemoPhoneMatched(false);
+      setPatient(prev => ({
+        ...prev,
+        id: ''
+      }));
+    }
   };
 
   const handleAddLine = () => {
@@ -274,7 +314,7 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                   </div>
                   {showPatientResults && patientSearchTerm && (
                     <div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2">
-                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
+                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).map(p=>(
                         <button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-pink-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group">
                           <div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone}</p></div>
                           <span className="text-pink-600 text-[9px] font-black uppercase tracking-widest bg-pink-50 px-3 py-1 rounded-full group-hover:bg-pink-600 group-hover:text-white transition-all">Select</span>
@@ -287,7 +327,15 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                 <div className="bg-pink-50/30 p-8 rounded-[2rem] border-2 border-dashed border-pink-100 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
-                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label>
+                        <input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.phone} onChange={e => handleDemoPhoneChange(e.target.value)} />
+                        {isDemoPhoneMatched && (
+                          <p className="text-[10px] font-bold text-teal-600 animate-pulse mt-1 ml-1">
+                            ✨ Patient matched! Linked to {patient.name}'s profile.
+                          </p>
+                        )}
+                      </div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><UserCheck size={12}/> Ref. Dr.</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} /></div>
                       <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-pink-600 font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
