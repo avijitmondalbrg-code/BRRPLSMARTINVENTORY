@@ -64,6 +64,8 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', phone: '', referDoctor: '', audiologist: '', state: 'West Bengal', district: 'Kolkata' });
+  const [isQuotePhoneMatched, setIsQuotePhoneMatched] = useState(false);
+  
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
   const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
@@ -99,6 +101,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
     setEditingId(null); 
     setPatientSearchTerm(''); 
     setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
+    setIsQuotePhoneMatched(false);
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
@@ -106,6 +109,44 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
   const handleSelectPatient = (p: Patient) => { 
     setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata' }); 
     setPatientSearchTerm(p.name); 
+    setIsQuotePhoneMatched(true);
+  };
+
+  const handleQuotePhoneChange = (inputVal: string) => {
+    const updatedPatient = { ...patient, phone: inputVal };
+    setPatient(updatedPatient);
+
+    const cleanedInput = inputVal.replace(/\D/g, '');
+
+    if (cleanedInput.length >= 10) {
+      const match = patients.find(p => {
+        const cleanedExisting = p.phone.replace(/\D/g, '');
+        return cleanedExisting === cleanedInput || 
+               (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
+                cleanedExisting.slice(-10) === cleanedInput.slice(-10));
+      });
+
+      if (match) {
+        setPatient({
+          ...match,
+          phone: inputVal,
+          state: match.state || 'West Bengal',
+          district: match.district || 'Kolkata',
+          referDoctor: match.referDoctor || ''
+        });
+        setIsQuotePhoneMatched(true);
+        setPatientSearchTerm(match.name);
+        return;
+      }
+    }
+
+    if (isQuotePhoneMatched) {
+      setIsQuotePhoneMatched(false);
+      setPatient(prev => ({
+        ...prev,
+        id: ''
+      }));
+    }
   };
 
   const handleEditClick = (q: Quotation) => {
@@ -322,7 +363,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                   </div>
                   {patientSearchTerm && (
                     <div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2">
-                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p=>(
+                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).map(p=>(
                         <button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group">
                           <div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone} • {p.address}</p></div>
                           <span className="text-primary text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-primary group-hover:text-white transition-all">Select</span>
@@ -336,7 +377,15 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Clinical Information</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
-                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.phone} onChange={e => setPatient({...patient, phone: e.target.value})} /></div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label>
+                        <input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.phone} onChange={e => handleQuotePhoneChange(e.target.value)} />
+                        {isQuotePhoneMatched && (
+                          <p className="text-[10px] font-bold text-teal-600 animate-pulse mt-1 ml-1">
+                            ✨ Patient matched! Linked to {patient.name}'s profile.
+                          </p>
+                        )}
+                      </div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><UserCheck size={12}/> Ref. Dr.</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="Referring Doctor" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1 flex items-center gap-1"><Stethoscope size={12}/> Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Consulting Audiologist" /></div>
                       <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Entry By (Staff) *</label><select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-primary font-bold shadow-sm" value={entryBy} onChange={e => setEntryBy(e.target.value)}>{STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
