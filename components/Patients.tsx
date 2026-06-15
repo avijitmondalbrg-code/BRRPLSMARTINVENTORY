@@ -20,6 +20,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAutoMatched, setIsAutoMatched] = useState(false);
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
 
   const handleOpenAdd = () => { 
     setEditingId(null); 
+    setIsAutoMatched(false);
     setFormData({ 
       id: '', 
       name: '', 
@@ -84,8 +86,45 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
 
   const handleOpenEdit = (p: Patient) => { 
     setEditingId(p.id); 
+    setIsAutoMatched(false);
     setFormData({ ...p }); 
     setShowModal(true); 
+  };
+
+  const handlePhoneChange = (inputVal: string) => {
+    // 1. Update form phone number as typed
+    const updatedForm = { ...formData, phone: inputVal };
+    setFormData(updatedForm);
+
+    // 2. Normalize and check if a patient exists with this phone number
+    const cleanedInput = inputVal.replace(/\D/g, '');
+    
+    // We only try to match if the cleaned input has 10 or more digits
+    if (cleanedInput.length >= 10) {
+      const match = patients.find(p => {
+        const cleanedExisting = p.phone.replace(/\D/g, '');
+        // Match exact or trailing 10 digits
+        return cleanedExisting === cleanedInput || 
+               (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
+                cleanedExisting.slice(-10) === cleanedInput.slice(-10));
+      });
+
+      if (match) {
+        setEditingId(match.id);
+        setIsAutoMatched(true);
+        setFormData({
+          ...match,
+          phone: inputVal // Keep user's exact typed format
+        });
+        return;
+      }
+    }
+
+    // If no match is found, but we were previously in an auto-matched state, revert back to "New Patient" mode
+    if (isAutoMatched) {
+      setEditingId(null);
+      setIsAutoMatched(false);
+    }
   };
 
   const calculateAge = (dobString?: string) => {
@@ -216,7 +255,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md overflow-y-auto">
               <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-8">
                   <div className="bg-[#3159a6] p-6 text-white flex justify-between items-center">
-                    <h3 className="font-black uppercase tracking-widest text-sm">{editingId ? 'Modify' : 'New'} Patient Entry</h3>
+                    <h3 className="font-black uppercase tracking-widest text-sm">{editingId ? (isAutoMatched ? 'Auto-Matched Patient (Updating)' : 'Modify Patient Entry') : 'New Patient Entry'}</h3>
                     <button onClick={()=>setShowModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
                   </div>
                   <div className="p-8 space-y-6">
@@ -237,7 +276,12 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Contact No *</label>
-                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} placeholder="Mobile number" />
+                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>handlePhoneChange(e.target.value)} placeholder="Mobile number" />
+                              {isAutoMatched && (
+                                <p className="text-[10px] font-bold text-teal-600 animate-pulse mt-1 ml-1">
+                                  ✨ Existing patient matched: {formData.name}! Details loaded. Saving will update this profile.
+                                </p>
+                              )}
                           </div>
                           <div className="space-y-1.5">
                               <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">State</label>
