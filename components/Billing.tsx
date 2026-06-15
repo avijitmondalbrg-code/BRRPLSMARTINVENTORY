@@ -1,37 +1,71 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
+import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { Patient, Invoice, UserRole } from '../types';
-import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote, Baby } from 'lucide-react';
-import { INDIAN_STATES, WEST_BENGAL_DISTRICTS } from '../constants';
-
-interface PatientsProps {
+interface BillingProps {
+  inventory: HearingAid[];
+  invoices?: Invoice[];
   patients: Patient[];
-  invoices: Invoice[];
-  onAddPatient: (patient: Patient) => void;
-  onUpdatePatient: (patient: Patient) => void;
-  onDelete: (patientId: string) => void;
+  hospitals: Hospital[];
+  advanceBookings?: AdvanceBooking[];
+  onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
+  onUpdateInvoice?: (invoice: Invoice) => void;
+  onDelete?: (invoiceId: string) => void;
+  onCancelInvoice?: (invoiceId: string) => void;
   logo: string;
   signature: string | null;
   userRole: UserRole;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  prefilledInvoiceData?: Invoice | null;
+  setPrefilledInvoiceData?: (invoice: Invoice | null) => void;
 }
 
-export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPatient, onUpdatePatient, onDelete, userRole, backHandlerRef }) => {
+const numberToWords = (num: number): string => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const inWords = (n: number): string => {
+        if ((n = n.toString() as any).length > 9) return 'overflow';
+        const n_array: any[] = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/) || [];
+        if (!n_array) return '';
+        let str = '';
+        str += (n_array[1] != 0) ? (a[Number(n_array[1])] || b[n_array[1][0]] + ' ' + a[n_array[1][1]]) + 'Crore ' : '';
+        str += (n_array[2] != 0) ? (a[Number(n_array[2])] || b[n_array[2][0]] + ' ' + a[n_array[2][1]]) + 'Lakh ' : '';
+        str += (n_array[3] != 0) ? (a[Number(n_array[3])] || b[n_array[3][0]] + ' ' + a[n_array[3][1]]) + 'Thousand ' : '';
+        str += (n_array[4] != 0) ? (a[Number(n_array[4])] || b[n_array[4][0]] + ' ' + a[n_array[4][1]]) + 'Hundred ' : '';
+        str += (n_array[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_array[5])] || b[n_array[5][0]] + ' ' + a[n_array[5][1]]) : '';
+        return str;
+    };
+    return inWords(Math.floor(num)) + 'Rupees Only';
+};
+
+export const Billing: React.FC<BillingProps> = ({ 
+  inventory, 
+  invoices = [], 
+  patients, 
+  hospitals, 
+  advanceBookings = [], 
+  onCreateInvoice, 
+  onUpdateInvoice, 
+  onDelete, 
+  onCancelInvoice, 
+  logo, 
+  signature, 
+  userRole, 
+  backHandlerRef,
+  prefilledInvoiceData,
+  setPrefilledInvoiceData
+}) => {
+  const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isAutoMatched, setIsAutoMatched] = useState(false);
-  const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!backHandlerRef) return;
     const handler = () => {
-      if (viewingHistoryId !== null) {
-        setViewingHistoryId(null);
-        return true;
-      }
-      if (showModal) {
-        setShowModal(false);
+      if (viewMode !== 'list') {
+        setViewMode('list');
         return true;
       }
       return false;
@@ -42,339 +76,1183 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
         backHandlerRef.current = null;
       }
     };
-  }, [viewingHistoryId, showModal, backHandlerRef]);
+  }, [viewMode, backHandlerRef]);
+
+  useEffect(() => {
+    if (prefilledInvoiceData) {
+      setViewMode('create');
+      setStep('review');
+      
+      const pat = prefilledInvoiceData.patientDetails || { 
+        id: prefilledInvoiceData.patientId || `P-${Date.now()}`, 
+        name: prefilledInvoiceData.patientName, 
+        address: '', 
+        phone: '', 
+        referDoctor: '', 
+        audiologist: '' 
+      };
+      setPatient({
+        ...pat,
+        state: pat.state || 'West Bengal',
+        district: pat.district || 'Kolkata',
+        country: pat.country || 'India'
+      });
+      setPatientSearchTerm(pat.name || '');
+      setInvoiceDate(new Date().toISOString().split('T')[0]);
+      
+      const PI_items = prefilledInvoiceData.items || [];
+      const realInventoryItemIds: string[] = [];
+      const remainingManualItems: any[] = [];
+      const discounts: Record<string, number> = {};
+      const overrides: Record<string, number> = {};
+
+      PI_items.forEach(item => {
+        const hAidId = item.hearingAidId;
+        const isRealInventory = hAidId && 
+                               !hAidId.startsWith('PI-') && 
+                               !hAidId.startsWith('MAN-') && 
+                               inventory.some(i => i.id === hAidId);
+                               
+        if (isRealInventory) {
+          realInventoryItemIds.push(hAidId);
+          discounts[hAidId] = item.discount || 0;
+          if (item.gstRate !== undefined) {
+            overrides[hAidId] = item.gstRate;
+          }
+        } else {
+          remainingManualItems.push({
+            ...item,
+            hearingAidId: hAidId && hAidId.startsWith('PI-') 
+              ? `MAN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` 
+              : hAidId
+          });
+        }
+      });
+
+      setSelectedItemIds(realInventoryItemIds);
+      setManualItems(remainingManualItems);
+      setItemDiscounts(discounts);
+      setGstOverrides(overrides);
+      
+      setTotalAdjustment(prefilledInvoiceData.discountValue || 0);
+      setInvoiceNotes(prefilledInvoiceData.notes || `CONVERTED FROM PROFORMA INVOICE: ${prefilledInvoiceData.id}`);
+      setWarranty(prefilledInvoiceData.warranty || '2 Years Standard Warranty');
+      setEntryBy(prefilledInvoiceData.entryBy || STAFF_NAMES[0]);
+      setSelectedHospitalId(prefilledInvoiceData.hospitalId || '');
+      setExistingPayments([]);
+      
+      if (prefilledInvoiceData.payments && prefilledInvoiceData.payments.length > 0) {
+        setInitialPayment(prefilledInvoiceData.payments[0].amount);
+        setPaymentMethod(prefilledInvoiceData.payments[0].method);
+        setPaymentBank(prefilledInvoiceData.payments[0].bankDetails || '');
+      } else {
+        setInitialPayment(0);
+      }
+      
+      if (setPrefilledInvoiceData) {
+        setPrefilledInvoiceData(null);
+      }
+    }
+  }, [prefilledInvoiceData, setPrefilledInvoiceData, inventory]);
   
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Post-Save Automation
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastSavedInvoice, setLastSavedInvoice] = useState<Invoice | null>(null);
 
-  const [formData, setFormData] = useState<Patient>({ 
-    id: '', 
-    name: '', 
-    dob: '', // Initial empty DOB
-    phone: '', 
-    email: '', 
-    address: '', 
-    district: 'Kolkata',
-    state: 'West Bengal', 
-    country: 'India', 
-    referDoctor: '', 
-    audiologist: '', 
-    addedDate: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
+  // Sales Dashboard Filters
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
-  const handleOpenAdd = () => { 
-    setEditingId(null); 
-    setIsAutoMatched(false);
-    setFormData({ 
-      id: '', 
-      name: '', 
-      dob: '',
-      phone: '', 
-      email: '', 
-      address: '', 
-      district: 'Kolkata',
-      state: 'West Bengal', 
-      country: 'India', 
-      referDoctor: '', 
-      audiologist: '', 
-      addedDate: new Date().toISOString().split('T')[0],
-      notes: ''
-    }); 
-    setShowModal(true); 
+  // Print Customization State
+  const [printScale, setPrintScale] = useState(100);
+  const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [printPaperSize, setPrintPaperSize] = useState<'A4' | 'Letter' | 'Legal'>('A4');
+
+  const [showCollectModal, setShowCollectModal] = useState(false);
+  const [collectingInvoice, setCollectingInvoice] = useState<Invoice | null>(null);
+  const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0);
+  const [payMethod, setPayMethod] = useState<PaymentRecord['method']>('Cash');
+  const [payBank, setPayBank] = useState<string>('');
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  const [patientSearchTerm, setPatientSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState(''); 
+  const [showPatientResults, setShowPatientResults] = useState(false);
+  const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
+  const [isBillingPhoneMatched, setIsBillingPhoneMatched] = useState(false);
+  
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [manualItems, setManualItems] = useState<InvoiceItem[]>([]);
+  const [tempManual, setTempManual] = useState({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
+  const [gstOverrides, setGstOverrides] = useState<Record<string, number>>({});
+  const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({});
+  const [totalAdjustment, setTotalAdjustment] = useState<number>(0); 
+  const [invoiceNotes, setInvoiceNotes] = useState<string>(''); 
+  const [warranty, setWarranty] = useState<string>('2 Years Standard Warranty');
+  const [entryBy, setEntryBy] = useState<string>(STAFF_NAMES[0]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
+  const [existingPayments, setExistingPayments] = useState<PaymentRecord[]>([]);
+  const [initialPayment, setInitialPayment] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentRecord['method']>('Cash');
+  const [paymentBank, setPaymentBank] = useState<string>('');
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const generateNextId = () => {
+    const fy = getFinancialYear();
+    const prefix = `BRRPL-HA-${fy}-`;
+    const fyInvoices = (invoices || []).filter(inv => inv.id.startsWith(prefix));
+    const maxSeq = fyInvoices.length === 0 ? 0 : Math.max(...fyInvoices.map(inv => parseInt(inv.id.split('-').pop() || '0', 10)));
+    return `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
   };
 
-  const handleOpenEdit = (p: Patient) => { 
-    setEditingId(p.id); 
-    setIsAutoMatched(false);
-    setFormData({ ...p }); 
-    setShowModal(true); 
+  const resetForm = () => { 
+    setStep('patient'); 
+    setPatient({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' }); 
+    setSelectedItemIds([]); 
+    setManualItems([]);
+    setGstOverrides({}); 
+    setItemDiscounts({}); 
+    setTotalAdjustment(0);
+    setInvoiceNotes('');
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setWarranty('2 Years Standard Warranty'); 
+    setEntryBy(STAFF_NAMES[0]);
+    setSelectedHospitalId('');
+    setEditingInvoiceId(null); 
+    setPatientSearchTerm(''); 
+    setProductSearchTerm(''); 
+    setInitialPayment(0); 
+    setPaymentMethod('Cash'); 
+    setPaymentBank(''); 
+    setExistingPayments([]);
+    setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
   };
 
-  const handlePhoneChange = (inputVal: string) => {
-    // 1. Update form phone number as typed
-    const updatedForm = { ...formData, phone: inputVal };
-    setFormData(updatedForm);
+  const handleStartNew = () => { resetForm(); setViewMode('create'); };
+  
+  const handleEditInvoice = (inv: Invoice, startStep: 'patient' | 'review' = 'review') => {
+    setEditingInvoiceId(inv.id);
+    setPatient(inv.patientDetails || { id: inv.patientId, name: inv.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+    setInvoiceDate(inv.date);
+    const inventoryIds = inv.items.filter(i => i.hearingAidId && !i.hearingAidId.startsWith('MAN-')).map(i => i.hearingAidId);
+    const manItems = inv.items.filter(i => !i.hearingAidId || i.hearingAidId.startsWith('MAN-'));
+    setSelectedItemIds(inventoryIds);
+    setManualItems(manItems);
+    const discounts: Record<string, number> = {};
+    inv.items.forEach(i => { if(i.hearingAidId) discounts[i.hearingAidId] = i.discount || 0; });
+    setItemDiscounts(discounts);
+    setTotalAdjustment(inv.discountValue || 0);
+    setInvoiceNotes(inv.notes || '');
+    setWarranty(inv.warranty || '2 Years Standard Warranty');
+    setEntryBy(inv.entryBy || STAFF_NAMES[0]);
+    setSelectedHospitalId(inv.hospitalId || '');
+    setExistingPayments(inv.payments || []);
+    setInitialPayment(0);
+    setProductSearchTerm('');
+    setStep(startStep);
+    setViewMode('edit');
+  };
 
-    // 2. Normalize and check if a patient exists with this phone number
+  const handleSelectPatient = (p: Patient) => { 
+    setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata', referDoctor: p.referDoctor || '' }); 
+    setPatientSearchTerm(p.name); 
+    setShowPatientResults(false); 
+    setIsBillingPhoneMatched(true);
+  };
+
+  const handleBillingPhoneChange = (inputVal: string) => {
+    const updatedPatient = { ...patient, phone: inputVal };
+    setPatient(updatedPatient);
+
     const cleanedInput = inputVal.replace(/\D/g, '');
-    
-    // We only try to match if the cleaned input has 10 or more digits
+
     if (cleanedInput.length >= 10) {
       const match = patients.find(p => {
         const cleanedExisting = p.phone.replace(/\D/g, '');
-        // Match exact or trailing 10 digits
         return cleanedExisting === cleanedInput || 
                (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
                 cleanedExisting.slice(-10) === cleanedInput.slice(-10));
       });
 
       if (match) {
-        setEditingId(match.id);
-        setIsAutoMatched(true);
-        setFormData({
+        setPatient({
           ...match,
-          phone: inputVal // Keep user's exact typed format
+          phone: inputVal,
+          state: match.state || 'West Bengal',
+          district: match.district || 'Kolkata',
+          referDoctor: match.referDoctor || ''
         });
+        setIsBillingPhoneMatched(true);
+        setPatientSearchTerm(match.name);
         return;
       }
     }
 
-    // If no match is found, but we were previously in an auto-matched state, revert back to "New Patient" mode
-    if (isAutoMatched) {
-      setEditingId(null);
-      setIsAutoMatched(false);
+    if (isBillingPhoneMatched) {
+      setIsBillingPhoneMatched(false);
+      setPatient(prev => ({
+        ...prev,
+        id: ''
+      }));
     }
   };
 
-  const calculateAge = (dobString?: string) => {
-    if (!dobString) return null;
-    const dob = new Date(dobString);
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-        age--;
-    }
-    return age;
+  const handleAddManualItem = () => {
+      if (!tempManual.model || tempManual.price <= 0) return;
+      const qty = tempManual.qty || 1;
+      const taxableValue = tempManual.price * qty;
+
+      const newItem: InvoiceItem = {
+          hearingAidId: `MAN-${Date.now()}`,
+          brand: tempManual.brand,
+          model: tempManual.model,
+          serialNumber: 'N/A',
+          price: tempManual.price,
+          qty: qty,
+          hsnCode: tempManual.hsn,
+          gstRate: tempManual.gst,
+          discount: 0,
+          taxableValue: taxableValue,
+          cgstAmount: 0,
+          sgstAmount: 0,
+          igstAmount: 0,
+          totalAmount: 0
+      };
+      setManualItems([...manualItems, newItem]);
+      setTempManual({ brand: '', model: '', hsn: '902190', price: 0, gst: 0, qty: 1 });
   };
 
-  const filteredPatients = patients.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.phone.includes(searchTerm);
-    const pDate = p.addedDate || '';
-    const matchesStart = !startDate || pDate >= startDate;
-    const matchesEnd = !endDate || pDate <= endDate;
-    return matchesSearch && matchesStart && matchesEnd;
-  }).sort((a, b) => {
-    const d1 = new Date(a.addedDate || 0).getTime(), d2 = new Date(b.addedDate || 0).getTime();
-    return d2 - d1;
+  const handleRemoveManualItem = (id: string) => {
+      setManualItems(manualItems.filter(i => i.hearingAidId !== id));
+  };
+
+  const isInterState = patient.state && patient.state !== 'West Bengal';
+  
+  const editingInvoice = editingInvoiceId ? invoices.find(inv => inv.id === editingInvoiceId) : null;
+  const selectedInventoryItems = selectedItemIds.map(id => {
+      // 1. Try to find in the main inventory
+      const foundInInv = (inventory || []).find(i => i.id === id);
+      if (foundInInv) return foundInInv;
+
+      // 2. Fallback to editing/prefilled invoice items snapshot
+      const sourceInvoiceItems = editingInvoice?.items || prefilledInvoiceData?.items || [];
+      const foundInInvoiceItems = sourceInvoiceItems.find(i => i.hearingAidId === id);
+      if (foundInInvoiceItems) {
+          return {
+              id: foundInInvoiceItems.hearingAidId,
+              brand: foundInInvoiceItems.brand || 'N/A',
+              model: foundInInvoiceItems.model || 'N/A',
+              serialNumber: foundInInvoiceItems.serialNumber || 'N/A',
+              price: foundInInvoiceItems.price || 0,
+              hsnCode: foundInInvoiceItems.hsnCode || '90214090',
+              gstRate: foundInInvoiceItems.gstRate || 0,
+              location: 'N/A',
+              status: 'Sold',
+              addedDate: ''
+          } as HearingAid;
+      }
+      return null;
+  }).filter((i): i is HearingAid => i !== null);
+  
+  let runningTaxableTotal: number = 0;
+  let runningCGST: number = 0;
+  let runningSGST: number = 0;
+  let runningIGST: number = 0;
+  let totalSubtotal: number = 0;
+
+  const invInvoiceItems: InvoiceItem[] = selectedInventoryItems.map(item => {
+      const itemDisc: number = (itemDiscounts[item.id] as number) || 0;
+      const itemTaxable: number = Math.max(0, item.price - itemDisc);
+      const gstRate: number = gstOverrides[item.id] !== undefined ? (gstOverrides[item.id] as number) : (item.gstRate || 0);
+      const totalTax = itemTaxable * (gstRate / 100);
+      let cgst = 0, sgst = 0, igst = 0;
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
+      runningTaxableTotal += itemTaxable; 
+      totalSubtotal += item.price;
+      return { 
+          hearingAidId: item.id, brand: item.brand, model: item.model, serialNumber: item.serialNumber, 
+          price: item.price, qty: 1, discount: itemDisc, gstRate, taxableValue: itemTaxable, 
+          cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: itemTaxable + totalTax, 
+          hsnCode: item.hsnCode || '90214090' 
+      };
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><User className="text-[#3159a6]" /> Patient Registry</h2>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Master Database & Records</p>
-        </div>
-        <button onClick={handleOpenAdd} className="bg-[#3159a6] text-white px-5 py-3 rounded-2xl flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all font-black uppercase text-[10px] tracking-widest">
-            <Plus size={18} /> New Patient Entry
-        </button>
-      </div>
-      
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input type="text" placeholder="Search by name or phone..." className="w-full pl-10 pr-4 py-3 border-2 border-gray-50 rounded-xl focus:border-[#3159a6] outline-none transition font-medium" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-gray-50 p-2 px-4 rounded-xl border border-gray-100">
-                <Calendar size={18} className="text-[#3159a6]" />
-                <span className="text-[9px] font-black uppercase text-gray-400 whitespace-nowrap tracking-[0.2em]">Registration Window</span>
-                <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="bg-transparent text-xs outline-none focus:text-[#3159a6] font-black" />
-                <span className="text-gray-300 font-black">/</span>
-                <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} className="bg-transparent text-xs outline-none focus:text-[#3159a6] font-black" />
-                {(startDate || endDate) && <button onClick={()=>{setStartDate(''); setEndDate('');}} className="text-red-400 hover:text-red-600 ml-1"><X size={16}/></button>}
-            </div>
-        </div>
-      </div>
+  const processedManualItems: InvoiceItem[] = manualItems.map(item => {
+      const totalTax = item.taxableValue * (item.gstRate / 100);
+      let cgst = 0, sgst = 0, igst = 0;
+      if (isInterState) { igst = totalTax; runningIGST += igst; } else { cgst = totalTax / 2; sgst = totalTax / 2; runningCGST += cgst; runningSGST += sgst; }
+      runningTaxableTotal += item.taxableValue;
+      totalSubtotal += item.price * (item.qty || 1);
+      return { ...item, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, totalAmount: item.taxableValue + totalTax };
+  });
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPatients.length === 0 ? (
-            <div className="col-span-full py-32 text-center bg-white rounded-3xl border-2 border-dashed border-gray-100">
-                <User className="mx-auto h-16 w-16 text-gray-100 mb-4" />
-                <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">No records found matching criteria</p>
+  const allInvoiceItems = [...invInvoiceItems, ...processedManualItems];
+  
+  // Explicit Round Off Logic
+  const rawFinalTotal = (runningTaxableTotal + runningCGST + runningSGST + runningIGST) - totalAdjustment;
+  const finalTotal: number = Math.round(Math.max(0, rawFinalTotal));
+  const roundOffAmount = finalTotal - rawFinalTotal;
+
+  const totalItemDiscounts: number = (Object.values(itemDiscounts) as number[]).reduce((a: number, b: number) => a + b, 0);
+
+  const gstSummary = React.useMemo(() => {
+    const summary: Record<number, { taxable: number, cgst: number, sgst: number, igst: number }> = {};
+    allInvoiceItems.forEach(item => {
+      const rate = item.gstRate;
+      if (!summary[rate]) summary[rate] = { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+      summary[rate].taxable += item.taxableValue;
+      summary[rate].cgst += item.cgstAmount;
+      summary[rate].sgst += item.sgstAmount;
+      summary[rate].igst += item.igstAmount;
+    });
+    return summary;
+  }, [allInvoiceItems]);
+
+  const handleSaveInvoice = () => {
+    const finalId = editingInvoiceId || generateNextId();
+    const currentPayments = [...existingPayments];
+    if (initialPayment > 0) {
+      currentPayments.push({
+        id: `PAY-${Date.now()}`, date: new Date().toISOString().split('T')[0],
+        amount: initialPayment, method: paymentMethod, bankDetails: paymentBank || ""
+      });
+    }
+    const totalPaid = currentPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
+    const balanceDue = Math.max(0, finalTotal - totalPaid);
+    
+    const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
+    const isPredefinedHospital = HOSPITAL_OPTIONS.includes(selectedHospitalId);
+
+    const invData: Invoice = { 
+      id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
+      subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
+      placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
+      finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, 
+      hospitalId: selectedHospitalId || undefined,
+      hospitalName: isPredefinedHospital ? selectedHospitalId : (selectedHospital?.name || undefined),
+      patientDetails: patient, notes: invoiceNotes,
+      payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
+    };
+    onCreateInvoice(invData, selectedItemIds); 
+    
+    // Automation Trigger
+    setLastSavedInvoice(invData);
+    setShowSuccessModal(true);
+    setViewMode('list');
+  };
+
+  const handleSendWhatsAppThankYou = () => {
+    if (!lastSavedInvoice) return;
+    const patientName = lastSavedInvoice.patientName;
+    const invId = lastSavedInvoice.id;
+    const amount = Math.round(lastSavedInvoice.finalTotal).toLocaleString();
+    const phone = lastSavedInvoice.patientDetails?.phone.replace(/\D/g, '') || '';
+    
+    // Bengali Custom Message
+    const message = `Namaste ${patientName} ji,\n\nBengal Rehabilitation & Research Pvt. Ltd. (BRG) theke apnake dhonyobad.\n\nApnar invoice generate hoyeche:\n# Invoice: ${invId}\n# Total: ₹${amount}\n\nApnar shustho jiboner kamona kori. Shighroi clinic-e dekha hobe!\n\nWebsite: www.bengalrehabilitationgroup.com`;
+    
+    const whatsappUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowSuccessModal(false);
+  };
+
+  const handleApplyAdvance = (adv: AdvanceBooking) => {
+      const newPayment: PaymentRecord = {
+          id: `PAY-ADV-${Date.now()}`, date: new Date().toISOString().split('T')[0],
+          amount: adv.amount, method: 'Advance', note: `Ref: ${adv.id}`, bankDetails: 'N/A'
+      };
+      setExistingPayments([...existingPayments, newPayment]);
+  };
+
+  const handleConfirmCollection = () => {
+      if (!collectingInvoice || !onUpdateInvoice || newPaymentAmount <= 0) return;
+      const newPayment: PaymentRecord = { id: `PAY-${Date.now()}`, date: payDate, amount: newPaymentAmount, method: payMethod, bankDetails: payBank || "" };
+      const updatedPayments = [...(collectingInvoice.payments || []), newPayment];
+      const totalPaid = updatedPayments.reduce((sum, p: PaymentRecord) => sum + p.amount, 0);
+      const balanceDue = Math.max(0, Math.round(collectingInvoice.finalTotal) - totalPaid);
+      const updatedInvoice: Invoice = { ...collectingInvoice, payments: updatedPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : 'Partial' };
+      onUpdateInvoice(updatedInvoice);
+      setShowCollectModal(false);
+      setCollectingInvoice(null);
+      setNewPaymentAmount(0);
+  };
+
+  const openCollectModal = (inv: Invoice) => {
+      setCollectingInvoice(inv);
+      setNewPaymentAmount(inv.balanceDue);
+      setShowCollectModal(true);
+  };
+
+  // Filter logic and statistics calculation
+  const filteredInvoices = useMemo(() => {
+    return (invoices || []).filter(inv => {
+      const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           inv.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           inv.items.some(it => it.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           inv.items.some(it => it.model.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStart = !filterStartDate || inv.date >= filterStartDate;
+      const matchesEnd = !filterEndDate || inv.date <= filterEndDate;
+      
+      return matchesSearch && matchesStart && matchesEnd;
+    }).sort((a, b) => {
+        // Primary sort: Date descending
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        // Secondary sort: ID descending (to handle multiple invoices on same day)
+        return b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [invoices, searchTerm, filterStartDate, filterEndDate]);
+
+  const billingStats = useMemo(() => {
+    let totalSales = 0;
+    let totalOutstanding = 0;
+    let totalReceived = 0;
+
+    filteredInvoices.forEach(inv => {
+      if (inv.status === 'Cancelled') return;
+      totalSales += inv.finalTotal;
+      totalOutstanding += (inv.balanceDue || 0);
+      const collectedForInv = inv.payments.reduce((sum, p) => sum + p.amount, 0);
+      totalReceived += collectedForInv;
+    });
+
+    return { totalSales, totalOutstanding, totalReceived };
+  }, [filteredInvoices]);
+
+  const exportToCSV = () => {
+    const headers = ['Invoice No', 'Date', 'Patient Name', 'Phone', 'Items', 'Serials', 'Total Amount', 'Taxable Value', 'Total Tax', 'Amount Paid', 'Balance Due', 'Status'];
+    const rows = filteredInvoices.map(inv => [
+      inv.id,
+      inv.date,
+      `"${inv.patientName}"`,
+      inv.patientDetails?.phone || 'N/A',
+      `"${inv.items.map(it => `${it.brand} ${it.model}`).join('; ')}"`,
+      `"${inv.items.map(it => it.serialNumber).join('; ')}"`,
+      inv.finalTotal.toFixed(2),
+      inv.totalTaxableValue.toFixed(2),
+      inv.totalTax.toFixed(2),
+      (inv.finalTotal - inv.balanceDue).toFixed(2),
+      inv.balanceDue.toFixed(2),
+      inv.paymentStatus
+    ]);
+    
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (viewMode === 'list') {
+      return (
+          <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileText className="text-[#3159a6]" /> Billing & Sales</h2>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button onClick={exportToCSV} className="bg-green-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-green-700 transition whitespace-nowrap"><Download size={16} /> Sales Report</button>
+                    <button onClick={handleStartNew} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition whitespace-nowrap"><Plus size={16} /> New Invoice</button>
+                  </div>
+              </div>
+
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-blue-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-blue-50 rounded-2xl text-[#3159a6] group-hover:scale-110 transition-transform"><TrendingUp size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Sales (Period)</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalSales.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-green-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-green-50 rounded-2xl text-green-600 group-hover:scale-110 transition-transform"><CreditCard size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Collected</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalReceived.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-red-50 flex items-center gap-5 transition hover:shadow-xl group">
+                  <div className="p-4 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform"><AlertCircle size={28}/></div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Outstanding</p>
+                    <p className="text-2xl font-black text-red-600 tracking-tighter">₹{billingStats.totalOutstanding.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters Area */}
+              <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center gap-6">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
+                    <input className="pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm w-full outline-none focus:bg-white focus:border-[#3159a6] transition font-bold" placeholder="Find by ID, Patient or Serial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-4 bg-gray-50 p-2 px-4 rounded-2xl border-2 border-gray-50 w-full lg:w-auto">
+                    <div className="flex items-center gap-2">
+                        <Calendar size={18} className="text-[#3159a6]" />
+                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">Date Filter</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        <span className="text-gray-300 font-black">/</span>
+                        <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        {(filterStartDate || filterEndDate) && (
+                            <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }} className="text-red-400 hover:text-red-600 ml-2"><X size={16}/></button>
+                        )}
+                    </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-[#3159a6] text-white font-black border-b text-[10px] uppercase tracking-[0.2em]">
+                            <tr><th className="p-5">Invoice No</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5">Device Units</th><th className="p-5 text-right">Grand Total</th><th className="p-5 text-right">Outstanding</th><th className="p-5 text-center">Status</th><th className="p-5 text-center">Actions</th></tr>
+                        </thead>
+                        <tbody className="divide-y text-sm">
+                            {filteredInvoices.map(inv => (
+                                <tr key={inv.id} className="hover:bg-blue-50/30 transition">
+                                    <td className="p-5 font-black text-[#3159a6]">
+                                        <div>{inv.id}</div>
+                                        {inv.entryBy && (
+                                            <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">
+                                                By: {inv.entryBy}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
+                                    <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{inv.patientName}</td>
+                                    <td className="p-5">
+                                        {/* Sorted items display for sequence consistency */}
+                                        {[...inv.items]
+                                          .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber, undefined, { numeric: true }))
+                                          .map((it, idx) => (
+                                            <div key={idx} className="mb-1 last:mb-0">
+                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand ? `${it.brand} ` : ''}{it.model} {it.qty && it.qty > 1 ? `(x${it.qty})` : ''}</p>
+                                                <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
+                                            </div>
+                                        ))}
+                                    </td>
+                                    <td className="p-5 text-right font-black">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
+                                    <td className="p-5 text-right font-black text-red-600">₹{(inv.balanceDue || 0).toLocaleString('en-IN')}</td>
+                                    <td className="p-5 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${
+                                                inv.status === 'Cancelled' ? 'bg-black text-white border-black' :
+                                                inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                                inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 
+                                                'bg-red-50 text-red-700 border-red-100'}`}>
+                                                {inv.status === 'Cancelled' ? 'Cancelled' : inv.paymentStatus}
+                                            </span>
+                                            {inv.status === 'Cancelled' && <p className="text-[8px] font-bold text-gray-400 mt-1 uppercase italic">Void Record</p>}
+                                        </div>
+                                    </td>
+                                    <td className="p-5 text-center">
+                                        <div className="flex justify-center items-center gap-1">
+                                            <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
+                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice" disabled={inv.status === 'Cancelled'}><Edit size={18} className={inv.status === 'Cancelled' ? 'opacity-20' : ''}/></button>
+                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5 || inv.status === 'Cancelled'}><Wallet size={18} className={(inv.balanceDue <= 0.5 || inv.status === 'Cancelled') ? 'opacity-20' : ''}/></button>
+                                            
+                                            {inv.status !== 'Cancelled' && onCancelInvoice && (
+                                                <button onClick={() => onCancelInvoice(inv.id)} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition" title="Cancel Invoice"><Ban size={18}/></button>
+                                            )}
+
+                                            {userRole === 'admin' && onDelete && (
+                                                <button 
+                                                    onClick={() => { 
+                                                        const userConfirmation = window.prompt(`To permanently delete invoice "${inv.id}" and return items to stock, please type the invoice ID to confirm:`);
+                                                        if (userConfirmation === inv.id) {
+                                                            onDelete(inv.id);
+                                                        } else if (userConfirmation !== null) {
+                                                            alert("Invoice ID mismatch. Deletion cancelled.");
+                                                        }
+                                                    }} 
+                                                    className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition" 
+                                                    title="Permanently Delete Invoice"
+                                                >
+                                                    <Trash2 size={18}/>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+              </div>
+
+              {/* Automation Success Modal */}
+              {showSuccessModal && lastSavedInvoice && (
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
+                      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
+                          <div className="p-10 text-center space-y-6">
+                              <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-green-100 shadow-inner">
+                                  <CheckCircle2 size={48} />
+                              </div>
+                              <div>
+                                  <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">Invoice Shared!</h3>
+                                  <p className="text-sm text-gray-500 font-bold mt-2">Data successfully archived in cloud vault.</p>
+                              </div>
+                              
+                              <div className="bg-blue-50 p-6 rounded-3xl border-2 border-blue-50 text-left">
+                                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Target Patient</p>
+                                  <p className="font-black text-gray-800 uppercase">{lastSavedInvoice.patientName}</p>
+                                  <p className="text-xs font-bold text-blue-600 font-mono mt-1">ID: {lastSavedInvoice.id}</p>
+                              </div>
+
+                              <div className="space-y-3">
+                                  <button onClick={handleSendWhatsAppThankYou} className="w-full bg-teal-600 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl hover:bg-teal-700 transition flex items-center justify-center gap-3 text-xs">
+                                      <MessageCircle size={18}/> Send WhatsApp Thank You
+                                  </button>
+                                  <button onClick={() => setShowSuccessModal(false)} className="w-full py-4 text-gray-400 font-black uppercase tracking-widest text-[10px] hover:text-gray-800 transition">
+                                      Skip for now
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {showCollectModal && collectingInvoice && (
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-fade-in">
+                      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border-4 border-white">
+                          <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+                              <h3 className="font-black uppercase tracking-widest text-xs ml-2">Record Outstanding Payment</h3>
+                              <button onClick={() => setShowCollectModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
+                          </div>
+                          <div className="p-10 space-y-6 bg-gray-50/50">
+                              <div className="bg-white p-4 rounded-2xl border-2 border-blue-50 shadow-sm">
+                                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Target Account Reference</p>
+                                  <p className="font-black text-gray-800 text-lg">{collectingInvoice.id}</p>
+                                  <p className="text-xs font-bold text-blue-600 uppercase tracking-tight">{collectingInvoice.patientName}</p>
+                              </div>
+
+                              <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-1.5">
+                                          <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Payment Mode</label>
+                                          <select className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-gray-700 outline-none focus:border-blue-500" value={payMethod} onChange={e=>setPayMethod(e.target.value as any)}>
+                                              <option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Account Transfer">Bank Transfer</option>
+                                              <option value="Cheque">Cheque</option>
+                                              <option value="EMI">Finance</option>
+                                              <option value="Credit Card">Credit Card</option>
+                                              <option value="Debit Card">Debit Card</option>
+                                          </select>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                          <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Date</label>
+                                          <input type="date" className="w-full border-2 border-gray-100 rounded-xl p-2.5 font-bold text-gray-700" value={payDate} onChange={e=>setPayDate(e.target.value)} />
+                                      </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Receiving Account</label>
+                                      <select className="w-full border-2 border-gray-100 rounded-xl p-3 font-bold text-blue-800 outline-none" value={payBank} onChange={e=>setPayBank(e.target.value)}>
+                                          <option value="">-- No Bank (Cash Node) --</option>
+                                          {COMPANY_BANK_ACCOUNTS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+                                      </select>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                      <label className="text-[10px] font-black uppercase text-gray-400 ml-1">Collection Amount (INR)</label>
+                                      <div className="relative">
+                                          <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600" size={24} />
+                                          <input type="number" className="w-full pl-12 pr-4 py-4 border-2 border-gray-100 rounded-2xl text-3xl font-black text-gray-800 outline-none focus:border-blue-500" value={newPaymentAmount || ''} onChange={e=>setNewPaymentAmount(Number(e.target.value))} />
+                                      </div>
+                                      <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest text-right mt-1">Due: ₹{collectingInvoice.balanceDue.toLocaleString()}</p>
+                                  </div>
+                              </div>
+
+                              <button onClick={handleConfirmCollection} className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-blue-700 transition active:scale-95 text-[10px] flex items-center justify-center gap-2">
+                                  <CheckCircle2 size={16}/> Finalize Receipt Entry
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+              )}
+          </div>
+      );
+  }
+
+  const patientAdvances = advanceBookings.filter(b => 
+    b.patientId === patient.id && 
+    b.status === 'Active' && 
+    !existingPayments.some(p => p.note?.includes(b.id))
+  );
+
+  const totalPaidSoFar = existingPayments.reduce((s: number, p: PaymentRecord) => s + p.amount, 0) + initialPayment;
+
+  return (
+    <div className="max-w-5xl mx-auto pb-10">
+        <div className="mb-6 flex items-center justify-between print:hidden">
+            <div className="flex items-center gap-4"><button onClick={() => setViewMode('list')} className="p-3 bg-white border-2 border-gray-50 rounded-full text-gray-400 shadow-sm transition"><ArrowLeft size={24} /></button><h2 className="text-2xl font-black uppercase tracking-tighter text-gray-800">Invoice Architect</h2></div>
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl border">{['patient', 'product', 'payment', 'review'].map((s, idx) => (<button key={s} onClick={() => setStep(s as any)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${step === s ? 'bg-[#3159a6] text-white shadow-lg' : 'bg-transparent text-gray-400'}`}>{idx+1}. {s}</button>))}</div>
+        </div>
+        
+        {step === 'patient' && (
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
+                <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 1: Client Selection</h3>
+                <div className="mb-10 relative"><label className="block text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest ml-1">Recall Registered Patient</label><div className="relative"><Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Start typing name or mobile..." className="w-full pl-12 pr-4 py-5 border-2 border-gray-50 bg-gray-50/50 rounded-2xl outline-none focus:border-[#3159a6] focus:bg-white transition-all shadow-sm font-bold text-lg" value={patientSearchTerm} onFocus={() => setShowPatientResults(true)} onChange={(e) => { setPatientSearchTerm(e.target.value); setShowPatientResults(true); }} /></div>{showPatientResults && (<div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2"><div className="space-y-1">{patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).map(p=>(<button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group"><div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone} • {p.state}</p></div><span className="text-[#3159a6] text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-[#3159a6] group-hover:text-white transition-all">Select</span></button>))}</div></div>)}</div>
+                <div className="bg-blue-50/30 p-8 rounded-[2rem] border-2 border-dashed border-blue-100 space-y-8">
+                    <p className="text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em]">Verification & Contact Details</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Patient Full Name *</label><input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.name} onChange={e => setPatient({...patient, name: e.target.value})} /></div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Active Phone *</label>
+                        <input required className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.phone} onChange={e => handleBillingPhoneChange(e.target.value)} />
+                        {isBillingPhoneMatched && (
+                          <p className="text-[10px] font-bold text-teal-600 animate-pulse mt-1 ml-1">
+                            ✨ Patient matched! Linked to {patient.name}'s profile.
+                          </p>
+                        )}
+                      </div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Ref. Dr. (Referrer)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.referDoctor} onChange={e => setPatient({...patient, referDoctor: e.target.value})} placeholder="e.g. Dr. Name" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">State (Supply Destination)</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.state} onChange={e => setPatient({...patient, state: e.target.value})} /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Audiologist</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.audiologist} onChange={e => setPatient({...patient, audiologist: e.target.value})} placeholder="Name" /></div>
+                      <div><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Entry By (Staff) *</label><select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={entryBy} onChange={e => setEntryBy(e.target.value)}>{STAFF_NAMES.map(name => <option key={name} value={name}>{name}</option>)}</select></div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Hospital / Clinic Selection</label>
+                        <select className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={selectedHospitalId} onChange={e => setSelectedHospitalId(e.target.value)}>
+                          <option value="">-- Self Patient --</option>
+                          <optgroup label="Standard Options">
+                            {HOSPITAL_OPTIONS.map(name => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </optgroup>
+                          {hospitals.length > 0 && (
+                            <optgroup label="Database Hospitals">
+                              {hospitals.map(h => (
+                                <option key={h.id} value={h.id}>{h.name}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Full Postal Address</label><input className="w-full border-2 border-white bg-white rounded-2xl p-4 outline-none focus:border-[#3159a6] font-bold shadow-sm" value={patient.address} onChange={e => setPatient({...patient, address: e.target.value})} /></div>
+                    </div>
+                </div>
+                <div className="mt-12 flex justify-end"><button onClick={() => setStep('product')} disabled={!patient.name} className="bg-[#3159a6] text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs disabled:opacity-50">Proceed to Product Selection &rarr;</button></div>
             </div>
-        ) : filteredPatients.map(patient => {
-            const age = calculateAge(patient.dob);
-            return (
-              <div key={patient.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#3159a6]/[0.02] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-                
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                    <div className="flex-1">
-                        <h3 className="font-black text-xl text-gray-800 leading-tight group-hover:text-[#3159a6] transition-colors uppercase tracking-tight">
-                            {patient.name} {age !== null && <span className="text-[#3159a6] opacity-40 ml-1">({age}y)</span>}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <span className="text-[9px] bg-gray-50 text-gray-400 font-mono px-2 py-0.5 rounded-lg border border-gray-100">ID: {patient.id.slice(-6)}</span>
-                          {patient.addedDate && (
-                              <span className="text-[9px] bg-blue-50 text-[#3159a6] px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1">
-                                <Calendar size={10}/> {new Date(patient.addedDate).toLocaleDateString('en-IN')}
-                              </span>
-                          )}
-                          {patient.entryBy && (
-                              <span className="text-[9px] bg-teal-50 text-teal-800 px-2 py-0.5 rounded-lg font-black uppercase flex items-center gap-1 border border-teal-100">
-                                BY: {patient.entryBy}
-                              </span>
-                          )}
+        )}
+
+        {step === 'product' && (
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
+                <div className="flex justify-between items-center mb-6 border-b-2 border-blue-50 pb-4">
+                    <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em]">Phase 2: Inventory Assignment</h3>
+                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${isInterState ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                        {isInterState ? `INTER-STATE (IGST MODE) - ${patient.state}` : `INTRA-STATE (CGST/SGST MODE)`}
+                    </div>
+                </div>
+                <div className="relative mb-6 flex gap-4"><div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Find serial number or model..." className="w-full pl-12 pr-4 py-4 border-2 border-gray-50 bg-gray-50/50 rounded-2xl focus:bg-white focus:border-[#3159a6] outline-none transition font-bold" value={productSearchTerm} onChange={(e) => setProductSearchTerm(e.target.value)}/></div></div>
+                <div className="max-h-80 overflow-y-auto border-2 border-gray-50 rounded-[2rem] mb-8 shadow-inner custom-scrollbar overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-[#3159a6] text-white sticky top-0 uppercase font-black text-[10px] tracking-widest">
+                            <tr><th className="p-5 w-14"></th><th className="p-5">Device Unit</th><th className="p-5 text-center">HSN Code</th><th className="p-5">Serial No</th><th className="p-5 text-center">Tax %</th><th className="p-5 text-center">Discount (₹)</th><th className="p-5 text-right">Unit MRP</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {inventory.filter(i => {
+                                const match = i.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) || i.model.toLowerCase().includes(productSearchTerm.toLowerCase()) || i.serialNumber.toLowerCase().includes(productSearchTerm.toLowerCase());
+                                return (i.status === 'Available' || selectedItemIds.includes(i.id)) && match;
+                            }).map(item => (
+                                <tr key={item.id} className={`${selectedItemIds.includes(item.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'} transition`}>
+                                    <td className="p-5 text-center"><input type="checkbox" className="h-5 w-5 rounded-lg border-2 border-gray-200 text-[#3159a6] focus:ring-[#3159a6] transition" checked={selectedItemIds.includes(item.id)} onChange={() => { if(selectedItemIds.includes(item.id)) { setSelectedItemIds(selectedItemIds.filter(id => id !== item.id)); const newDiscounts = {...itemDiscounts}; delete newDiscounts[item.id]; setItemDiscounts(newDiscounts); } else setSelectedItemIds([...selectedItemIds, item.id]); }} /></td>
+                                    <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{item.brand} {item.model}</td>
+                                    <td className="p-5 text-center font-mono font-bold text-gray-400">{item.hsnCode || '90214090'}</td>
+                                    <td className="p-5 font-mono font-black text-[#3159a6] tracking-widest">{item.serialNumber}</td>
+                                    <td className="p-5 text-center">
+                                        {selectedItemIds.includes(item.id) && (
+                                            <select className="border-2 border-blue-100 rounded-xl p-1.5 font-bold text-[#3159a6] bg-white outline-none" value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : (item.gstRate || 0)} onChange={(e) => setGstOverrides({...gstOverrides, [item.id]: Number(e.target.value)})}> 
+                                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                                            </select>
+                                        )}
+                                    </td>
+                                    <td className="p-5 text-center">{selectedItemIds.includes(item.id) && (<input type="number" className="border-2 border-blue-100 rounded-xl p-1.5 w-24 text-right outline-none focus:border-[#3159a6] font-bold" placeholder="0" value={itemDiscounts[item.id] || ''} onChange={(e) => setItemDiscounts({...itemDiscounts, [item.id]: Number(e.target.value)})}/>)}</td>
+                                    <td className="p-5 text-right font-black text-gray-900 text-lg">₹{item.price.toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-[2rem] border-2 border-dashed border-slate-200 mb-8">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 ml-1">
+                        <Wrench size={14}/> Manual Service / Non-Inventory Entry
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
+                        <div className="md:col-span-2">
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Description (Repair / Service)" value={tempManual.model} onChange={e=>setTempManual({...tempManual, model: e.target.value})} />
+                        </div>
+                        <div className="md:col-span-1">
+                            <input className="w-full border-2 border-white rounded-xl p-3 text-sm font-mono outline-none focus:border-[#3159a6]" placeholder="HSN" value={tempManual.hsn} onChange={e=>setTempManual({...tempManual, hsn: e.target.value})} />
+                        </div>
+                        <div className="md:col-span-1">
+                            <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Qty" value={tempManual.qty || ''} onChange={e=>setTempManual({...tempManual, qty: Number(e.target.value)})} />
+                        </div>
+                        <div className="md:col-span-1">
+                            <input type="number" className="w-full border-2 border-white rounded-xl p-3 text-sm font-bold outline-none focus:border-[#3159a6]" placeholder="Rate" value={tempManual.price || ''} onChange={e=>setTempManual({...tempManual, price: Number(e.target.value)})} />
+                        </div>
+                        <div className="md:col-span-1 flex gap-2">
+                           <select className="border-2 border-white rounded-xl p-3 text-xs font-bold outline-none flex-1" value={tempManual.gst} onChange={e=>setTempManual({...tempManual, gst: Number(e.target.value)})}>
+                                <option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option>
+                           </select>
+                            <button onClick={handleAddManualItem} className="bg-[#3159a6] text-white p-3 rounded-xl hover:bg-slate-800 transition shadow-lg"><PackagePlus size={20}/></button>
                         </div>
                     </div>
-                    {userRole === 'admin' && (
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={()=>handleOpenEdit(patient)} className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition"><Edit size={18}/></button>
-                        <button onClick={()=>{ if(window.confirm(`Permanently delete ${patient.name}?`)) onDelete(patient.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
-                      </div>
-                    )}
-                </div>
-                
-                <div className="space-y-3 text-sm text-gray-600 mb-8 border-t border-gray-50 pt-6 relative z-10">
-                    <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest"><Phone size={16} className="text-[#3159a6]" /> {patient.phone}</p>
-                    <p className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
-                        <Baby size={16} className="text-[#3159a6]" /> 
-                        {patient.dob ? new Date(patient.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric'}) : 'DOB not provided'}
-                    </p>
-                    <p className="flex items-start gap-4 text-xs font-medium leading-relaxed">
-                      <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" /> 
-                      <span>
-                        {patient.address && `${patient.address}, `}
-                        {patient.district && `${patient.district}, `}
-                        {patient.state || 'Location data not registered'}
-                      </span>
-                    </p>
-                    {patient.notes && (
-                      <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 text-[11px] italic text-amber-900 line-clamp-3">
-                        "{patient.notes}"
-                      </div>
-                    )}
-                </div>
 
-                <button 
-                  onClick={() => setViewingHistoryId(patient.id)} 
-                  className="w-full py-4 text-[10px] text-[#3159a6] bg-blue-50 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-[#3159a6] hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 relative z-10"
-                >
-                  <History size={14}/> Transaction Ledger
-                </button>
-              </div>
-            );
-        })}
-      </div>
-
-      {showModal && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-md overflow-y-auto">
-              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-8">
-                  <div className="bg-[#3159a6] p-6 text-white flex justify-between items-center">
-                    <h3 className="font-black uppercase tracking-widest text-sm">{editingId ? (isAutoMatched ? 'Auto-Matched Patient (Updating)' : 'Modify Patient Entry') : 'New Patient Entry'}</h3>
-                    <button onClick={()=>setShowModal(false)} className="hover:rotate-90 transition-transform"><X size={24}/></button>
-                  </div>
-                  <div className="p-8 space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Legal Name *</label>
-                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} placeholder="Full name" />
-                          </div>
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Date of Birth</label>
-                              <div className="relative">
-                                  <Baby className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
-                                  <input type="date" className="w-full pl-12 border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.dob} onChange={e=>setFormData({...formData, dob: e.target.value})} />
-                              </div>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Contact No *</label>
-                              <input required className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.phone} onChange={e=>handlePhoneChange(e.target.value)} placeholder="Mobile number" />
-                              {isAutoMatched && (
-                                <p className="text-[10px] font-bold text-teal-600 animate-pulse mt-1 ml-1">
-                                  ✨ Existing patient matched: {formData.name}! Details loaded. Saving will update this profile.
-                                </p>
-                              )}
-                          </div>
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">State</label>
-                              <select 
-                                className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white focus:border-[#3159a6] transition-all"
-                                value={formData.state}
-                                onChange={e => setFormData({...formData, state: e.target.value})}
-                              >
-                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">District</label>
-                              {formData.state === 'West Bengal' ? (
-                                <select 
-                                  className="w-full border-2 border-gray-50 rounded-2xl p-4 outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white focus:border-[#3159a6] transition-all"
-                                  value={formData.district}
-                                  onChange={e => setFormData({...formData, district: e.target.value})}
-                                >
-                                  {WEST_BENGAL_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                              ) : (
-                                <input 
-                                  className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" 
-                                  value={formData.district} 
-                                  onChange={e=>setFormData({...formData, district: e.target.value})} 
-                                  placeholder="Enter District" 
-                                />
-                              )}
-                          </div>
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1">Address Line</label>
-                              <input className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-bold text-gray-700 bg-gray-50 focus:bg-white transition-all" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} placeholder="Flat/House No, Street, Landmark" />
-                          </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest ml-1 flex items-center gap-2"><StickyNote size={12}/> Clinical Notes / History</label>
-                          <textarea 
-                            className="w-full border-2 border-gray-50 rounded-2xl p-4 focus:border-[#3159a6] outline-none font-medium text-gray-700 bg-gray-50 focus:bg-white transition-all h-32 resize-none" 
-                            value={formData.notes} 
-                            onChange={e=>setFormData({...formData, notes: e.target.value})} 
-                            placeholder="Add relevant patient details, clinical history, or specific requirements here..." 
-                          />
-                      </div>
-
-                      <button onClick={() => { editingId ? onUpdatePatient(formData) : onAddPatient({...formData, id: `P-${Date.now()}`}); setShowModal(false); }} className="w-full bg-[#3159a6] text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all uppercase tracking-[0.3em] text-[10px]">Save Clinical Profile</button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {viewingHistoryId && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] p-4 backdrop-blur-xl">
-            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white">
-                <div className="p-8 border-b-2 border-gray-50 flex justify-between items-center bg-gray-50/50">
-                  <div>
-                    <h3 className="font-black text-2xl text-gray-800 uppercase tracking-tighter">Financial Ledger</h3>
-                    <p className="text-xs text-[#3159a6] font-black tracking-widest uppercase mt-1">{patients.find(p=>p.id===viewingHistoryId)?.name}</p>
-                  </div>
-                  <button onClick={() => setViewingHistoryId(null)} className="p-3 hover:bg-white rounded-full transition-all border border-transparent hover:border-gray-100 shadow-sm"><X size={28} className="text-gray-400"/></button>
-                </div>
-                <div className="p-10 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar bg-white">
-                    {invoices.filter(i=>i.patientId===viewingHistoryId).length === 0 ? (
-                      <div className="text-center py-24 text-gray-400 italic bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
-                        <History size={48} className="mx-auto mb-4 opacity-10" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">No transaction history recorded</p>
-                      </div>
-                    ) : invoices.filter(i=>i.patientId===viewingHistoryId).map(inv => (
-                        <div key={inv.id} className="p-6 border-2 border-gray-50 rounded-[2rem] hover:border-blue-100 transition-all bg-white flex justify-between items-center group shadow-sm">
-                            <div>
-                              <p className="font-black text-gray-800 tracking-tight text-xl">{inv.id}</p>
-                              <div className="flex items-center gap-3 mt-2">
-                                <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{new Date(inv.date).toLocaleDateString('en-IN')}</span>
-                                <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest border-2 ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-800 border-orange-100'}`}>{inv.paymentStatus}</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-1">Invoice Amount</p>
-                              <p className="text-3xl font-black text-[#3159a6] tracking-tighter">₹{inv.finalTotal.toLocaleString('en-IN')}</p>
-                            </div>
+                    {manualItems.length > 0 && (
+                        <div className="space-y-2 mt-4">
+                            {manualItems.map(item => (
+                                <div key={item.hearingAidId} className="flex justify-between items-center bg-white p-3 px-5 rounded-xl border border-slate-100 shadow-sm animate-fade-in">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-black text-slate-800 uppercase">{item.model} {item.qty && item.qty > 1 ? `(Qty: ${item.qty})` : ''}</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase">HSN: {item.hsnCode} • Rate: ₹{item.price.toLocaleString()} • GST: {item.gstRate}%</span>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                        <span className="font-black text-[#3159a6]">₹{item.taxableValue.toLocaleString()}</span>
+                                        <button onClick={() => handleRemoveManualItem(item.hearingAidId)} className="text-red-400 hover:text-red-600 transition"><Trash2 size={16}/></button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    )}
                 </div>
-                <div className="p-8 bg-gray-50 text-center border-t border-gray-100">
-                   <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.5em] select-none">End of Audit Trail</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Invoice Date</label><input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Global Adjustment</label><input type="number" value={totalAdjustment || ''} onChange={e => setTotalAdjustment(Number(e.target.value))} className="w-full border-2 border-white bg-white p-3 rounded-xl font-black text-xl text-[#3159a6] outline-none shadow-sm" placeholder="0.00" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Warranty Period</label><input type="text" value={warranty} onChange={e => setWarranty(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl font-bold outline-none shadow-sm" /></div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border-2 border-gray-50"><label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest flex items-center gap-1"><MessageSquare size={12}/> Remarks</label><textarea value={invoiceNotes} onChange={e => setInvoiceNotes(e.target.value)} className="w-full border-2 border-white bg-white p-3 rounded-xl text-xs h-16 resize-none outline-none shadow-sm" placeholder="Internal clinical notes..." /></div>
+                </div>
+                <div className="mt-8 flex justify-between items-center bg-gray-50 p-8 rounded-3xl border-2 border-blue-50 shadow-inner">
+                    <div><p className="text-[10px] font-black text-[#3159a6] uppercase tracking-[0.2em] mb-1">Estimated Net Payable</p><p className="text-4xl font-black text-gray-900 tracking-tighter">₹{finalTotal.toLocaleString('en-IN')}</p></div>
+                    <button onClick={() => setStep('payment')} className="bg-[#3159a6] text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs">Proceed to Settlement &rarr;</button>
                 </div>
             </div>
-        </div>
-      )}
+        )}
+
+        {step === 'payment' && (
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-10 animate-fade-in print:hidden">
+                <h3 className="text-xs font-black text-[#3159a6] uppercase tracking-[0.3em] mb-10 border-b-2 border-blue-50 pb-4">Phase 3: Financial Settlement</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    <div className="md:col-span-2 space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="p-8 bg-blue-50/50 rounded-3xl border-2 border-blue-50 shadow-inner"><label className="block text-[10px] font-black text-[#3159a6] uppercase tracking-widest mb-4 ml-1">Immediate Collection (INR)</label><div className="relative"><IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3159a6]" size={24} /><input type="number" className="w-full pl-12 pr-4 py-5 border-2 border-white bg-white rounded-2xl outline-none focus:border-[#3159a6] text-3xl font-black text-gray-800 shadow-sm" value={initialPayment || ''} onChange={e => setInitialPayment(Number(e.target.value))} placeholder="0.00" /></div></div>
+                            <div className="p-8 bg-white rounded-3xl border-2 border-gray-50 space-y-5">
+                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Payment Mode</label><select className="w-full border-2 border-gray-100 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-gray-700 bg-gray-50 transition" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}>
+                                <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="Account Transfer">Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="EMI">EMI</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                </select>
+                                </div>
+                                <div><label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Target Account</label><select className="w-full border-2 border-gray-100 rounded-2xl p-4 outline-none focus:border-[#3159a6] font-black text-[#3159a6] bg-gray-50 transition" value={paymentBank} onChange={e => setPaymentBank(e.target.value)}><option value="">-- No Bank (Cash) --</option>{COMPANY_BANK_ACCOUNTS.map(bank => <option key={bank.name} value={bank.name}>{bank.name}</option>)}</select></div>
+                            </div>
+                        </div>
+                        {patientAdvances.length > 0 && (
+                            <div className="bg-amber-50/50 rounded-3xl border-2 border-amber-100 p-8">
+                                <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-[0.3em] mb-5 ml-1">Unclaimed Advance Tokens</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{patientAdvances.map(adv => (<div key={adv.id} className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 border-amber-100 shadow-sm transition-all hover:border-amber-400"><div><p className="font-black text-amber-900 text-lg">₹{adv.amount.toLocaleString()}</p><p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">{adv.date}</p></div><button onClick={() => handleApplyAdvance(adv)} className="px-6 py-2 bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-amber-700 transition active:scale-95 shadow-lg shadow-amber-900/10">Apply</button></div>))}</div>
+                            </div>
+                        )}
+                        {existingPayments.length > 0 && (
+                            <div className="bg-green-50/50 rounded-3xl border-2 border-green-100 p-8">
+                                <h4 className="text-[10px] font-black text-green-800 uppercase tracking-[0.3em] mb-5 ml-1">Payment Accumulation</h4>
+                                <div className="space-y-3">{existingPayments.map(p => (<div key={p.id} className="flex justify-between items-center text-sm bg-white px-5 py-3 rounded-xl border-2 border-green-50 shadow-sm"><span className={`font-black uppercase tracking-widest text-[10px] ${p.method === 'Advance' ? 'text-[#3159a6] flex items-center gap-1' : 'text-green-900'}`}>{p.method === 'Advance' && <CheckCircle2 size={12}/>}{p.method} {p.note ? `[${p.note}]` : ''}</span><span className="font-black text-green-900 text-lg">₹{p.amount.toLocaleString()}</span></div>))}</div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-8 bg-[#3159a6] rounded-[2.5rem] shadow-2xl shadow-blue-900/40 flex flex-col justify-center items-center text-center h-full relative overflow-hidden"><div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none -rotate-12 translate-y-12 scale-150"></div><p className="text-[10px] font-black text-blue-100 uppercase tracking-[0.4em] mb-4 relative z-10">Outstanding Balance</p><p className="text-5xl font-black text-white tracking-tighter relative z-10">₹{(finalTotal - totalPaidSoFar).toLocaleString()}</p></div>
+                </div>
+                <div className="mt-12 flex justify-end"><button onClick={() => setStep('review')} className="bg-[#3159a6] text-white px-16 py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-900/30 hover:bg-slate-800 transition-all text-xs">Review Digital Draft &rarr;</button></div>
+            </div>
+        )}
+
+        {step === 'review' && (
+            <div className="flex flex-col items-center bg-gray-200/50 p-4 sm:p-10 min-h-screen print:bg-white print:p-0 print:block">
+                {/* Print Control Panel - Hidden on Print */}
+                <div className="bg-white p-6 rounded-3xl shadow-xl mb-8 flex flex-wrap items-center gap-8 border border-gray-100 print:hidden w-full max-w-[900px]">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 rounded-lg text-primary"><Settings2 size={18}/></div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-gray-500">PDF Print Configuration</h4>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Scale</label>
+                        <input 
+                            type="range" min="60" max="100" value={printScale} 
+                            onChange={(e) => setPrintScale(Number(e.target.value))}
+                            className="w-32 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" 
+                        />
+                        <span className="text-xs font-black text-primary w-8">{printScale}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Layout</label>
+                        <select 
+                            className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                            value={printOrientation} onChange={(e) => setPrintOrientation(e.target.value as any)}
+                        >
+                            <option value="portrait">Portrait</option>
+                            <option value="landscape">Landscape</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-4 border-l pl-8">
+                        <label className="text-[10px] font-black uppercase text-gray-400">Size</label>
+                        <select 
+                            className="text-[10px] font-black uppercase tracking-widest border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                            value={printPaperSize} onChange={(e) => setPrintPaperSize(e.target.value as any)}
+                        >
+                            <option value="A4">A4 Paper</option>
+                            <option value="Letter">Letter</option>
+                            <option value="Legal">Legal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div 
+                    id="invoice-printable-area" 
+                    style={{ 
+                        '--print-scale': `${printScale / 100}`,
+                        '--print-orientation': printOrientation,
+                        '--print-size': printPaperSize === 'A4' ? '210mm 297mm' : printPaperSize === 'Letter' ? '216mm 279mm' : '216mm 356mm'
+                    } as React.CSSProperties}
+                    className="bg-white shadow-2xl relative overflow-hidden animate-fade-in mx-auto w-full max-w-[900px] p-[10mm] flex flex-col print:max-w-none print:shadow-none print:p-0 print:m-0"
+                >
+                    
+                    <div className="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
+                        <div className="flex items-center gap-6">
+                            <img src={logo} alt="Logo" className="h-24 w-auto object-contain" />
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                            <div className="bg-[#3159a6] text-white px-6 py-2 mb-3 rounded-lg">
+                                <h2 className="text-lg font-black uppercase tracking-widest text-center">Tax Invoice</h2>
+                            </div>
+                            <p className="text-sm font-black text-slate-900 uppercase"># {editingInvoiceId || generateNextId()}</p>
+                            <p className="text-[11px] font-black text-slate-700 uppercase mt-1 tracking-widest">DATE: {new Date(invoiceDate).toLocaleDateString('en-IN')}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 mb-6">
+                        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100">
+                            <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Client Details</h4>
+                            <p className="font-black text-xl text-slate-900 uppercase tracking-tight leading-none mb-1">{patient.name}</p>
+                            <p className="font-bold text-slate-900 text-sm mb-2">{patient.phone} • {patient.district}, {patient.state}</p>
+                            <p className="text-xs text-slate-800 uppercase font-semibold leading-relaxed min-h-[40px]">{patient.address || 'No Address Provided'}</p>
+                            
+                            <div className="mt-4 pt-3 border-t-2 border-slate-200 flex flex-wrap gap-x-6 gap-y-2">
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Referred By</p><p className="text-xs font-black text-slate-900 uppercase">{patient.referDoctor || 'Self'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Audiologist</p><p className="text-xs font-black text-[#3159a6] uppercase">{patient.audiologist || 'Internal'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Staff Code</p><p className="text-xs font-black text-slate-700 uppercase">{entryBy || 'N/A'}</p></div>
+                                <div><p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Sale Type</p><p className={`text-xs font-black uppercase ${isInterState ? 'text-orange-600' : 'text-slate-900'}`}>{isInterState ? 'Inter-State (IGST)' : 'Intra-State'}</p></div>
+                                {selectedHospitalId && (
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Hospital / Clinic</p>
+                                        <p className="text-xs font-black text-blue-600 uppercase">
+                                            {HOSPITAL_OPTIONS.includes(selectedHospitalId) ? selectedHospitalId : (hospitals.find(h => h.id === selectedHospitalId)?.name || 'Direct')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 flex flex-col justify-between">
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2 border-b-2 border-slate-200 pb-1 tracking-widest">Billing Info</h4>
+                                <p className="font-black text-[12px] text-slate-900 uppercase tracking-tight mb-1">{COMPANY_NAME}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_ADDRESS}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">PAN: AALCB1534C | PH: {COMPANY_PHONES}</p>
+                                <p className="text-[10px] text-slate-800 font-bold uppercase tracking-tight">{COMPANY_EMAIL} | GSTIN: {CLINIC_GSTIN}</p>
+                            </div>
+                            
+                            <div className="mt-4 pt-3 border-t-2 border-slate-200">
+                                <h5 className="text-[10px] font-black uppercase text-[#3159a6] tracking-[0.2em] mb-1">Bank Settlement Details:</h5>
+                                <div className="grid grid-cols-2 text-[10px] uppercase font-black text-slate-800">
+                                    <p>SBI ACC: <span className="text-slate-900">42367906742</span></p>
+                                    <p className="text-right">IFSC: SBIN0001357</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-6">
+                        <table className="w-full border-collapse border-4 border-slate-900 text-[12px]">
+                            <thead className="bg-[#3159a6] text-white uppercase font-black tracking-tight">
+                                <tr>
+                                    <th className="p-3 text-left border-r-2 border-white/20 w-[30%]">Description of Goods</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-[10%]">HSN</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-[8%]">Qty</th>
+                                    <th className="p-3 text-right border-r-2 border-white/20 w-[15%]">Rate (INR)</th>
+                                    <th className="p-3 text-center border-r-2 border-white/20 w-[10%]">GST %</th>
+                                    {isInterState ? (
+                                        <th className="p-3 text-right border-r-2 border-white/20 w-[12%]">IGST</th>
+                                    ) : (
+                                        <th className="p-3 text-right border-r-2 border-white/20 w-[12%]">C+S GST</th>
+                                    )}
+                                    <th className="p-3 text-right w-[15%]">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="font-bold text-slate-900">
+                                {allInvoiceItems.map(item => (
+                                    <tr key={item.hearingAidId} className="border-b-2 border-slate-400 last:border-b-4 last:border-slate-900">
+                                        <td className="p-2 border-r-2 border-slate-900">
+                                            <p className="font-black text-slate-900 uppercase text-[12px] tracking-tight">{item.brand ? `${item.brand} ` : ''}{item.model}</p>
+                                            <p className="text-[10px] text-[#3159a6] font-black uppercase tracking-[0.3em] mt-1">
+                                                {item.serialNumber === 'N/A' ? '' : `S/N: ${item.serialNumber}`}
+                                            </p>
+                                        </td>
+                                        <td className="p-2 text-center border-r-2 border-slate-900 font-mono text-[10px]">{item.hsnCode || '90214090'}</td>
+                                        <td className="p-2 text-center border-r-2 border-slate-900">{item.qty || 1}</td>
+                                        <td className="p-2 text-right border-r-2 border-slate-900 font-mono">₹{item.price.toLocaleString()}</td>
+                                        <td className="p-2 text-center border-r-2 border-slate-900">{item.gstRate}%</td>
+                                        <td className="p-2 text-right border-r-2 border-slate-900 text-slate-500">
+                                            {isInterState ? `₹${item.igstAmount.toFixed(2)}` : `₹${(item.cgstAmount + item.sgstAmount).toFixed(2)}`}
+                                        </td>
+                                        <td className="p-2 text-right font-black bg-slate-50/50">₹{item.totalAmount.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-8 mb-6 items-start">
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-1 tracking-[0.2em]">GST Analysis ({isInterState ? 'Inter-State' : 'Intra-State'})</h4>
+                                <table className="w-full border-collapse border-2 border-slate-900 text-[10px] text-center">
+                                    <thead className="bg-slate-100 font-black text-slate-800">
+                                        <tr className="border-b-2 border-slate-900">
+                                            <th className="p-1.5 text-left border-r-2 border-slate-900">Rate</th>
+                                            <th className="p-1.5 text-right border-r-2 border-slate-900">Taxable</th>
+                                            {isInterState ? (
+                                                <th className="p-1.5 text-right">IGST</th>
+                                            ) : (
+                                                <>
+                                                    <th className="p-1.5 text-right border-r-2 border-slate-900">CGST</th>
+                                                    <th className="p-1.5 text-right">SGST</th>
+                                                </>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="font-bold text-slate-900 uppercase">
+                                        {Object.entries(gstSummary).map(([rate, vals]: any) => (
+                                            <tr key={rate} className="border-b-2 border-slate-200 last:border-b-0">
+                                                <td className="p-1.5 text-left font-black bg-slate-50 border-r-2 border-slate-900">{rate}% GST</td>
+                                                <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.taxable.toFixed(2)}</td>
+                                                {isInterState ? (
+                                                    <td className="p-1.5 text-right font-black text-[#3159a6]">₹{vals.igst.toFixed(2)}</td>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-1.5 text-right border-r-2 border-slate-900">₹{vals.cgst.toFixed(2)}</td>
+                                                        <td className="p-1.5 text-right">₹{vals.sgst.toFixed(2)}</td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div className="bg-red-50 p-4 rounded-2xl border-4 border-white shadow-lg text-center">
+                                <p className="text-[10px] font-black text-red-700 uppercase tracking-[0.3em] mb-1">Current Outstanding Balance</p>
+                                <p className="text-3xl font-black text-red-600 tracking-tighter leading-none">₹{(finalTotal - totalPaidSoFar).toLocaleString()} /-</p>
+                                
+                                <div className="mt-3 pt-3 border-t-2 border-red-200">
+                                    <div className="space-y-1 text-[10px] text-left">
+                                        {existingPayments.map(p => (
+                                            <div key={p.id} className={`flex justify-between font-bold uppercase ${p.method === 'Advance' ? 'text-[#3159a6]' : 'text-slate-700'}`}>
+                                                <span>{p.method} {p.method === 'Advance' ? '(Applied Token)' : `(${new Date(p.date).toLocaleDateString('en-IN')})`}</span>
+                                                <span>₹{p.amount.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                        {initialPayment > 0 && (
+                                            <div className="flex justify-between font-black text-[#3159a6] uppercase border-t border-[#3159a6]/20 pt-1">
+                                                <span>{paymentMethod} (Collection)</span>
+                                                <span>₹{initialPayment.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-white shadow-xl font-bold text-slate-900">
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1"><span>Gross Subtotal</span><span>₹{totalSubtotal.toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-red-600 mb-1"><span>Special Consideration</span><span>-₹{(totalItemDiscounts + totalAdjustment).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-[11px] uppercase text-slate-600 mb-1">
+                                    <span>Net GST</span>
+                                    <span>₹{(runningCGST + runningSGST + runningIGST).toFixed(2)}</span>
+                                </div>
+                                <div className={`flex justify-between text-[11px] uppercase mb-3 ${roundOffAmount < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                    <span>Round Off</span>
+                                    <span>{roundOffAmount >= 0 ? '+' : ''}{roundOffAmount.toFixed(2)}</span>
+                                </div>
+                                <div className="h-0.5 bg-slate-900 mb-3"></div>
+                                <div className="flex justify-between items-center text-slate-900">
+                                    <span className="text-xs font-black uppercase tracking-[0.2em]">Net Payable</span>
+                                    <span className="text-xl font-black tracking-tighter text-[#3159a6]">₹{Math.round(finalTotal).toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            {invoiceNotes && (
+                                <div className="bg-blue-50/50 p-4 border-2 border-dashed border-blue-200 rounded-2xl">
+                                    <h4 className="text-[10px] font-black uppercase text-[#3159a6] mb-2 border-b border-blue-100 pb-1 tracking-widest">Remarks:</h4>
+                                    <p className="text-xs text-slate-800 italic leading-relaxed font-semibold uppercase">"{invoiceNotes}"</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#3159a6] text-white p-3 rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 text-center shadow-lg">
+                        Grand Total in Words: {numberToWords(finalTotal)}
+                    </div>
+
+                    {/* Footer Section: Managed for better printing visibility */}
+                    <div className="mt-auto pt-10">
+                        <div className="flex justify-between items-end">
+                            <div className="w-[60%]">
+                                <p className="font-black text-[11px] uppercase border-b-4 border-slate-900 inline-block mb-3 tracking-widest text-slate-900">Legal Terms & Conditions</p>
+                                <div className="text-[10px] text-slate-800 font-bold space-y-1.5 uppercase leading-tight tracking-tight">
+                                    <p>1. Please keep this Invoice safe for future correspondence.</p>
+                                    <p>2. Our Udyam Registration Certificate No. UDYAM-WB-18-0032916 (Micro Enterprise)</p>
+                                    <p>3. Under the current taxation regime, all healthcare services doctors and hospitals provide are exempt from GST. These exemptions were provided vide Notifications No. 12/2017-Central Tax (Rate) and 9/2017 – Integrated Tax (R) dated 28th June 2017.</p>
+                                    <p>4. Hearing aids are classifiable under HSN 9021 40 90 and are exempt from GST by virtue of Sl.No 142 of Notf No 2/2017 CT(Rate) dated 28-06-2017.</p>    
+                                    <p>5. Subject to jurisdiction of Courts in Kolkata, WB.</p>
+                                </div>
+                            </div>
+                            <div className="text-center w-64">
+                                {signature ? (
+                                    <img src={signature} className="h-20 mb-2 mx-auto mix-blend-multiply transition-all hover:scale-110" />
+                                ) : (
+                                    <div className="h-16 w-full border-b-4 border-dashed border-slate-200 mb-2"></div>
+                                )}
+                                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-900 border-t-4 border-slate-900 pt-2">Authorized Signatory</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-12 text-center opacity-30 pointer-events-none pb-4 print:opacity-10">
+                            <p className="text-[9px] font-black uppercase tracking-[0.7em] text-slate-600">BENGAL REHABILITATION & RESEARCH PVT. LTD.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
+                    <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Go Back</button>
+                    <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"> <Save size={22}/> Save Database Record</button>
+                    <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Save as PDF"><Download size={28}/></button>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
