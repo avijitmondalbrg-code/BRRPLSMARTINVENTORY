@@ -388,4 +388,5 @@ export const BRANDS = [
   'Battery 312',
   'Battery 10',
   'Instrument',
+  'Shonakotha Slot'
 ];
