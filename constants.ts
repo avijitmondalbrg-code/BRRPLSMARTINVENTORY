@@ -44,6 +44,7 @@ export const STAFF_NAMES = [
   "Arijit Saha",
   "Akash Thakur",
   "Avijit Mondal",
+  "Pampa Dutta",
   "Audiologist"
 ];
 export const AUDIOLOGIST_NAMES = [ 
