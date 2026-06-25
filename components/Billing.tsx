@@ -521,21 +521,90 @@ export const Billing: React.FC<BillingProps> = ({
   }, [filteredInvoices]);
 
   const exportToCSV = () => {
-    const headers = ['Invoice No', 'Date', 'Patient Name', 'Phone', 'Items', 'Serials', 'Total Amount', 'Taxable Value', 'Total Tax', 'Amount Paid', 'Balance Due', 'Status'];
-    const rows = filteredInvoices.map(inv => [
-      inv.id,
-      inv.date,
-      `"${inv.patientName}"`,
-      inv.patientDetails?.phone || 'N/A',
-      `"${inv.items.map(it => `${it.brand} ${it.model}`).join('; ')}"`,
-      `"${inv.items.map(it => it.serialNumber).join('; ')}"`,
-      inv.finalTotal.toFixed(2),
-      inv.totalTaxableValue.toFixed(2),
-      inv.totalTax.toFixed(2),
-      (inv.finalTotal - inv.balanceDue).toFixed(2),
-      inv.balanceDue.toFixed(2),
-      inv.paymentStatus
-    ]);
+    const escapeCSV = (val: any) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val);
+      // Escape double quotes by doubling them, then wrap the entire value in double quotes
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const headers = [
+      'Invoice No', 
+      'Date', 
+      'Patient Name', 
+      'Phone', 
+      'Email',
+      'DOB',
+      'Doctor Name (Referrer)', 
+      'Audiologist Name', 
+      'Hospital Name', 
+      'Address', 
+      'District', 
+      'State', 
+      'Country',
+      'Patient GSTIN', 
+      'Place of Supply', 
+      'Entry By (Staff)', 
+      'Warranty', 
+      'Items Detail', 
+      'Serials', 
+      'Total Items Count', 
+      'Total Discount', 
+      'Taxable Value', 
+      'CGST', 
+      'SGST', 
+      'IGST', 
+      'Total Tax', 
+      'Total Amount', 
+      'Amount Paid', 
+      'Balance Due', 
+      'Payment Status', 
+      'Invoice Status', 
+      'Notes'
+    ];
+
+    const rows = filteredInvoices.map(inv => {
+      const itemsDetail = inv.items.map(it => 
+        `${it.brand} ${it.model} [Qty: ${it.qty || 1}, HSN: ${it.hsnCode || 'N/A'}, Price: ${it.price}, Disc: ${it.discount}, GST: ${it.gstRate}%, Taxable: ${it.taxableValue.toFixed(2)}]`
+      ).join('; ');
+
+      const serials = inv.items.map(it => it.serialNumber || 'N/A').join('; ');
+
+      return [
+        escapeCSV(inv.id),
+        escapeCSV(inv.date),
+        escapeCSV(inv.patientName),
+        escapeCSV(inv.patientDetails?.phone || 'N/A'),
+        escapeCSV(inv.patientDetails?.email || 'N/A'),
+        escapeCSV(inv.patientDetails?.dob || 'N/A'),
+        escapeCSV(inv.patientDetails?.referDoctor || 'N/A'),
+        escapeCSV(inv.patientDetails?.audiologist || 'N/A'),
+        escapeCSV(inv.hospitalName || 'N/A'),
+        escapeCSV(inv.patientDetails?.address || 'N/A'),
+        escapeCSV(inv.patientDetails?.district || 'N/A'),
+        escapeCSV(inv.patientDetails?.state || 'N/A'),
+        escapeCSV(inv.patientDetails?.country || 'N/A'),
+        escapeCSV(inv.patientDetails?.gstin || 'N/A'),
+        escapeCSV(inv.placeOfSupply),
+        escapeCSV(inv.entryBy || 'N/A'),
+        escapeCSV(inv.warranty || 'N/A'),
+        escapeCSV(itemsDetail),
+        escapeCSV(serials),
+        escapeCSV(inv.items.length),
+        escapeCSV(inv.totalDiscount.toFixed(2)),
+        escapeCSV(inv.totalTaxableValue.toFixed(2)),
+        escapeCSV(inv.totalCGST.toFixed(2)),
+        escapeCSV(inv.totalSGST.toFixed(2)),
+        escapeCSV(inv.totalIGST.toFixed(2)),
+        escapeCSV(inv.totalTax.toFixed(2)),
+        escapeCSV(inv.finalTotal.toFixed(2)),
+        escapeCSV((inv.finalTotal - inv.balanceDue).toFixed(2)),
+        escapeCSV(inv.balanceDue.toFixed(2)),
+        escapeCSV(inv.paymentStatus),
+        escapeCSV(inv.status || 'Active'),
+        escapeCSV(inv.notes || 'N/A')
+      ];
+    });
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
