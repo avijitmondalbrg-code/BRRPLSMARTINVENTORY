@@ -22,7 +22,7 @@ import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
 import { UsersAdmin } from './components/UsersAdmin';
 import { RazorpayPayments } from './components/RazorpayPayments';
-import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft, CreditCard, Wifi, WifiOff } from 'lucide-react';
 
 // Firebase Services
 import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
@@ -59,11 +59,25 @@ const App: React.FC = () => {
   const [rzpEnabled, setRzpEnabled] = useState<boolean>(false);
   const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([]);
   
+  // Live Auto Sync states
+  const [isAutoSync, setIsAutoSync] = useState(() => {
+    return localStorage.getItem('brg_auto_sync') === 'true';
+  });
+  const [syncInterval, setSyncInterval] = useState(() => {
+    return Number(localStorage.getItem('brg_sync_interval')) || 60; // Default to 60 seconds
+  });
+  const [syncCountdown, setSyncCountdown] = useState(syncInterval);
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string, code?: string } | null>(null);
 
-  const refreshData = async () => {
-    setLoading(true);
+  const refreshData = async (isBackground = false) => {
+    if (!isBackground) {
+      setLoading(true);
+    }
+    setIsSyncing(true);
     setError(null);
     try {
       const fetchPromise = Promise.all([
@@ -120,25 +134,57 @@ const App: React.FC = () => {
       setCompanyAssets((assets as CompanyAsset[]) || []);
       setRazorpayPayments((rzpPays as any[]) || []);
       
+      setLastSyncedTime(new Date().toLocaleTimeString());
     } catch (err: any) {
       console.error("Data refresh failed:", err);
-      if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
-          setError({ 
-              code: 'PERMISSION_DENIED', 
-              message: "Access Denied: Cloud Firestore Security Rules are blocking the app." 
-          });
-      } else {
-          setError({ 
-              message: err.message || "Failed to sync with database. Please check your internet connection." 
-          });
+      if (!isBackground) {
+        if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
+            setError({ 
+                code: 'PERMISSION_DENIED', 
+                message: "Access Denied: Cloud Firestore Security Rules are blocking the app." 
+            });
+        } else {
+            setError({ 
+                message: err.message || "Failed to sync with database. Please check your internet connection." 
+            });
+        }
       }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
+      setIsSyncing(false);
     }
   };
 
+  // Persist live-sync settings
   useEffect(() => {
-    refreshData();
+    localStorage.setItem('brg_auto_sync', String(isAutoSync));
+    localStorage.setItem('brg_sync_interval', String(syncInterval));
+    setSyncCountdown(syncInterval);
+  }, [isAutoSync, syncInterval]);
+
+  // Handle countdown and background synchronisation
+  useEffect(() => {
+    if (!isAutoSync) return;
+
+    const intervalId = setInterval(() => {
+      setSyncCountdown(prev => {
+        if (prev <= 1) {
+          refreshData(true);
+          return syncInterval;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isAutoSync, syncInterval]);
+
+  useEffect(() => {
+    refreshData().then(() => {
+      setLastSyncedTime(new Date().toLocaleTimeString());
+    });
   }, []);
 
   const handleLogin = (role: UserRole, userDetails: AppUser) => {
@@ -895,7 +941,7 @@ service cloud.firestore {
         </nav>
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <header className="bg-white border-b px-8 py-4 flex justify-between items-center print:hidden">
+        <header className="bg-white border-b px-8 py-4 flex flex-col md:flex-row gap-4 justify-between items-center print:hidden">
           <div className="flex items-center gap-4">
               <button
                 onClick={() => {
@@ -913,7 +959,81 @@ service cloud.firestore {
               <h2 className="text-xl font-bold text-gray-800 capitalize">{activeView.replace('-', ' ')}</h2>
               <span className="text-xs font-bold uppercase text-[#3159a6] bg-blue-50 px-2 py-1 rounded border border-blue-200">{userRole}</span>
           </div>
-          <div className="text-right text-xs text-gray-400 hidden sm:block">Bengal Rehabilitation & Research Pvt. Ltd.</div>
+          
+          <div className="flex items-center flex-wrap gap-4">
+            {/* Live Auto Sync Control Bar */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-1.5">
+                {isAutoSync ? (
+                  <Wifi size={14} className="text-teal-600 animate-pulse shrink-0" />
+                ) : (
+                  <WifiOff size={14} className="text-gray-400 shrink-0" />
+                )}
+                <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                  Live Sync
+                </span>
+              </div>
+              
+              <div className="h-4 w-px bg-slate-200"></div>
+
+              {/* IOS-Style Toggle Slider */}
+              <button 
+                onClick={() => setIsAutoSync(!isAutoSync)}
+                className={`relative inline-flex h-4.5 w-8.5 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-0 ${isAutoSync ? 'bg-[#3159a6]' : 'bg-slate-300'}`}
+                title={isAutoSync ? "Pause Live Auto-Sync" : "Enable Live Auto-Sync"}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAutoSync ? 'translate-x-4' : 'translate-x-0'}`}
+                />
+              </button>
+
+              {isAutoSync && (
+                <>
+                  <div className="h-4 w-px bg-slate-200"></div>
+                  <select 
+                    value={syncInterval}
+                    onChange={(e) => setSyncInterval(Number(e.target.value))}
+                    className="bg-transparent text-[10px] font-bold text-slate-600 outline-none border-none py-0 pl-1 pr-4 cursor-pointer focus:ring-0"
+                    title="Choose Refresh Speed"
+                  >
+                    <option value={15}>15s</option>
+                    <option value={30}>30s</option>
+                    <option value={60}>1m</option>
+                    <option value={120}>2m</option>
+                    <option value={300}>5m</option>
+                  </select>
+
+                  <div className="h-4 w-px bg-slate-200"></div>
+                  <span className="text-[10px] font-black text-teal-600 w-8 text-center" title="Time to next update">
+                    {syncCountdown}s
+                  </span>
+                </>
+              )}
+
+              <div className="h-4 w-px bg-slate-200"></div>
+
+              {/* Force Manual Refresh */}
+              <button
+                onClick={() => refreshData(true)}
+                disabled={isSyncing}
+                className={`p-1 rounded hover:bg-slate-200/60 transition ${isSyncing ? 'text-[#3159a6]' : 'text-slate-500'}`}
+                title="Force Sync Right Now"
+              >
+                <RefreshCw size={12} className={`${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+
+              {lastSyncedTime && (
+                <>
+                  <div className="h-4 w-px bg-slate-200"></div>
+                  <span className="text-[9px] font-bold text-slate-400" title="Time of last data snapshot">
+                    Synced: {lastSyncedTime}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <div className="text-right text-xs text-gray-400 hidden lg:block font-medium">Bengal Rehabilitation & Research Pvt. Ltd.</div>
+          </div>
         </header>
         <div className="p-8 max-w-7xl mx-auto print:p-0">
           {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} />}
