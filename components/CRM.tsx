@@ -79,8 +79,9 @@ export const CRM: React.FC<CRMProps> = ({ leads, onAddLead, onUpdateLead, onConv
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({ type: 'Call', content: '' });
 
   const filteredLeads = leads.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      l.phone.includes(searchTerm);
+    const nameMatch = l.name && typeof l.name === 'string' && l.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const phoneMatch = l.phone && typeof l.phone === 'string' && l.phone.includes(searchTerm);
+    const matchesSearch = nameMatch || phoneMatch;
     
     let matchesDate = true;
     if (startDate) matchesDate = matchesDate && l.createdAt >= startDate;
