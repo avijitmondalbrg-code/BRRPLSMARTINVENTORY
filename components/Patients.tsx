@@ -102,7 +102,7 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
     // We only try to match if the cleaned input has 10 or more digits
     if (cleanedInput.length >= 10) {
       const match = patients.find(p => {
-        const cleanedExisting = p.phone.replace(/\D/g, '');
+        const cleanedExisting = (p.phone || '').replace(/\D/g, '');
         // Match exact or trailing 10 digits
         return cleanedExisting === cleanedInput || 
                (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
@@ -140,7 +140,9 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
   };
 
   const filteredPatients = patients.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.phone.includes(searchTerm);
+    const nameMatch = p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const phoneMatch = p.phone && typeof p.phone === 'string' && p.phone.includes(searchTerm);
+    const matchesSearch = nameMatch || phoneMatch;
     const pDate = p.addedDate || '';
     const matchesStart = !startDate || pDate >= startDate;
     const matchesEnd = !endDate || pDate <= endDate;
