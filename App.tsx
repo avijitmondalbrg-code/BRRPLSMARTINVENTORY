@@ -73,70 +73,99 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string, code?: string } | null>(null);
 
-  const refreshData = async (isBackground = false) => {
-    if (!isBackground) {
-      setLoading(true);
-    }
+  // Dynamic on-demand collection loading to optimize Firestore read quotas
+  const [loadedCollections, setLoadedCollections] = useState<Record<string, boolean>>({});
+
+  const COLLECTIONS_PER_VIEW: Record<string, string[]> = {
+    'front-cover': ['settings'],
+    'dashboard': ['inventory', 'invoices', 'stockTransfers', 'quotations', 'leads'],
+    'inventory': ['inventory'],
+    'assets': ['companyAssets'],
+    'asset-transfer': ['companyAssets', 'assetTransfers'],
+    'advance-booking': ['advanceBookings', 'patients'],
+    'transfer': ['inventory', 'stockTransfers'],
+    'quotation': ['inventory', 'quotations', 'patients'],
+    'billing': ['inventory', 'invoices', 'patients', 'hospitals', 'advanceBookings'],
+    'demo-billing': ['demoInvoices', 'patients'],
+    'proforma-billing': ['proformaInvoices', 'patients'],
+    'service-billing': ['hospitals', 'serviceInvoices'],
+    'purchases': ['vendors', 'purchases', 'purchaseOrders'],
+    'crm': ['leads'],
+    'patients': ['patients', 'invoices'],
+    'credit-note': ['financialNotes', 'patients', 'vendors', 'invoices', 'serviceInvoices', 'hospitals', 'inventory'],
+    'debit-note': ['financialNotes', 'patients', 'vendors', 'invoices', 'serviceInvoices', 'hospitals', 'inventory'],
+    'receipts': ['invoices'],
+    'razorpay-payments': ['patients', 'invoices', 'razorpay_payments'],
+    'settings': ['settings'],
+    'users-admin': []
+  };
+
+  const COLLECTION_SETTERS: Record<string, (data: any[]) => void> = {
+    inventory: (data) => setInventory(data),
+    invoices: (data) => setInvoices(data),
+    demoInvoices: (data) => setDemoInvoices(data),
+    serviceInvoices: (data) => setServiceInvoices(data),
+    proformaInvoices: (data) => setProformaInvoices(data),
+    hospitals: (data) => setHospitals(data),
+    patients: (data) => setPatients(data),
+    quotations: (data) => setQuotations(data),
+    financialNotes: (data) => setFinancialNotes(data),
+    leads: (data) => setLeads(data),
+    stockTransfers: (data) => setStockTransfers(data),
+    assetTransfers: (data) => setAssetTransfers(data),
+    advanceBookings: (data) => setAdvanceBookings(data),
+    settings: (data) => {
+      if (data && data.length > 0) {
+        const clinicAssets = data.find((s: any) => s.id === 'clinic_assets');
+        if (clinicAssets) {
+          if (clinicAssets.logo) setCompanyLogo(clinicAssets.logo);
+          if (clinicAssets.signature) setCompanySignature(clinicAssets.signature);
+          if (clinicAssets.razorpayKeyId) setRzpKeyId(clinicAssets.razorpayKeyId);
+          if (clinicAssets.razorpayKeySecret) setRzpKeySecret(clinicAssets.razorpayKeySecret);
+          if (clinicAssets.razorpayEnabled !== undefined) setRzpEnabled(clinicAssets.razorpayEnabled);
+        }
+      }
+    },
+    companyAssets: (data) => setCompanyAssets(data),
+    vendors: (data) => setVendors(data),
+    purchases: (data) => setPurchases(data),
+    purchaseOrders: (data) => setPurchaseOrders(data),
+    razorpay_payments: (data) => setRazorpayPayments(data)
+  };
+
+  const loadCollections = async (collectionsToFetch: string[], isBackground = false) => {
+    if (collectionsToFetch.length === 0) return;
+    
     setIsSyncing(true);
     setError(null);
     try {
-      const fetchPromise = Promise.all([
-          fetchCollection('inventory'),
-          fetchCollection('invoices'),
-          fetchCollection('demoInvoices'),
-          fetchCollection('serviceInvoices'),
-          fetchCollection('proformaInvoices'),
-          fetchCollection('hospitals'),
-          fetchCollection('patients'),
-          fetchCollection('quotations'),
-          fetchCollection('financialNotes'),
-          fetchCollection('leads'),
-          fetchCollection('stockTransfers'),
-          fetchCollection('assetTransfers'),
-          fetchCollection('advanceBookings'),
-          fetchCollection('settings'),
-          fetchCollection('companyAssets'),
-          fetchCollection('vendors'),
-          fetchCollection('purchases'),
-          fetchCollection('purchaseOrders'),
-          fetchCollection('razorpay_payments').catch(() => [])
-      ]);
-
-      const [inv, invs, dinvs, sinvs, profInvs, hosps, pats, quotes, notes, lds, trfs, atrfs, advs, settings, assets, vends, pur, poList, rzpPays] = await fetchPromise;
-
-      if (settings && settings.length > 0) {
-          const clinicAssets: any = settings.find((s: any) => s.id === 'clinic_assets');
-          if (clinicAssets) {
-              if (clinicAssets.logo) setCompanyLogo(clinicAssets.logo);
-              if (clinicAssets.signature) setCompanySignature(clinicAssets.signature);
-              if (clinicAssets.razorpayKeyId) setRzpKeyId(clinicAssets.razorpayKeyId);
-              if (clinicAssets.razorpayKeySecret) setRzpKeySecret(clinicAssets.razorpayKeySecret);
-              if (clinicAssets.razorpayEnabled !== undefined) setRzpEnabled(clinicAssets.razorpayEnabled);
-          }
-      }
-
-      setInventory((inv as HearingAid[]) || []);
-      setVendors((vends as Vendor[]) || []);
-      setPurchases((pur as PurchaseRecord[]) || []);
-      setPurchaseOrders((poList as PurchaseOrder[]) || []);
-      setInvoices((invs as Invoice[]) || []);
-      setDemoInvoices((dinvs as Invoice[]) || []);
-      setProformaInvoices((profInvs as Invoice[]) || []);
-      setServiceInvoices((sinvs as ServiceInvoice[]) || []);
-      setHospitals((hosps as Hospital[]) || []);
-      setPatients((pats as Patient[]) || []);
-      setQuotations((quotes as Quotation[]) || []);
-      setFinancialNotes((notes as FinancialNote[]) || []);
-      setLeads((lds as Lead[]) || []);
-      setStockTransfers((trfs as StockTransferType[]) || []);
-      setAssetTransfers((atrfs as AssetTransferType[]) || []);
-      setAdvanceBookings((advs as AdvanceBooking[]) || []);
-      setCompanyAssets((assets as CompanyAsset[]) || []);
-      setRazorpayPayments((rzpPays as any[]) || []);
+      const promises = collectionsToFetch.map(coll => {
+        if (coll === 'razorpay_payments') {
+          return fetchCollection(coll).catch(() => []).then(data => ({ coll, data }));
+        }
+        return fetchCollection(coll).then(data => ({ coll, data }));
+      });
+      
+      const results = await Promise.all(promises);
+      
+      results.forEach(({ coll, data }) => {
+        const setter = COLLECTION_SETTERS[coll];
+        if (setter) {
+          setter(data || []);
+        }
+      });
+      
+      setLoadedCollections(prev => {
+        const next = { ...prev };
+        collectionsToFetch.forEach(coll => {
+          next[coll] = true;
+        });
+        return next;
+      });
       
       setLastSyncedTime(new Date().toLocaleTimeString());
     } catch (err: any) {
-      console.error("Data refresh failed:", err);
+      console.error("Data fetch failed for:", collectionsToFetch, err);
       if (!isBackground) {
         if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
             setError({ 
@@ -150,11 +179,23 @@ const App: React.FC = () => {
         }
       }
     } finally {
-      if (!isBackground) {
-        setLoading(false);
-      }
       setIsSyncing(false);
     }
+  };
+
+  const refreshData = async (isBackground = false) => {
+    const needed = COLLECTIONS_PER_VIEW[activeView] || [];
+    if (!needed.includes('settings')) {
+      needed.push('settings');
+    }
+    
+    // For manual sync (isBackground is false), refresh everything loaded so far to keep session fresh.
+    // For automatic background sync (isBackground is true), ONLY refresh current active view's required collections.
+    const collectionsToRefresh = isBackground 
+      ? needed 
+      : Array.from(new Set([...needed, ...Object.keys(loadedCollections)]));
+      
+    await loadCollections(collectionsToRefresh, isBackground);
   };
 
   // Persist live-sync settings
@@ -179,11 +220,23 @@ const App: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isAutoSync, syncInterval]);
+  }, [isAutoSync, syncInterval, activeView, loadedCollections]);
+
+  // Automatically load required collections when changing activeView
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const needed = COLLECTIONS_PER_VIEW[activeView] || [];
+    const missing = needed.filter(coll => !loadedCollections[coll]);
+    
+    if (missing.length > 0) {
+      loadCollections(missing, false);
+    }
+  }, [activeView, isAuthenticated]);
 
   useEffect(() => {
-    refreshData().then(() => {
-      setLastSyncedTime(new Date().toLocaleTimeString());
+    loadCollections(['settings'], false).then(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -882,6 +935,9 @@ service cloud.firestore {
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
   if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
 
+  const neededForView = COLLECTIONS_PER_VIEW[activeView] || [];
+  const isViewLoading = neededForView.some(coll => !loadedCollections[coll]) && !error;
+
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
@@ -1036,26 +1092,35 @@ service cloud.firestore {
           </div>
         </header>
         <div className="p-8 max-w-7xl mx-auto print:p-0">
-          {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} />}
-          {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
-          {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
-          {activeView === 'asset-transfer' && <AssetTransfer assets={companyAssets} transferHistory={assetTransfers} onTransfer={handleAssetTransfer} />}
-          {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
-          {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
-          {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} prefilledInvoiceData={prefilledProforma} setPrefilledInvoiceData={setPrefilledProforma} />}
-          {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-          {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
-          {activeView === 'razorpay-payments' && <RazorpayPayments patients={patients} invoices={invoices} razorpayPayments={razorpayPayments} onAddRazorpayPayment={(pay) => setRazorpayPayments(prev => [pay, ...prev])} onUpdateInvoice={handleUpdateInvoice} rzpKeyId={rzpKeyId} rzpKeySecret={rzpKeySecret} rzpEnabled={rzpEnabled} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
-          {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} />}
-          {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
+          {isViewLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
+              <div className="h-12 w-12 border-4 border-[#3159a6] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-[#3159a6] font-black uppercase tracking-widest text-[10px] animate-pulse">Synchronizing Live Node Data...</p>
+            </div>
+          ) : (
+            <>
+              {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} />}
+              {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
+              {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
+              {activeView === 'asset-transfer' && <AssetTransfer assets={companyAssets} transferHistory={assetTransfers} onTransfer={handleAssetTransfer} />}
+              {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
+              {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
+              {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} prefilledInvoiceData={prefilledProforma} setPrefilledInvoiceData={setPrefilledProforma} />}
+              {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
+              {activeView === 'razorpay-payments' && <RazorpayPayments patients={patients} invoices={invoices} razorpayPayments={razorpayPayments} onAddRazorpayPayment={(pay) => setRazorpayPayments(prev => [pay, ...prev])} onUpdateInvoice={handleUpdateInvoice} rzpKeyId={rzpKeyId} rzpKeySecret={rzpKeySecret} rzpEnabled={rzpEnabled} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
+              {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} />}
+              {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
+            </>
+          )}
         </div>
       </main>
     </div>
