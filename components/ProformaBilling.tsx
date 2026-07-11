@@ -186,7 +186,11 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
     setViewMode('list');
   };
 
-  const filteredPatients = patients.filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm));
+  const filteredPatients = patients.filter(p => {
+    const nameMatch = p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(patientSearchTerm.toLowerCase());
+    const phoneMatch = p.phone && typeof p.phone === 'string' && p.phone.includes(patientSearchTerm);
+    return nameMatch || phoneMatch;
+  });
 
   const filteredInvoices = invoices.filter(inv => 
     inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
