@@ -298,7 +298,7 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
                 </div>
                 {showHospResults && hospitalSearch && (
                   <div className="absolute z-20 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto p-2">
-                    {hospitals.filter(h => h.name.toLowerCase().includes(hospitalSearch.toLowerCase())).map(h => (
+                    {hospitals.filter(h => h.name && typeof h.name === 'string' && h.name.toLowerCase().includes(hospitalSearch.toLowerCase())).map(h => (
                       <div key={h.id} className="flex items-center gap-2 group">
                         <button type="button" onClick={() => { setSelectedHospital(h); setHospitalSearch(h.name); setShowHospResults(false); }} className="flex-1 text-left p-4 hover:bg-blue-50 rounded-xl transition font-bold uppercase text-xs">{h.name}</button>
                         <button type="button" onClick={() => { setEditingHospitalId(h.id); setNewHospital(h); setShowAddHospitalModal(true); setShowHospResults(false); }} className="p-2 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition opacity-0 group-hover:opacity-100 mr-2"><Edit size={16}/></button>
