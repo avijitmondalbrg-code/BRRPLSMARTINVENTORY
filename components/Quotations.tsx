@@ -120,7 +120,7 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
 
     if (cleanedInput.length >= 10) {
       const match = patients.find(p => {
-        const cleanedExisting = p.phone.replace(/\D/g, '');
+        const cleanedExisting = (p.phone || '').replace(/\D/g, '');
         return cleanedExisting === cleanedInput || 
                (cleanedExisting.length >= 10 && cleanedInput.length >= 10 && 
                 cleanedExisting.slice(-10) === cleanedInput.slice(-10));
@@ -363,7 +363,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                   </div>
                   {patientSearchTerm && (
                     <div className="absolute z-50 left-0 right-0 mt-3 bg-white rounded-3xl shadow-2xl border border-gray-100 max-h-80 overflow-y-auto custom-scrollbar p-2">
-                      {patients.filter(p=>p.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) || p.phone.includes(patientSearchTerm)).map(p=>(
+                      {patients.filter(p => {
+                        const nameMatch = p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(patientSearchTerm.toLowerCase());
+                        const phoneMatch = p.phone && typeof p.phone === 'string' && p.phone.includes(patientSearchTerm);
+                        return nameMatch || phoneMatch;
+                      }).map(p=>(
                         <button key={p.id} onClick={() => handleSelectPatient(p)} className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl border-b border-gray-50 last:border-0 flex justify-between items-center transition-all group">
                           <div><p className="font-black text-gray-800 uppercase tracking-tight">{p.name}</p><p className="text-[10px] text-gray-400 font-bold">{p.phone} • {p.address}</p></div>
                           <span className="text-primary text-[9px] font-black uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full group-hover:bg-primary group-hover:text-white transition-all">Select</span>
