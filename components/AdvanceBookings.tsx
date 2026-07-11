@@ -107,9 +107,9 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
     const matchesTab = activeTab === 'Consumed' ? b.status === 'Consumed' : b.status === 'Active';
     const term = activeTab === 'Active' ? activeSearchTerm : historySearchTerm;
     const matchesSearch = !term || 
-      b.patientName.toLowerCase().includes(term.toLowerCase()) || 
-      b.id.toLowerCase().includes(term.toLowerCase()) ||
-      b.phone.includes(term);
+      (b.patientName && typeof b.patientName === 'string' && b.patientName.toLowerCase().includes(term.toLowerCase())) || 
+      (b.id && typeof b.id === 'string' && b.id.toLowerCase().includes(term.toLowerCase())) ||
+      (b.phone && typeof b.phone === 'string' && b.phone.includes(term));
     return matchesTab && matchesSearch;
   });
 
@@ -230,7 +230,7 @@ export const AdvanceBookings: React.FC<AdvanceBookingsProps> = ({ bookings, pati
                 </div>
                 {showPatientResults && patientSearchTerm && (
                   <div className="absolute z-10 w-full bg-white border-2 border-gray-50 rounded-2xl shadow-2xl mt-2 max-h-48 overflow-y-auto custom-scrollbar p-2">
-                    {patients.filter(p => p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p => (
+                    {patients.filter(p => p.name && typeof p.name === 'string' && p.name.toLowerCase().includes(patientSearchTerm.toLowerCase())).map(p => (
                       <button key={p.id} type="button" onClick={() => handleSelectPatient(p)} className="w-full text-left px-5 py-3 hover:bg-blue-50 rounded-xl border-b border-gray-50 last:border-0 font-black uppercase tracking-tighter text-xs text-gray-700">{p.name}</button>
                     ))}
                   </div>
