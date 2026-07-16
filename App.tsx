@@ -329,6 +329,149 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBackupData = async () => {
+    setIsSyncing(true);
+    try {
+      const backupData: Record<string, any[]> = {};
+      const allBackupColls = [
+        'inventory',
+        'vendors',
+        'purchases',
+        'purchaseOrders',
+        'invoices',
+        'demoInvoices',
+        'proformaInvoices',
+        'serviceInvoices',
+        'hospitals',
+        'patients',
+        'quotations',
+        'financialNotes',
+        'stockTransfers',
+        'assetTransfers',
+        'advanceBookings',
+        'settings',
+        'companyAssets',
+        'razorpay_payments',
+        'users'
+      ];
+      
+      for (const coll of allBackupColls) {
+        try {
+          const docs = await fetchCollection(coll);
+          backupData[coll] = docs || [];
+        } catch (err) {
+          console.warn(`Backup fetch failed for ${coll}:`, err);
+          backupData[coll] = [];
+        }
+      }
+      
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupData, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonString);
+      const timestamp = new Date().toISOString().split('T')[0];
+      downloadAnchor.setAttribute('download', `brg_erp_backup_${timestamp}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      
+      alert('সবগুলো ডাটাবেস কালেকশন সফলভাবে ব্যাকআপ ফাইল হিসেবে ডাউনলোড করা হয়েছে!');
+    } catch (err: any) {
+      console.error("Backup failed:", err);
+      alert(`ব্যাকআপ করতে ব্যর্থ হয়েছে: ${err.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleRestoreData = async (backupData: Record<string, any[]>, onProgress?: (text: string) => void) => {
+    setIsSyncing(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    const allBackupColls = [
+      'inventory',
+      'vendors',
+      'purchases',
+      'purchaseOrders',
+      'invoices',
+      'demoInvoices',
+      'proformaInvoices',
+      'serviceInvoices',
+      'hospitals',
+      'patients',
+      'quotations',
+      'financialNotes',
+      'stockTransfers',
+      'assetTransfers',
+      'advanceBookings',
+      'settings',
+      'companyAssets',
+      'razorpay_payments',
+      'users'
+    ];
+    
+    try {
+      const keys = Object.keys(backupData);
+      
+      for (const coll of keys) {
+        if (!allBackupColls.includes(coll)) {
+          console.warn(`Unknown collection in backup file: ${coll}`);
+          continue;
+        }
+        
+        const docs = backupData[coll];
+        if (!Array.isArray(docs)) continue;
+        
+        if (onProgress) {
+          onProgress(`Restoring ${coll} (${docs.length} records)...`);
+        }
+        
+        for (const docObj of docs) {
+          if (!docObj.id) {
+            failCount++;
+            continue;
+          }
+          const { id, ...docData } = docObj;
+          try {
+            await setDocument(coll, id, docData);
+            successCount++;
+          } catch (err) {
+            console.error(`Failed to restore doc ${id} in ${coll}:`, err);
+            failCount++;
+          }
+        }
+      }
+      
+      // Update local states
+      keys.forEach(coll => {
+        const setter = COLLECTION_SETTERS[coll];
+        if (setter && backupData[coll]) {
+          setter(backupData[coll]);
+        }
+      });
+      
+      // Reload collections of current view
+      setLoadedCollections(prev => {
+        const next = { ...prev };
+        keys.forEach(coll => {
+          next[coll] = true;
+        });
+        return next;
+      });
+      
+      alert(`রিস্টোর সম্পূর্ণ হয়েছে!\nসফলভাবে রিস্টোর করা হয়েছে: ${successCount} টি রেকর্ড\nব্যর্থ হয়েছে: ${failCount} টি রেকর্ড`);
+      return true;
+    } catch (err: any) {
+      console.error("Restore failed:", err);
+      alert(`রিস্টোর করতে সমস্যা হয়েছে: ${err.message}`);
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleAddHospital = async (h: Hospital) => {
     setHospitals([...hospitals, h]);
     try { await setDocument('hospitals', h.id, h); } catch(e) {}
@@ -1117,7 +1260,7 @@ service cloud.firestore {
               {activeView === 'debit-note' && <FinancialNotes type="DEBIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'receipts' && <ReceiptsManager invoices={invoices} logo={companyLogo} signature={companySignature} onUpdateInvoice={handleUpdateInvoice} onDeleteReceipt={handleDeleteReceipt} userRole={userRole!} />}
               {activeView === 'razorpay-payments' && <RazorpayPayments patients={patients} invoices={invoices} razorpayPayments={razorpayPayments} onAddRazorpayPayment={(pay) => setRazorpayPayments(prev => [pay, ...prev])} onUpdateInvoice={handleUpdateInvoice} rzpKeyId={rzpKeyId} rzpKeySecret={rzpKeySecret} rzpEnabled={rzpEnabled} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
-              {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} />}
+              {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} onBackup={handleBackupData} onRestore={handleRestoreData} />}
               {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
             </>
           )}
