@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Hospital, ServiceInvoice, ServiceInvoiceLine, UserRole } from '../types';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, CLINIC_GSTIN } from '../constants';
-import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2, IndianRupee, Percent, Edit } from 'lucide-react';
+import { Plus, Search, Trash2, Printer, Save, ArrowLeft, Landmark, Building2, Calendar, FileText, Download, X, PlusCircle, CheckCircle2, IndianRupee, Percent, Edit, RotateCcw, Filter, FileSpreadsheet, Activity } from 'lucide-react';
 
 interface ServiceBillingProps {
   hospitals: Hospital[];
@@ -57,6 +57,9 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
 
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [datePreset, setDatePreset] = useState<'all' | 'today' | 'this_month' | 'last_month' | 'this_fy' | 'custom'>('all');
   
   // Create Form State
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
@@ -175,95 +178,508 @@ export const ServiceBilling: React.FC<ServiceBillingProps> = ({ hospitals, invoi
     resetForm();
   };
 
-  if (viewMode === 'list') {
-    const filtered = [...invoices]
-      .filter(i => 
-        i.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        i.hospitalName.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const applyDatePreset = (preset: 'all' | 'today' | 'this_month' | 'last_month' | 'this_fy') => {
+    setDatePreset(preset);
+    const now = new Date();
+    
+    if (preset === 'all') {
+      setStartDate('');
+      setEndDate('');
+    } else if (preset === 'today') {
+      const todayStr = now.toISOString().split('T')[0];
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === 'this_month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setStartDate(startOfMonth.toISOString().split('T')[0]);
+      setEndDate(endOfMonth.toISOString().split('T')[0]);
+    } else if (preset === 'last_month') {
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      setStartDate(startOfLastMonth.toISOString().split('T')[0]);
+      setEndDate(endOfLastMonth.toISOString().split('T')[0]);
+    } else if (preset === 'this_fy') {
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-indexed (April is 3)
+      let fyStartYear = currentYear;
+      if (currentMonth < 3) {
+        fyStartYear = currentYear - 1;
+      }
+      const fyStart = new Date(fyStartYear, 3, 1); // April 1st
+      const fyEnd = new Date(fyStartYear + 1, 2, 31); // March 31st
+      setStartDate(fyStart.toISOString().split('T')[0]);
+      setEndDate(fyEnd.toISOString().split('T')[0]);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setDatePreset('all');
+  };
+
+  const exportToCSV = () => {
+    if (filtered.length === 0) {
+      alert('কোনো সার্ভিস ইনভয়েস রেকর্ড পাওয়া যায়নি ডাউনলোড করার জন্য!');
+      return;
+    }
+
+    const headers = [
+      'Bill No',
+      'Billing Date',
+      'Hospital Name',
+      'Hospital GSTIN',
+      'Hospital PAN',
+      'Hospital Address',
+      'Services / Particulars Summary',
+      'Total Items Qty',
+      'Subtotal (INR)',
+      'Line Items Discount (INR)',
+      'Special / Global Adjustment (INR)',
+      'Total Discount (INR)',
+      'GST / Tax (INR)',
+      'Net Payable Amount (INR)',
+      'Bank Account Name',
+      'Entered By',
+      'Invoice Remarks'
+    ];
+
+    const escapeCsv = (str: any) => {
+      if (str === null || str === undefined) return '""';
+      const s = String(str).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const rows = filtered.map(inv => {
+      const particulars = (inv.items || [])
+        .map(it => `${it.description || ''} [Qty: ${it.qty || 1}, Rate: ₹${it.rate || 0}, Disc: ₹${it.discount || 0}, Total: ₹${it.amount || 0}]`)
+        .join('; ');
+      const totalQty = (inv.items || []).reduce((sum, it) => sum + (it.qty || 1), 0);
+
+      return [
+        escapeCsv(inv.id),
+        escapeCsv(inv.date),
+        escapeCsv(inv.hospitalName),
+        escapeCsv(inv.hospitalDetails?.gstin || ''),
+        escapeCsv(inv.hospitalDetails?.pan || ''),
+        escapeCsv(inv.hospitalDetails?.address || ''),
+        escapeCsv(particulars),
+        totalQty,
+        inv.subtotal || 0,
+        inv.itemDiscount || 0,
+        inv.globalAdjustment || 0,
+        inv.totalDiscount || 0,
+        inv.taxAmount || 0,
+        inv.totalAmount || 0,
+        escapeCsv(inv.bankAccountName || ''),
+        escapeCsv(inv.entryBy || ''),
+        escapeCsv(inv.notes || '')
+      ].join(',');
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(','), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+
+    const dateSuffix = startDate && endDate 
+      ? `${startDate}_to_${endDate}` 
+      : startDate 
+      ? `from_${startDate}` 
+      : endDate 
+      ? `until_${endDate}` 
+      : new Date().toISOString().split('T')[0];
+
+    link.setAttribute("download", `service_billing_report_${dateSuffix}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const filtered = useMemo(() => {
+    return [...invoices]
+      .filter(i => {
+        const matchesSearch = 
+          i.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          i.hospitalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (i.items && i.items.some(item => item.description.toLowerCase().includes(searchTerm.toLowerCase())));
+        
+        const matchesStart = !startDate || i.date >= startDate;
+        const matchesEnd = !endDate || i.date <= endDate;
+
+        return matchesSearch && matchesStart && matchesEnd;
+      })
       .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  }, [invoices, searchTerm, startDate, endDate]);
 
+  const summaryStats = useMemo(() => {
+    const totalCount = filtered.length;
+    const totalAmount = filtered.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    const totalDiscount = filtered.reduce((sum, inv) => sum + (inv.totalDiscount || 0), 0);
+    const totalServices = filtered.reduce((sum, inv) => sum + (inv.items ? inv.items.reduce((s, it) => s + (it.qty || 1), 0) : 0), 0);
+    return { totalCount, totalAmount, totalDiscount, totalServices };
+  }, [filtered]);
+
+  const isFilterActive = searchTerm || startDate || endDate || datePreset !== 'all';
+
+  if (viewMode === 'list') {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 animate-fade-in">
+        {/* Top Header & Actions */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Landmark className="text-primary" /> Hospital Service Billing</h2>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">B2B Hospital Invoicing</p>
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Landmark className="text-primary" /> Hospital Service Billing Dashboard
+            </h2>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+              B2B Hospital Invoicing, Date Range Analytics & Export
+            </p>
           </div>
-          <button onClick={() => { resetForm(); setViewMode('create'); }} className="bg-primary text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition active:scale-95">
-            <Plus size={20} /> Create New Bill
-          </button>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <button 
+              onClick={exportToCSV} 
+              disabled={filtered.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold text-xs shadow-md transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download filtered service billing data as CSV file"
+            >
+              <FileSpreadsheet size={16} /> 
+              <span>CSV ডাউনলোড ({filtered.length})</span>
+            </button>
+
+            <button 
+              onClick={() => { resetForm(); setViewMode('create'); }} 
+              className="bg-primary hover:bg-slate-800 text-white px-5 py-3 rounded-xl flex items-center gap-2 font-bold text-xs shadow-md transition active:scale-95"
+            >
+              <Plus size={16} /> 
+              <span>নতুন বিল তৈরি করুন</span>
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border flex items-center gap-4">
-          <Search className="text-gray-400" size={20} />
-          <input type="text" placeholder="Search invoices by ID or Hospital..." className="flex-1 outline-none text-sm font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+        {/* Date Range & Search Filter Panel */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
+              <Filter size={18} className="text-[#3159a6]" />
+              <span>ফিল্টার এবং তারিখ নির্বাচন (Date Range & Search Filters)</span>
+            </div>
+            {isFilterActive && (
+              <button
+                onClick={clearFilters}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5 px-3 py-1 bg-rose-50 rounded-lg hover:bg-rose-100 transition"
+              >
+                <RotateCcw size={13} />
+                <span>সব ফিল্টার ক্লিয়ার করুন</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            {/* Search Input */}
+            <div className="md:col-span-4 relative">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                খুঁজুন (Search)
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Bill No, Hospital Name বা সার্ভিস দিয়ে খুঁজুন..." 
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:bg-white text-xs font-medium transition" 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* From Date */}
+            <div className="md:col-span-4">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                শুরুর তারিখ (From Date)
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={e => { setStartDate(e.target.value); setDatePreset('custom'); }} 
+                  className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:bg-white text-xs font-semibold text-gray-700 transition" 
+                />
+              </div>
+            </div>
+
+            {/* To Date */}
+            <div className="md:col-span-4">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                শেষ তারিখ (To Date)
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={e => { setEndDate(e.target.value); setDatePreset('custom'); }} 
+                  className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:bg-white text-xs font-semibold text-gray-700 transition" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Date Presets */}
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              কুইক সিলেক্ট:
+            </span>
+            <button
+              onClick={() => applyDatePreset('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                datePreset === 'all' && !startDate && !endDate
+                  ? 'bg-[#3159a6] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              All Time
+            </button>
+            <button
+              onClick={() => applyDatePreset('today')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                datePreset === 'today'
+                  ? 'bg-[#3159a6] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => applyDatePreset('this_month')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                datePreset === 'this_month'
+                  ? 'bg-[#3159a6] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              This Month
+            </button>
+            <button
+              onClick={() => applyDatePreset('last_month')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                datePreset === 'last_month'
+                  ? 'bg-[#3159a6] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Last Month
+            </button>
+            <button
+              onClick={() => applyDatePreset('this_fy')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                datePreset === 'this_fy'
+                  ? 'bg-[#3159a6] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              This Financial Year
+            </button>
+
+            {(startDate || endDate) && (
+              <span className="ml-auto text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
+                রেঞ্জ: {startDate || 'শুরু থেকে'} &rarr; {endDate || 'বর্তমান'}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-[#3159a6] text-white font-black text-[10px] uppercase tracking-widest border-b">
-              <tr><th className="p-5">Bill No</th><th className="p-5">Date</th><th className="p-5">Hospital</th><th className="p-5 text-right">Total Amount</th><th className="p-5 text-center">Actions</th></tr>
-            </thead>
-            <tbody className="divide-y text-sm">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={5} className="p-20 text-center text-gray-300 italic font-black uppercase tracking-widest">No service invoices found</td></tr>
-              ) : filtered.map(inv => (
-                <tr key={inv.id} className="hover:bg-slate-50/50 transition">
-                  <td className="p-5 font-black text-primary uppercase">
-                    <div>{inv.id}</div>
-                    {inv.entryBy && (
-                      <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider normal-case">
-                        By: {inv.entryBy}
+        {/* Summary Metric Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">মোট ইনভয়েস (Invoices)</p>
+              <p className="text-2xl font-black text-gray-800 mt-1">{summaryStats.totalCount}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+              <FileText size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">মোট বিল্ড অ্যামাউন্ট (Revenue)</p>
+              <p className="text-2xl font-black text-emerald-700 mt-1">₹{summaryStats.totalAmount.toLocaleString('en-IN')}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <IndianRupee size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">মোট সার্ভিস সংখ্যা (Services)</p>
+              <p className="text-2xl font-black text-purple-700 mt-1">{summaryStats.totalServices}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+              <Activity size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">মোট ডিসকাউন্ট (Discounts)</p>
+              <p className="text-2xl font-black text-amber-600 mt-1">₹{summaryStats.totalDiscount.toLocaleString('en-IN')}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <Percent size={18} />
+            </div>
+          </div>
+        </div>
+
+        {/* Invoices List Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-xs font-bold text-gray-600">
+            <span className="flex items-center gap-2">
+              <span>ইনভয়েস তালিকা (Showing {filtered.length} of {invoices.length})</span>
+            </span>
+            {filtered.length > 0 && (
+              <button 
+                onClick={exportToCSV} 
+                className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 text-xs"
+              >
+                <Download size={14} /> CSV ডাউনলোড করুন
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-[#3159a6] text-white font-black text-[10px] uppercase tracking-widest border-b">
+                <tr>
+                  <th className="p-4">Bill No</th>
+                  <th className="p-4">Date</th>
+                  <th className="p-4">Hospital / Client</th>
+                  <th className="p-4">Services / Items</th>
+                  <th className="p-4 text-right">Total Amount</th>
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y text-sm">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-16 text-center text-gray-400 space-y-2">
+                      <FileText className="mx-auto text-gray-300" size={40} />
+                      <p className="font-bold text-gray-500">কোনো সার্ভিস ইনভয়েস পাওয়া যায়নি</p>
+                      {isFilterActive && (
+                        <p className="text-xs text-gray-400">
+                          আপনার নির্বাচিত তারিখ বা সার্চ ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন অথবা{' '}
+                          <button onClick={clearFilters} className="text-primary underline font-bold">
+                            সব ফিল্টার মুছুন
+                          </button>
+                        </p>
+                      )}
+                    </td>
+                  </tr>
+                ) : filtered.map(inv => (
+                  <tr key={inv.id} className="hover:bg-slate-50/50 transition">
+                    <td className="p-4 font-black text-primary uppercase">
+                      <div>{inv.id}</div>
+                      {inv.entryBy && (
+                        <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider normal-case">
+                          By: {inv.entryBy}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4 font-bold text-gray-600 whitespace-nowrap">
+                      {new Date(inv.date).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </td>
+                    <td className="p-4">
+                      <div className="font-black text-gray-800 uppercase">{inv.hospitalName}</div>
+                      {inv.hospitalDetails?.gstin && (
+                        <div className="text-[10px] text-gray-400 font-mono">GST: {inv.hospitalDetails.gstin}</div>
+                      )}
+                    </td>
+                    <td className="p-4 text-xs text-gray-600 max-w-xs">
+                      <div className="truncate font-medium">
+                        {(inv.items || []).map(it => it.description).filter(Boolean).join(', ') || 'N/A'}
                       </div>
-                    )}
-                  </td>
-                  <td className="p-5 font-bold text-gray-500">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
-                  <td className="p-5 font-black text-gray-800 uppercase">{inv.hospitalName}</td>
-                  <td className="p-5 text-right font-black text-lg">₹{inv.totalAmount.toLocaleString('en-IN')}</td>
-                  <td className="p-5 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button onClick={() => { 
-                        setSelectedHospital(inv.hospitalDetails); 
-                        setInvoiceLines(inv.items); 
-                        setInvoiceDate(inv.date); 
-                        setNotes(inv.notes || ''); 
-                        setGlobalAdjustment(inv.globalAdjustment || 0); 
-                        setSelectedBank(inv.bankAccountName || selectedBank); 
-                        setEditingInvoiceId(inv.id);
-                        setViewMode('create'); 
-                      }} className="p-2 text-blue-400 hover:bg-blue-50 rounded-xl transition" title="Edit Invoice"><Edit size={18}/></button>
-                      
-                      <button onClick={() => { 
-                        setSelectedHospital(inv.hospitalDetails); 
-                        setInvoiceLines(inv.items); 
-                        setInvoiceDate(inv.date); 
-                        setNotes(inv.notes || ''); 
-                        setGlobalAdjustment(inv.globalAdjustment || 0); 
-                        setSelectedBank(inv.bankAccountName || selectedBank); 
-                        setEditingInvoiceId(inv.id);
-                        setViewMode('review'); 
-                      }} className="p-2 text-primary hover:bg-blue-50 rounded-xl transition" title="Print/Review"><Printer size={18}/></button>
-                      
-                      {userRole === 'admin' && (
+                      <div className="text-[10px] text-gray-400 mt-0.5">
+                        {inv.items?.length || 0} টি সার্ভিস আইটেম
+                      </div>
+                    </td>
+                    <td className="p-4 text-right font-black text-base text-gray-900 whitespace-nowrap">
+                      ₹{inv.totalAmount.toLocaleString('en-IN')}
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex justify-center gap-1.5">
                         <button 
                           onClick={() => { 
-                            if (window.confirm(`Are you sure you want to delete Service Invoice "${inv.id}"? This action has been backed up in the database.`)) {
-                              onDeleteInvoice(inv.id);
-                            }
+                            setSelectedHospital(inv.hospitalDetails); 
+                            setInvoiceLines(inv.items); 
+                            setInvoiceDate(inv.date); 
+                            setNotes(inv.notes || ''); 
+                            setGlobalAdjustment(inv.globalAdjustment || 0); 
+                            setSelectedBank(inv.bankAccountName || selectedBank); 
+                            setEditingInvoiceId(inv.id);
+                            setViewMode('create'); 
                           }} 
-                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition" 
-                          title="Permanently Delete Service Invoice"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" 
+                          title="Edit Invoice"
                         >
-                          <Trash2 size={18}/>
+                          <Edit size={16}/>
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        
+                        <button 
+                          onClick={() => { 
+                            setSelectedHospital(inv.hospitalDetails); 
+                            setInvoiceLines(inv.items); 
+                            setInvoiceDate(inv.date); 
+                            setNotes(inv.notes || ''); 
+                            setGlobalAdjustment(inv.globalAdjustment || 0); 
+                            setSelectedBank(inv.bankAccountName || selectedBank); 
+                            setEditingInvoiceId(inv.id);
+                            setViewMode('review'); 
+                          }} 
+                          className="p-2 text-primary hover:bg-blue-50 rounded-lg transition" 
+                          title="Print/Review"
+                        >
+                          <Printer size={16}/>
+                        </button>
+                        
+                        {userRole === 'admin' && (
+                          <button 
+                            onClick={() => { 
+                              if (window.confirm(`Are you sure you want to delete Service Invoice "${inv.id}"? This action has been backed up in the database.`)) {
+                                onDeleteInvoice(inv.id);
+                              }
+                            }} 
+                            className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition" 
+                            title="Permanently Delete Service Invoice"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
