@@ -142,8 +142,13 @@ export interface ServiceInvoiceLine {
   qty: number;
   rate: number;
   discount: number; // Added item-wise discount
-  taxableAmount: number; // Added taxable amount after discount
-  amount: number; // Final line amount
+  taxableAmount: number; // Taxable amount after discount
+  gstRate?: number; // GST Rate percentage (e.g. 0, 5, 12, 18, 28)
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  taxAmount?: number; // Total GST for this line
+  amount: number; // Final line amount (taxableAmount + taxAmount)
 }
 
 export interface ServiceInvoice {
@@ -157,8 +162,15 @@ export interface ServiceInvoice {
   itemDiscount: number; // Total of line-item discounts
   globalAdjustment: number; // Additional global discount
   totalDiscount: number; // sum of both
-  taxAmount: number;
-  totalAmount: number;
+  taxableAmount?: number; // Total taxable value
+  gstRate?: number; // Overall GST rate if uniform
+  isInterState?: boolean; // IGST (Inter-State) vs CGST+SGST (Intra-State)
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  taxAmount: number; // Total tax amount
+  roundOff?: number;
+  totalAmount: number; // Grand total including GST
   notes?: string;
   bankAccountName?: string;
   entryBy?: string;
@@ -347,7 +359,7 @@ export interface Lead {
 }
 
 // FIX: Added 'purchases' and 'vendors' to ViewState to resolve navigation state errors
-export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'demo-billing' | 'service-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets' | 'purchases' | 'vendors' | 'users-admin';
+export type ViewState = 'front-cover' | 'dashboard' | 'inventory' | 'billing' | 'demo-billing' | 'service-billing' | 'proforma-billing' | 'quotation' | 'transfer' | 'asset-transfer' | 'patients' | 'credit-note' | 'debit-note' | 'crm' | 'settings' | 'receipts' | 'advance-booking' | 'assets' | 'purchases' | 'vendors' | 'users-admin' | 'razorpay-payments';
 export type UserRole = 'admin' | 'user';
 
 export interface AppUser {
@@ -388,5 +400,5 @@ export const BRANDS = [
   'Battery 312',
   'Battery 10',
   'Instrument',
-  'Shonakotha Slot'
+  'Shonakotha Slot',
 ];
