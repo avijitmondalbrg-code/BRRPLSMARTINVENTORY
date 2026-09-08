@@ -519,8 +519,11 @@ export const Quotations: React.FC<QuotationsProps> = ({ inventory, quotations, p
                             <div className="h-28 w-28 flex items-center justify-center bg-white rounded-3xl p-2 border-2 border-slate-50"><img src={logo} alt="Logo" className="h-full object-contain" /></div>
                             <div>
                                  <h1 className="text-3xl font-black text-slate-900 uppercase leading-none tracking-tighter">{COMPANY_NAME}</h1>
-                                <p className="text-sm text-slate-600 font-bold mt-2 tracking-tight italic">{COMPANY_TAGLINE}</p>
-                                <p className="text-[11px] text-slate-800 mt-4 leading-relaxed max-w-sm font-semibold">{COMPANY_ADDRESS}</p>
+                                <p className="text-xs font-black text-slate-900 uppercase tracking-wider mt-1.5">
+                                    GSTIN: <span className="text-[#3159a6] font-black">{CLINIC_GSTIN}</span>
+                                </p>
+                                <p className="text-sm text-slate-600 font-bold mt-1 tracking-tight italic">{COMPANY_TAGLINE}</p>
+                                <p className="text-[11px] text-slate-800 mt-3 leading-relaxed max-w-sm font-semibold">{COMPANY_ADDRESS}</p>
                                 <p className="text-[11px] text-slate-900 font-black uppercase tracking-widest">Ph: {COMPANY_PHONES} | Email: {COMPANY_EMAIL}</p>
                             </div>
                         </div>
