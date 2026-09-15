@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban, Building2 } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban, Building2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, Maximize2, Minimize2 } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -580,6 +580,80 @@ export const Billing: React.FC<BillingProps> = ({
     return { totalSales, totalOutstanding, totalReceived, activeInvoicesCount, totalUnits };
   }, [filteredInvoices]);
 
+  // Table Scroll & View State
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollPosition, setScrollPosition] = useState<{ left: boolean; right: boolean }>({ left: false, right: true });
+  const [tableHeightMode, setTableHeightMode] = useState<'fit' | 'expand'>('fit');
+  const isSyncingScroll = useRef(false);
+
+  const updateScrollState = (el: HTMLElement) => {
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setScrollPosition({
+      left: el.scrollLeft > 10,
+      right: el.scrollLeft < maxScroll - 10
+    });
+  };
+
+  const handleTableScroll = () => {
+    if (!tableContainerRef.current) return;
+    updateScrollState(tableContainerRef.current);
+    if (!isSyncingScroll.current && topScrollRef.current) {
+      isSyncingScroll.current = true;
+      topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
+  const handleTopScroll = () => {
+    if (!topScrollRef.current) return;
+    if (!isSyncingScroll.current && tableContainerRef.current) {
+      isSyncingScroll.current = true;
+      tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+      updateScrollState(tableContainerRef.current);
+      requestAnimationFrame(() => {
+        isSyncingScroll.current = false;
+      });
+    }
+  };
+
+  const scrollTable = (direction: 'left' | 'right', amount = 350) => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({
+        left: direction === 'left' ? -amount : amount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollToStart = () => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToEnd = () => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({ left: tableContainerRef.current.scrollWidth, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToPageTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToPageBottom = () => {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      updateScrollState(tableContainerRef.current);
+    }
+  }, [filteredInvoices, tableHeightMode]);
+
   const exportToCSV = () => {
     const escapeCSV = (val: any) => {
       if (val === undefined || val === null) return '""';
@@ -834,20 +908,99 @@ export const Billing: React.FC<BillingProps> = ({
                 )}
               </div>
 
-              <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-[#3159a6] text-white font-black border-b text-[10px] uppercase tracking-[0.2em]">
+              <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100 flex flex-col">
+                {/* Table Header Control Bar: Scroll Buttons & View Toggle */}
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-50 via-blue-50/40 to-slate-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-[#3159a6] text-white shadow-xs">
+                      <FileText size={14} />
+                      {filteredInvoices.length} Invoices
+                    </span>
+                    {filterHospital !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-blue-100/70 text-[#3159a6]">
+                        <Building2 size={12} /> {filterHospital === 'direct' ? 'Direct / Self' : filterHospital}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setTableHeightMode(m => m === 'fit' ? 'expand' : 'fit')}
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 transition shadow-xs"
+                      title={tableHeightMode === 'fit' ? 'Show all rows on one long page' : 'Fit table to screen with sticky header & on-screen scrollbar'}
+                    >
+                      {tableHeightMode === 'fit' ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                      <span>{tableHeightMode === 'fit' ? 'Expand All Rows' : 'Screen Fit View'}</span>
+                    </button>
+                  </div>
+
+                  {/* Horizontal Scroll Windows-Style Buttons */}
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-gray-200 shadow-xs">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-2 hidden md:inline">
+                      Horizontal Scroll:
+                    </span>
+                    <button
+                      onClick={scrollToStart}
+                      className="p-1.5 px-2 rounded-xl text-gray-600 hover:text-[#3159a6] hover:bg-blue-50 transition text-[11px] font-black flex items-center gap-1"
+                      title="Jump to first columns (Invoice No & Patient)"
+                    >
+                      <ChevronsLeft size={16} />
+                      <span className="hidden sm:inline">Start</span>
+                    </button>
+                    <button
+                      onClick={() => scrollTable('left')}
+                      className="p-1.5 px-2.5 rounded-xl bg-gray-50 hover:bg-[#3159a6] text-gray-700 hover:text-white transition text-xs font-black flex items-center gap-1 shadow-xs border border-gray-200 hover:border-[#3159a6]"
+                      title="Scroll table left"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Left</span>
+                    </button>
+                    <button
+                      onClick={() => scrollTable('right')}
+                      className="p-1.5 px-2.5 rounded-xl bg-[#3159a6] text-white hover:bg-slate-800 transition text-xs font-black flex items-center gap-1 shadow-xs"
+                      title="Scroll table right to see Grand Total, Status & Actions"
+                    >
+                      <span>Right</span>
+                      <ChevronRight size={16} />
+                    </button>
+                    <button
+                      onClick={scrollToEnd}
+                      className="p-1.5 px-2 rounded-xl text-gray-600 hover:text-[#3159a6] hover:bg-blue-50 transition text-[11px] font-black flex items-center gap-1"
+                      title="Jump to end columns (Grand Total, Balance & Actions)"
+                    >
+                      <span className="hidden sm:inline">Actions</span>
+                      <ChevronsRight size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Synchronized Top Horizontal Scrollbar */}
+                <div
+                  ref={topScrollRef}
+                  onScroll={handleTopScroll}
+                  className="overflow-x-auto overflow-y-hidden custom-scrollbar bg-slate-100 border-b border-slate-200 h-3"
+                  title="Drag or click to scroll table horizontally"
+                >
+                  <div style={{ width: 1350, height: 1 }} />
+                </div>
+
+                {/* Scrollable Table Viewport */}
+                <div
+                  ref={tableContainerRef}
+                  onScroll={handleTableScroll}
+                  className={`overflow-x-auto custom-scrollbar relative ${
+                    tableHeightMode === 'fit' ? 'max-h-[calc(100vh-270px)] min-h-[380px] overflow-y-auto' : ''
+                  }`}
+                >
+                    <table className="w-full text-left border-collapse min-w-[1250px]">
+                        <thead className="sticky top-0 z-20 bg-[#3159a6] text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-md">
                             <tr>
-                                <th className="p-5">Invoice No</th>
-                                <th className="p-5">Date</th>
-                                <th className="p-5">Patient</th>
-                                <th className="p-5">Hospital / Branch</th>
-                                <th className="p-5">Device Units</th>
-                                <th className="p-5 text-right">Grand Total</th>
-                                <th className="p-5 text-right">Outstanding</th>
-                                <th className="p-5 text-center">Status</th>
-                                <th className="p-5 text-center">Actions</th>
+                                <th className="p-5 sticky top-0 bg-[#3159a6] z-20">Invoice No</th>
+                                <th className="p-5 sticky top-0 bg-[#3159a6] z-20">Date</th>
+                                <th className="p-5 sticky top-0 bg-[#3159a6] z-20">Patient</th>
+                                <th className="p-5 sticky top-0 bg-[#3159a6] z-20">Hospital / Branch</th>
+                                <th className="p-5 sticky top-0 bg-[#3159a6] z-20">Device Units</th>
+                                <th className="p-5 text-right sticky top-0 bg-[#3159a6] z-20">Grand Total</th>
+                                <th className="p-5 text-right sticky top-0 bg-[#3159a6] z-20">Outstanding</th>
+                                <th className="p-5 text-center sticky top-0 bg-[#3159a6] z-20">Status</th>
+                                <th className="p-5 text-center sticky top-0 bg-[#3159a6] z-20">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y text-sm">
@@ -965,6 +1118,83 @@ export const Billing: React.FC<BillingProps> = ({
                         </tbody>
                     </table>
                   </div>
+
+                {/* Table Footer with Summary & Bottom Scroll Buttons */}
+                <div className="p-3.5 px-5 bg-slate-50 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 font-bold">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">Status:</span>
+                    <span className="text-gray-800 font-black">Showing {filteredInvoices.length} invoices</span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-gray-500 text-[11px] hidden sm:inline">
+                      Tip: Use <strong>Left / Right buttons</strong> or scroll horizontally to inspect all 9 columns
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-gray-200 shadow-xs">
+                    <button
+                      onClick={scrollToStart}
+                      className="p-1 px-2 rounded-lg text-gray-600 hover:text-[#3159a6] hover:bg-blue-50 transition text-xs font-black flex items-center gap-1"
+                      title="Jump to Start"
+                    >
+                      <ChevronsLeft size={14} /> Start
+                    </button>
+                    <button
+                      onClick={() => scrollTable('left')}
+                      className="p-1.5 px-2.5 rounded-lg bg-gray-50 hover:bg-[#3159a6] text-gray-700 hover:text-white transition text-xs font-black flex items-center gap-1 shadow-xs border border-gray-200 hover:border-[#3159a6]"
+                      title="Scroll Left"
+                    >
+                      <ChevronLeft size={14} /> Scroll Left
+                    </button>
+                    <button
+                      onClick={() => scrollTable('right')}
+                      className="p-1.5 px-2.5 rounded-lg bg-[#3159a6] text-white hover:bg-slate-800 transition text-xs font-black flex items-center gap-1 shadow-xs"
+                      title="Scroll Right"
+                    >
+                      Scroll Right <ChevronRight size={14} />
+                    </button>
+                    <button
+                      onClick={scrollToEnd}
+                      className="p-1 px-2 rounded-lg text-gray-600 hover:text-[#3159a6] hover:bg-blue-50 transition text-xs font-black flex items-center gap-1"
+                      title="Jump to Actions"
+                    >
+                      Actions <ChevronsRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Quick Scroll Buttons (Windows-style On-Screen Navigators) */}
+              <div className="fixed bottom-6 right-6 z-40 flex flex-col items-center gap-1 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border border-gray-200">
+                <button
+                  onClick={scrollToPageTop}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-[#3159a6] text-gray-700 hover:text-white transition shadow-xs"
+                  title="Scroll Page to Top (উপরে যান)"
+                >
+                  <ArrowUp size={15} />
+                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => scrollTable('left')}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-[#3159a6] text-gray-700 hover:text-white transition shadow-xs"
+                    title="Scroll Table Left (বামে যান)"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={() => scrollTable('right')}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl bg-[#3159a6] hover:bg-slate-800 text-white transition shadow-xs"
+                    title="Scroll Table Right (ডানে যান)"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+                <button
+                  onClick={scrollToPageBottom}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-[#3159a6] text-gray-700 hover:text-white transition shadow-xs"
+                  title="Scroll Page to Bottom (নিচে যান)"
+                >
+                  <ArrowDown size={15} />
+                </button>
               </div>
 
               {/* Automation Success Modal */}
