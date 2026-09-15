@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { HearingAid, Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, AdvanceBooking, Hospital } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, getFinancialYear, STAFF_NAMES, HOSPITAL_OPTIONS } from '../constants';
-import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban } from 'lucide-react';
+import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, Wallet, IndianRupee, Edit, MessageSquare, Wrench, PackagePlus, CheckCircle2, Settings2, Download, Calendar, TrendingUp, CreditCard, AlertCircle, MessageCircle, Info, Ban, Building2 } from 'lucide-react';
 
 interface BillingProps {
   inventory: HearingAid[];
@@ -162,6 +162,7 @@ export const Billing: React.FC<BillingProps> = ({
   // Sales Dashboard Filters
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterHospital, setFilterHospital] = useState<string>('all');
 
   // Print Customization State
   const [printScale, setPrintScale] = useState(100);
@@ -245,7 +246,14 @@ export const Billing: React.FC<BillingProps> = ({
     setInvoiceNotes(inv.notes || '');
     setWarranty(inv.warranty || '2 Years Standard Warranty');
     setEntryBy(inv.entryBy || STAFF_NAMES[0]);
-    setSelectedHospitalId(inv.hospitalId || '');
+    setSelectedHospitalId(
+      inv.hospitalId || 
+      (inv.hospitalName 
+        ? (HOSPITAL_OPTIONS.includes(inv.hospitalName) 
+            ? inv.hospitalName 
+            : hospitals.find(h => h.name.toLowerCase() === inv.hospitalName?.toLowerCase())?.id || '')
+        : '')
+    );
     setExistingPayments(inv.payments || []);
     setInitialPayment(0);
     setProductSearchTerm('');
@@ -483,18 +491,66 @@ export const Billing: React.FC<BillingProps> = ({
       setShowCollectModal(true);
   };
 
+  // Helper to extract hospital display name
+  const getInvoiceHospitalName = (inv: Invoice): string => {
+    if (inv.hospitalName) return inv.hospitalName;
+    if (inv.hospitalId) {
+      if (HOSPITAL_OPTIONS.includes(inv.hospitalId)) return inv.hospitalId;
+      const found = hospitals.find(h => h.id === inv.hospitalId);
+      if (found) return found.name;
+      return inv.hospitalId;
+    }
+    return '';
+  };
+
+  // Comprehensive unique list of hospitals for filter dropdown
+  const availableHospitals = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+
+    const addIfNew = (name?: string) => {
+      if (!name) return;
+      const trimmed = name.trim();
+      if (!trimmed || trimmed === 'Others' || seen.has(trimmed.toLowerCase())) return;
+      seen.add(trimmed.toLowerCase());
+      list.push(trimmed);
+    };
+
+    // Predefined options
+    HOSPITAL_OPTIONS.forEach(opt => addIfNew(opt));
+    // Database hospitals
+    (hospitals || []).forEach(h => addIfNew(h.name));
+    // Invoices recorded hospitals
+    (invoices || []).forEach(inv => {
+      addIfNew(getInvoiceHospitalName(inv));
+    });
+
+    return list.sort((a, b) => a.localeCompare(b));
+  }, [hospitals, invoices]);
+
   // Filter logic and statistics calculation
   const filteredInvoices = useMemo(() => {
     return (invoices || []).filter(inv => {
+      const hospName = getInvoiceHospitalName(inv);
       const matchesSearch = inv.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            inv.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           inv.items.some(it => it.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                           inv.items.some(it => it.model.toLowerCase().includes(searchTerm.toLowerCase()));
+                           hospName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           inv.items.some(it => (it.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           inv.items.some(it => (it.model || '').toLowerCase().includes(searchTerm.toLowerCase())) ||
+                           inv.items.some(it => (it.brand || '').toLowerCase().includes(searchTerm.toLowerCase()));
       
       const matchesStart = !filterStartDate || inv.date >= filterStartDate;
       const matchesEnd = !filterEndDate || inv.date <= filterEndDate;
+
+      let matchesHospital = true;
+      if (filterHospital === 'direct') {
+        matchesHospital = !hospName;
+      } else if (filterHospital !== 'all') {
+        matchesHospital = hospName.toLowerCase() === filterHospital.toLowerCase() || 
+                          inv.hospitalId === filterHospital;
+      }
       
-      return matchesSearch && matchesStart && matchesEnd;
+      return matchesSearch && matchesStart && matchesEnd && matchesHospital;
     }).sort((a, b) => {
         // Primary sort: Date descending
         const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -502,22 +558,26 @@ export const Billing: React.FC<BillingProps> = ({
         // Secondary sort: ID descending (to handle multiple invoices on same day)
         return b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [invoices, searchTerm, filterStartDate, filterEndDate]);
+  }, [invoices, searchTerm, filterStartDate, filterEndDate, filterHospital, hospitals]);
 
   const billingStats = useMemo(() => {
     let totalSales = 0;
     let totalOutstanding = 0;
     let totalReceived = 0;
+    let activeInvoicesCount = 0;
+    let totalUnits = 0;
 
     filteredInvoices.forEach(inv => {
       if (inv.status === 'Cancelled') return;
+      activeInvoicesCount += 1;
       totalSales += inv.finalTotal;
       totalOutstanding += (inv.balanceDue || 0);
       const collectedForInv = inv.payments.reduce((sum, p) => sum + p.amount, 0);
       totalReceived += collectedForInv;
+      totalUnits += inv.items.reduce((s, it) => s + (it.qty || 1), 0);
     });
 
-    return { totalSales, totalOutstanding, totalReceived };
+    return { totalSales, totalOutstanding, totalReceived, activeInvoicesCount, totalUnits };
   }, [filteredInvoices]);
 
   const exportToCSV = () => {
@@ -579,7 +639,7 @@ export const Billing: React.FC<BillingProps> = ({
         escapeCSV(inv.patientDetails?.dob || 'N/A'),
         escapeCSV(inv.patientDetails?.referDoctor || 'N/A'),
         escapeCSV(inv.patientDetails?.audiologist || 'N/A'),
-        escapeCSV(inv.hospitalName || 'N/A'),
+        escapeCSV(getInvoiceHospitalName(inv) || 'Direct / Self'),
         escapeCSV(inv.patientDetails?.address || 'N/A'),
         escapeCSV(inv.patientDetails?.district || 'N/A'),
         escapeCSV(inv.patientDetails?.state || 'N/A'),
@@ -611,7 +671,8 @@ export const Billing: React.FC<BillingProps> = ({
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
+    const hospSuffix = filterHospital !== 'all' ? `_${filterHospital.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
+    link.setAttribute("download", `sales_report${hospSuffix}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -630,126 +691,277 @@ export const Billing: React.FC<BillingProps> = ({
               </div>
 
               {/* Statistics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-blue-50 flex items-center gap-5 transition hover:shadow-xl group">
-                  <div className="p-4 bg-blue-50 rounded-2xl text-[#3159a6] group-hover:scale-110 transition-transform"><TrendingUp size={28}/></div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Sales (Period)</p>
-                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalSales.toLocaleString()}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-blue-50 flex items-center gap-4 transition hover:shadow-xl group">
+                  <div className="p-3.5 bg-blue-50 rounded-2xl text-[#3159a6] group-hover:scale-110 transition-transform"><TrendingUp size={26}/></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
+                      Total Sales {filterHospital !== 'all' ? `(${filterHospital})` : '(Period)'}
+                    </p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalSales.toLocaleString('en-IN')}</p>
+                    {(filterStartDate || filterEndDate) && (
+                      <p className="text-[9px] font-bold text-gray-400 mt-0.5 truncate">
+                        {filterStartDate || 'Start'} &rarr; {filterEndDate || 'Now'}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-green-50 flex items-center gap-5 transition hover:shadow-xl group">
-                  <div className="p-4 bg-green-50 rounded-2xl text-green-600 group-hover:scale-110 transition-transform"><CreditCard size={28}/></div>
-                  <div>
+                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-green-50 flex items-center gap-4 transition hover:shadow-xl group">
+                  <div className="p-3.5 bg-green-50 rounded-2xl text-green-600 group-hover:scale-110 transition-transform"><CreditCard size={26}/></div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Collected</p>
-                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalReceived.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">₹{billingStats.totalReceived.toLocaleString('en-IN')}</p>
+                    <p className="text-[9px] font-bold text-emerald-600 mt-0.5">
+                      {billingStats.totalSales > 0 ? `${Math.round((billingStats.totalReceived / billingStats.totalSales) * 100)}% Collected` : '0% Collected'}
+                    </p>
                   </div>
                 </div>
-                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-red-50 flex items-center gap-5 transition hover:shadow-xl group">
-                  <div className="p-4 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform"><AlertCircle size={28}/></div>
-                  <div>
+                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-red-50 flex items-center gap-4 transition hover:shadow-xl group">
+                  <div className="p-3.5 bg-red-50 rounded-2xl text-red-500 group-hover:scale-110 transition-transform"><AlertCircle size={26}/></div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Net Outstanding</p>
-                    <p className="text-2xl font-black text-red-600 tracking-tighter">₹{billingStats.totalOutstanding.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-red-600 tracking-tighter">₹{billingStats.totalOutstanding.toLocaleString('en-IN')}</p>
+                    <p className="text-[9px] font-bold text-rose-500 mt-0.5">
+                      {billingStats.totalOutstanding > 0 ? 'Pending Collection' : 'Nil Balance'}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-indigo-50 flex items-center gap-4 transition hover:shadow-xl group">
+                  <div className="p-3.5 bg-indigo-50 rounded-2xl text-indigo-600 group-hover:scale-110 transition-transform"><FileText size={26}/></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Invoices & Units</p>
+                    <p className="text-2xl font-black text-gray-800 tracking-tighter">{billingStats.activeInvoicesCount} Invoices</p>
+                    <p className="text-[9px] font-bold text-indigo-600 mt-0.5">
+                      {billingStats.totalUnits} Device Units
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Filters Area */}
-              <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center gap-6">
-                <div className="relative flex-1 w-full">
+              <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col lg:flex-row items-stretch lg:items-center gap-4">
+                {/* Search Bar */}
+                <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
-                    <input className="pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm w-full outline-none focus:bg-white focus:border-[#3159a6] transition font-bold" placeholder="Find by ID, Patient or Serial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <input 
+                      className="pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-50 rounded-2xl text-sm w-full outline-none focus:bg-white focus:border-[#3159a6] transition font-bold" 
+                      placeholder="Find by ID, Patient, Hospital, or Serial..." 
+                      value={searchTerm} 
+                      onChange={e => setSearchTerm(e.target.value)} 
+                    />
+                    {searchTerm && (
+                      <button onClick={() => setSearchTerm('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <X size={16} />
+                      </button>
+                    )}
                 </div>
-                <div className="flex items-center gap-4 bg-gray-50 p-2 px-4 rounded-2xl border-2 border-gray-50 w-full lg:w-auto">
-                    <div className="flex items-center gap-2">
+
+                {/* Hospital Filter Dropdown */}
+                <div className="flex items-center gap-2 bg-gray-50 p-2 px-3.5 rounded-2xl border-2 border-gray-50 min-w-[240px]">
+                    <Building2 size={18} className="text-[#3159a6] shrink-0" />
+                    <div className="flex-1">
+                      <select
+                        value={filterHospital}
+                        onChange={e => setFilterHospital(e.target.value)}
+                        className="bg-transparent text-xs font-black uppercase text-gray-800 outline-none w-full cursor-pointer focus:text-[#3159a6]"
+                      >
+                        <option value="all">All Hospitals & Centers</option>
+                        <option value="direct">Direct / Self (No Hospital)</option>
+                        <optgroup label="Hospitals / Branches">
+                          {availableHospitals.map(hName => (
+                            <option key={hName} value={hName}>{hName}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+                    {filterHospital !== 'all' && (
+                      <button 
+                        onClick={() => setFilterHospital('all')} 
+                        className="text-red-400 hover:text-red-600 ml-1 p-0.5 rounded-md hover:bg-red-50 transition"
+                        title="Clear Hospital Filter"
+                      >
+                        <X size={15}/>
+                      </button>
+                    )}
+                </div>
+
+                {/* Date Filter */}
+                <div className="flex items-center gap-3 bg-gray-50 p-2 px-4 rounded-2xl border-2 border-gray-50">
+                    <div className="flex items-center gap-1.5">
                         <Calendar size={18} className="text-[#3159a6]" />
-                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">Date Filter</span>
+                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">Date:</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <input type="date" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        <input 
+                          type="date" 
+                          value={filterStartDate} 
+                          onChange={e => setFilterStartDate(e.target.value)} 
+                          className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" 
+                        />
                         <span className="text-gray-300 font-black">/</span>
-                        <input type="date" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" />
+                        <input 
+                          type="date" 
+                          value={filterEndDate} 
+                          onChange={e => setFilterEndDate(e.target.value)} 
+                          className="bg-transparent text-xs font-black outline-none focus:text-[#3159a6] uppercase" 
+                        />
                         {(filterStartDate || filterEndDate) && (
-                            <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }} className="text-red-400 hover:text-red-600 ml-2"><X size={16}/></button>
+                            <button 
+                              onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }} 
+                              className="text-red-400 hover:text-red-600 ml-1 p-0.5 rounded-md hover:bg-red-50 transition"
+                              title="Clear Date Filter"
+                            >
+                              <X size={15}/>
+                            </button>
                         )}
                     </div>
                 </div>
+
+                {/* Reset all filters button if active */}
+                {(searchTerm || filterStartDate || filterEndDate || filterHospital !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterStartDate('');
+                      setFilterEndDate('');
+                      setFilterHospital('all');
+                    }}
+                    className="px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-2xl text-[10px] font-black uppercase tracking-wider transition whitespace-nowrap flex items-center justify-center gap-1.5"
+                    title="Reset All Filters"
+                  >
+                    <X size={14} /> Reset
+                  </button>
+                )}
               </div>
 
               <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden border border-gray-100">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-[#3159a6] text-white font-black border-b text-[10px] uppercase tracking-[0.2em]">
-                            <tr><th className="p-5">Invoice No</th><th className="p-5">Date</th><th className="p-5">Patient</th><th className="p-5">Device Units</th><th className="p-5 text-right">Grand Total</th><th className="p-5 text-right">Outstanding</th><th className="p-5 text-center">Status</th><th className="p-5 text-center">Actions</th></tr>
+                            <tr>
+                                <th className="p-5">Invoice No</th>
+                                <th className="p-5">Date</th>
+                                <th className="p-5">Patient</th>
+                                <th className="p-5">Hospital / Branch</th>
+                                <th className="p-5">Device Units</th>
+                                <th className="p-5 text-right">Grand Total</th>
+                                <th className="p-5 text-right">Outstanding</th>
+                                <th className="p-5 text-center">Status</th>
+                                <th className="p-5 text-center">Actions</th>
+                            </tr>
                         </thead>
                         <tbody className="divide-y text-sm">
-                            {filteredInvoices.map(inv => (
-                                <tr key={inv.id} className="hover:bg-blue-50/30 transition">
-                                    <td className="p-5 font-black text-[#3159a6]">
-                                        <div>{inv.id}</div>
-                                        {inv.entryBy && (
-                                            <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">
-                                                By: {inv.entryBy}
+                            {filteredInvoices.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="p-16 text-center text-gray-400 space-y-2">
+                                        <FileText className="mx-auto text-gray-300" size={40} />
+                                        <p className="font-bold text-gray-500">কোনো ইনভয়েস পাওয়া যায়নি (No Invoices Found)</p>
+                                        {(searchTerm || filterStartDate || filterEndDate || filterHospital !== 'all') && (
+                                            <div className="pt-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setSearchTerm('');
+                                                        setFilterStartDate('');
+                                                        setFilterEndDate('');
+                                                        setFilterHospital('all');
+                                                    }}
+                                                    className="text-xs font-black text-[#3159a6] hover:underline"
+                                                >
+                                                    সব ফিল্টার রিসেট করুন (Reset All Filters)
+                                                </button>
                                             </div>
                                         )}
                                     </td>
-                                    <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
-                                    <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">{inv.patientName}</td>
-                                    <td className="p-5">
-                                        {/* Sorted items display for sequence consistency */}
-                                        {[...inv.items]
-                                          .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber, undefined, { numeric: true }))
-                                          .map((it, idx) => (
-                                            <div key={idx} className="mb-1 last:mb-0">
-                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand ? `${it.brand} ` : ''}{it.model} {it.qty && it.qty > 1 ? `(x${it.qty})` : ''}</p>
-                                                <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
-                                            </div>
-                                        ))}
-                                    </td>
-                                    <td className="p-5 text-right font-black">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
-                                    <td className="p-5 text-right font-black text-red-600">₹{(inv.balanceDue || 0).toLocaleString('en-IN')}</td>
-                                    <td className="p-5 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${
-                                                inv.status === 'Cancelled' ? 'bg-black text-white border-black' :
-                                                inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 
-                                                inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 
-                                                'bg-red-50 text-red-700 border-red-100'}`}>
-                                                {inv.status === 'Cancelled' ? 'Cancelled' : inv.paymentStatus}
-                                            </span>
-                                            {inv.status === 'Cancelled' && <p className="text-[8px] font-bold text-gray-400 mt-1 uppercase italic">Void Record</p>}
-                                        </div>
-                                    </td>
-                                    <td className="p-5 text-center">
-                                        <div className="flex justify-center items-center gap-1">
-                                            <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
-                                            <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice" disabled={inv.status === 'Cancelled'}><Edit size={18} className={inv.status === 'Cancelled' ? 'opacity-20' : ''}/></button>
-                                            <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5 || inv.status === 'Cancelled'}><Wallet size={18} className={(inv.balanceDue <= 0.5 || inv.status === 'Cancelled') ? 'opacity-20' : ''}/></button>
-                                            
-                                            {inv.status !== 'Cancelled' && onCancelInvoice && (
-                                                <button onClick={() => onCancelInvoice(inv.id)} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition" title="Cancel Invoice"><Ban size={18}/></button>
-                                            )}
-
-                                            {userRole === 'admin' && onDelete && (
-                                                <button 
-                                                    onClick={() => { 
-                                                        const userConfirmation = window.prompt(`To permanently delete invoice "${inv.id}" and return items to stock, please type the invoice ID to confirm:`);
-                                                        if (userConfirmation === inv.id) {
-                                                            onDelete(inv.id);
-                                                        } else if (userConfirmation !== null) {
-                                                            alert("Invoice ID mismatch. Deletion cancelled.");
-                                                        }
-                                                    }} 
-                                                    className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition" 
-                                                    title="Permanently Delete Invoice"
-                                                >
-                                                    <Trash2 size={18}/>
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredInvoices.map(inv => {
+                                    const hospName = getInvoiceHospitalName(inv);
+                                    return (
+                                        <tr key={inv.id} className="hover:bg-blue-50/30 transition">
+                                            <td className="p-5 font-black text-[#3159a6]">
+                                                <div>{inv.id}</div>
+                                                {inv.entryBy && (
+                                                    <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">
+                                                        By: {inv.entryBy}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-5 text-gray-500 font-bold whitespace-nowrap">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
+                                            <td className="p-5 font-black text-gray-800 uppercase tracking-tighter">
+                                                <div>{inv.patientName}</div>
+                                                {inv.patientDetails?.phone && (
+                                                    <div className="text-[10px] text-gray-400 font-mono font-normal tracking-normal">{inv.patientDetails.phone}</div>
+                                                )}
+                                            </td>
+                                            <td className="p-5 whitespace-nowrap">
+                                                {hospName ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-tight bg-blue-50 text-[#3159a6] border border-blue-100 shadow-xs">
+                                                        <Building2 size={13} className="shrink-0 text-[#3159a6]" />
+                                                        <span className="truncate max-w-[140px]">{hospName}</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border border-slate-200">
+                                                        Direct / Self
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-5">
+                                                {/* Sorted items display for sequence consistency */}
+                                                {[...inv.items]
+                                                  .sort((a, b) => a.serialNumber.localeCompare(b.serialNumber, undefined, { numeric: true }))
+                                                  .map((it, idx) => (
+                                                    <div key={idx} className="mb-1 last:mb-0">
+                                                        <p className="text-[10px] font-black text-slate-700 uppercase leading-none">{it.brand ? `${it.brand} ` : ''}{it.model} {it.qty && it.qty > 1 ? `(x${it.qty})` : ''}</p>
+                                                        <p className="text-[9px] font-bold text-teal-600 font-mono tracking-widest mt-0.5">S/N: {it.serialNumber}</p>
+                                                    </div>
+                                                ))}
+                                            </td>
+                                            <td className="p-5 text-right font-black">₹{inv.finalTotal.toLocaleString('en-IN')}</td>
+                                            <td className="p-5 text-right font-black text-red-600">₹{(inv.balanceDue || 0).toLocaleString('en-IN')}</td>
+                                            <td className="p-5 text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border-2 ${
+                                                        inv.status === 'Cancelled' ? 'bg-black text-white border-black' :
+                                                        inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 
+                                                        inv.paymentStatus === 'Partial' ? 'bg-orange-50 text-orange-800 border-orange-100' : 
+                                                        'bg-red-50 text-red-700 border-red-100'}`}>
+                                                        {inv.status === 'Cancelled' ? 'Cancelled' : inv.paymentStatus}
+                                                    </span>
+                                                    {inv.status === 'Cancelled' && <p className="text-[8px] font-bold text-gray-400 mt-1 uppercase italic">Void Record</p>}
+                                                </div>
+                                            </td>
+                                            <td className="p-5 text-center">
+                                                <div className="flex justify-center items-center gap-1">
+                                                    <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
+                                                    <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice" disabled={inv.status === 'Cancelled'}><Edit size={18} className={inv.status === 'Cancelled' ? 'opacity-20' : ''}/></button>
+                                                    <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5 || inv.status === 'Cancelled'}><Wallet size={18} className={(inv.balanceDue <= 0.5 || inv.status === 'Cancelled') ? 'opacity-20' : ''}/></button>
+                                                    
+                                                    {inv.status !== 'Cancelled' && onCancelInvoice && (
+                                                        <button onClick={() => onCancelInvoice(inv.id)} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition" title="Cancel Invoice"><Ban size={18}/></button>
+                                                    )}
+
+                                                    {userRole === 'admin' && onDelete && (
+                                                        <button 
+                                                            onClick={() => { 
+                                                                const userConfirmation = window.prompt(`To permanently delete invoice "${inv.id}" and return items to stock, please type the invoice ID to confirm:`);
+                                                                if (userConfirmation === inv.id) {
+                                                                    onDelete(inv.id);
+                                                                } else if (userConfirmation !== null) {
+                                                                    alert("Invoice ID mismatch. Deletion cancelled.");
+                                                                }
+                                                            }} 
+                                                            className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition" 
+                                                            title="Permanently Delete Invoice"
+                                                        >
+                                                            <Trash2 size={18}/>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                   </div>
