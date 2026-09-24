@@ -4,6 +4,7 @@ import {
   initializeFirestore, 
   collection, 
   getDocs, 
+  getDoc,
   doc, 
   setDoc, 
   updateDoc, 
@@ -97,6 +98,20 @@ export const deleteDocument = async (collectionName: string, docId: string) => {
     return await deleteDoc(docRef);
   } catch (error) {
     console.error(`Error deleting document ${docId}:`, error);
+    throw error;
+  }
+};
+
+export const getDocument = async (collectionName: string, docId: string) => {
+  try {
+    const docRef = doc(db, collectionName, docId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error getting document ${docId}:`, error);
     throw error;
   }
 };
