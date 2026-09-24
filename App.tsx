@@ -25,7 +25,7 @@ import { RazorpayPayments } from './components/RazorpayPayments';
 import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft, CreditCard, Wifi, WifiOff } from 'lucide-react';
 
 // Firebase Services
-import { fetchCollection, setDocument, updateDocument, deleteDocument } from './services/firebase';
+import { fetchCollection, getDocument, setDocument, updateDocument, deleteDocument } from './services/firebase';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -738,11 +738,31 @@ const App: React.FC = () => {
 
   const handleCreateDemoInvoice = async (invoice: Invoice) => {
     const userStamp = currentUser?.name || currentUser?.id || 'admin';
-    const stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
-    setDemoInvoices([stampedInvoice, ...demoInvoices]);
-    try { await setDocument('demoInvoices', invoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
+    let stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
+    
+    // Real-time Cloud Conflict Resolution for simultaneous users
+    try {
+      const existsInDb = await getDocument('demoInvoices', stampedInvoice.id.replace(/\//g, '-'));
+      if (existsInDb && !demoInvoices.some(d => d.id === invoice.id)) {
+        const fresh = await fetchCollection('demoInvoices');
+        const fy = getFinancialYear();
+        const prefix = `BRRPL-DEMO-${fy}-`;
+        let maxSeq = 0;
+        fresh.forEach((inv: any) => {
+          if (inv?.id && typeof inv.id === 'string' && inv.id.startsWith(prefix)) {
+            const num = parseInt(inv.id.split('-').pop() || '0', 10);
+            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+          }
+        });
+        stampedInvoice.id = `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
+      }
+    } catch(e) {}
+
+    setDemoInvoices(prev => [stampedInvoice, ...prev.filter(i => i.id !== stampedInvoice.id)]);
+    try { await setDocument('demoInvoices', stampedInvoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
       console.error("Demo invoice sync failed:", e);
     }
+    return stampedInvoice;
   };
 
   const handleDeleteDemoInvoice = async (id: string) => {
@@ -770,15 +790,35 @@ const App: React.FC = () => {
 
   const handleCreateProformaInvoice = async (invoice: Invoice) => {
     const userStamp = currentUser?.name || currentUser?.id || 'admin';
-    const stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
+    let stampedInvoice = { ...invoice, entryBy: invoice.entryBy || userStamp };
+
+    // Real-time Cloud Conflict Resolution for simultaneous users
+    try {
+      const existsInDb = await getDocument('proformaInvoices', stampedInvoice.id.replace(/\//g, '-'));
+      if (existsInDb && !proformaInvoices.some(p => p.id === invoice.id)) {
+        const fresh = await fetchCollection('proformaInvoices');
+        const fy = getFinancialYear();
+        const prefix = `BRRPL-PI-${fy}-`;
+        let maxSeq = 0;
+        fresh.forEach((inv: any) => {
+          if (inv?.id && typeof inv.id === 'string' && inv.id.startsWith(prefix)) {
+            const num = parseInt(inv.id.split('-').pop() || '0', 10);
+            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+          }
+        });
+        stampedInvoice.id = `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
+      }
+    } catch(e) {}
+
     setProformaInvoices(prev => {
-      const exists = prev.find(i => i.id === invoice.id);
-      if (exists) return prev.map(i => i.id === invoice.id ? stampedInvoice : i);
+      const exists = prev.find(i => i.id === stampedInvoice.id);
+      if (exists) return prev.map(i => i.id === stampedInvoice.id ? stampedInvoice : i);
       return [stampedInvoice, ...prev];
     });
-    try { await setDocument('proformaInvoices', invoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
+    try { await setDocument('proformaInvoices', stampedInvoice.id.replace(/\//g, '-'), stampedInvoice); } catch(e) {
       console.error("Proforma invoice sync failed:", e);
     }
+    return stampedInvoice;
   };
 
   const handleDeleteProformaInvoice = async (id: string) => {
@@ -857,7 +897,7 @@ const App: React.FC = () => {
   const handleCreateInvoice = async (invoice: Invoice, soldItemIds: string[]) => {
     const exists = invoices.find(i => i.id === invoice.id);
     const userStamp = currentUser?.name || currentUser?.id || 'admin';
-    const updatedInvoiceToSave = { 
+    let updatedInvoiceToSave = { 
       ...invoice, 
       status: invoice.status || 'Active',
       entryBy: invoice.entryBy || userStamp 
@@ -890,14 +930,55 @@ const App: React.FC = () => {
           for (const id of itemsToRestock) { await updateDocument('inventory', id, { status: 'Available' }); }
       } catch ( e) {}
     } else {
-      setInvoices([...invoices, updatedInvoiceToSave]);
+      // BRAND NEW INVOICE: Real-time Cloud Conflict Resolution
+      // Protect against simultaneous billing race condition across multiple hospitals/devices
+      let finalId = invoice.id;
+      try {
+        const existingInDb = await getDocument('invoices', finalId);
+        if (existingInDb) {
+          console.warn(`Collision detected for Invoice ID ${finalId}. Resolving next sequential ID from cloud...`);
+          const freshInvoices = await fetchCollection('invoices');
+          const fy = getFinancialYear();
+          const prefix = `BRRPL-HA-${fy}-`;
+          
+          let maxSeq = 0;
+          freshInvoices.forEach((inv: any) => {
+            if (inv?.id && typeof inv.id === 'string' && inv.id.startsWith(prefix)) {
+              const num = parseInt(inv.id.split('-').pop() || '0', 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+          });
+          invoices.forEach(inv => {
+            if (inv?.id && typeof inv.id === 'string' && inv.id.startsWith(prefix)) {
+              const num = parseInt(inv.id.split('-').pop() || '0', 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+          });
+
+          let nextCandidate = `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
+          let safetyCount = 0;
+          while (safetyCount < 15) {
+            const occupied = await getDocument('invoices', nextCandidate);
+            if (!occupied) break;
+            maxSeq += 1;
+            nextCandidate = `${prefix}${(maxSeq + 1).toString().padStart(3, '0')}`;
+            safetyCount += 1;
+          }
+          finalId = nextCandidate;
+          updatedInvoiceToSave.id = finalId;
+        }
+      } catch (colErr) {
+        console.warn("Collision check fallback:", colErr);
+      }
+
+      setInvoices(prev => [updatedInvoiceToSave, ...prev.filter(i => i.id !== finalId)]);
       setInventory(prev => prev.map(item => soldItemIds.includes(item.id) ? { ...item, status: 'Sold' } : item));
       
       // Update local AdvanceBookings state
       setAdvanceBookings(prev => prev.map(b => appliedAdvanceIds.includes(b.id) ? { ...b, status: 'Consumed' } : b));
 
       try {
-          await setDocument('invoices', invoice.id, updatedInvoiceToSave);
+          await setDocument('invoices', finalId, updatedInvoiceToSave);
           for (const id of soldItemIds) { await updateDocument('inventory', id, { status: 'Sold' }); }
           
           // Update applied advances in Firebase
@@ -907,6 +988,7 @@ const App: React.FC = () => {
       } catch(e) {}
     }
     setActiveView('billing');
+    return updatedInvoiceToSave;
   };
 
   const handleCancelInvoice = async (invoiceId: string) => {
