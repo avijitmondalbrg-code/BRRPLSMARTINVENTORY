@@ -9,7 +9,7 @@ interface BillingProps {
   patients: Patient[];
   hospitals: Hospital[];
   advanceBookings?: AdvanceBooking[];
-  onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => void;
+  onCreateInvoice: (invoice: Invoice, soldItemIds: string[]) => Promise<any> | void;
   onUpdateInvoice?: (invoice: Invoice) => void;
   onDelete?: (invoiceId: string) => void;
   onCancelInvoice?: (invoiceId: string) => void;
@@ -179,6 +179,7 @@ export const Billing: React.FC<BillingProps> = ({
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
   const [productSearchTerm, setProductSearchTerm] = useState(''); 
   const [showPatientResults, setShowPatientResults] = useState(false);
+  const [isSavingInvoice, setIsSavingInvoice] = useState(false);
   const [patient, setPatient] = useState<Patient>({ id: '', name: '', address: '', state: 'West Bengal', district: 'Kolkata', country: 'India', phone: '', email: '', referDoctor: '', audiologist: '', gstin: '' });
   const [isBillingPhoneMatched, setIsBillingPhoneMatched] = useState(false);
   
@@ -416,37 +417,48 @@ export const Billing: React.FC<BillingProps> = ({
     return summary;
   }, [allInvoiceItems]);
 
-  const handleSaveInvoice = () => {
-    const finalId = editingInvoiceId || generateNextId();
-    const currentPayments = [...existingPayments];
-    if (initialPayment > 0) {
-      currentPayments.push({
-        id: `PAY-${Date.now()}`, date: new Date().toISOString().split('T')[0],
-        amount: initialPayment, method: paymentMethod, bankDetails: paymentBank || ""
-      });
-    }
-    const totalPaid = currentPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
-    const balanceDue = Math.max(0, finalTotal - totalPaid);
-    
-    const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
-    const isPredefinedHospital = HOSPITAL_OPTIONS.includes(selectedHospitalId);
+  const handleSaveInvoice = async () => {
+    if (isSavingInvoice) return;
+    setIsSavingInvoice(true);
+    try {
+      const finalId = editingInvoiceId || generateNextId();
+      const currentPayments = [...existingPayments];
+      if (initialPayment > 0) {
+        currentPayments.push({
+          id: `PAY-${Date.now()}`, date: new Date().toISOString().split('T')[0],
+          amount: initialPayment, method: paymentMethod, bankDetails: paymentBank || ""
+        });
+      }
+      const totalPaid = currentPayments.reduce((sum: number, p: PaymentRecord) => sum + p.amount, 0);
+      const balanceDue = Math.max(0, finalTotal - totalPaid);
+      
+      const selectedHospital = hospitals.find(h => h.id === selectedHospitalId);
+      const isPredefinedHospital = HOSPITAL_OPTIONS.includes(selectedHospitalId);
 
-    const invData: Invoice = { 
-      id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
-      subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
-      placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
-      finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, 
-      hospitalId: selectedHospitalId || undefined,
-      hospitalName: isPredefinedHospital ? selectedHospitalId : (selectedHospital?.name || undefined),
-      patientDetails: patient, notes: invoiceNotes,
-      payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
-    };
-    onCreateInvoice(invData, selectedItemIds); 
-    
-    // Automation Trigger
-    setLastSavedInvoice(invData);
-    setShowSuccessModal(true);
-    setViewMode('list');
+      const invData: Invoice = { 
+        id: finalId, patientId: patient.id || `P-${Date.now()}`, patientName: patient.name, items: allInvoiceItems, 
+        subtotal: totalSubtotal, discountType: 'flat', discountValue: totalAdjustment, totalDiscount: totalItemDiscounts + totalAdjustment, 
+        placeOfSupply: isInterState ? 'Inter-State' : 'Intra-State', totalTaxableValue: runningTaxableTotal, totalCGST: runningCGST, totalSGST: runningSGST, totalIGST: runningIGST, totalTax: runningCGST + runningSGST + runningIGST, 
+        finalTotal: finalTotal, date: invoiceDate, warranty, entryBy: entryBy, 
+        hospitalId: selectedHospitalId || undefined,
+        hospitalName: isPredefinedHospital ? selectedHospitalId : (selectedHospital?.name || undefined),
+        patientDetails: patient, notes: invoiceNotes,
+        payments: currentPayments, balanceDue: balanceDue, paymentStatus: balanceDue <= 1 ? 'Paid' : (totalPaid > 0 ? 'Partial' : 'Unpaid') 
+      };
+      
+      const savedResult = await onCreateInvoice(invData, selectedItemIds); 
+      const finalInvoiceRecord = (savedResult as Invoice) || invData;
+
+      // Automation Trigger
+      setLastSavedInvoice(finalInvoiceRecord);
+      setShowSuccessModal(true);
+      setViewMode('list');
+    } catch (saveErr) {
+      console.error("Save invoice error:", saveErr);
+      alert("Failed to save invoice. Please try again.");
+    } finally {
+      setIsSavingInvoice(false);
+    }
   };
 
   const handleSendWhatsAppThankYou = () => {
@@ -1763,7 +1775,7 @@ export const Billing: React.FC<BillingProps> = ({
 
                 <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
                     <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Go Back</button>
-                    <button onClick={handleSaveInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95"> <Save size={22}/> Save Database Record</button>
+                    <button onClick={handleSaveInvoice} disabled={isSavingInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"> <Save size={22}/> {isSavingInvoice ? 'SAVING RECORD...' : 'Save Database Record'}</button>
                     <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Save as PDF"><Download size={28}/></button>
                 </div>
             </div>
