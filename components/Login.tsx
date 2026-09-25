@@ -11,7 +11,7 @@ interface LoginProps {
   onLogin: (role: UserRole, userDetails: AppUser) => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+export const Login: React.FC<LoginProps> = ({ logo, onLogin }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +19,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
+  // Reset img error if logo prop changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [logo]);
+
+  // Determine current active logo: prop > localStorage fallback > default base64
+  const activeLogo = (!imgError && logo)
+    ? logo
+    : (typeof window !== 'undefined' ? localStorage.getItem('brg_company_logo') : null) || COMPANY_LOGO_BASE64;
 
   const handleLoginProcess = async (uid: string, pass: string) => {
     setError('');
@@ -97,20 +105,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         {/* Header Section */}
         <div className="bg-white p-10 text-center border-b border-gray-100 relative">
            <div className="mx-auto h-28 w-28 flex items-center justify-center mb-6 bg-white rounded-3xl border border-gray-100 overflow-hidden p-3 shadow-xl ring-4 ring-gray-50">
-               {!imgError ? (
-                   <img 
-                     src={LOGO_URL} 
-                     alt="BRG Logo" 
-                     className="h-full w-full object-contain"
-                     onError={() => setImgError(true)}
-                   />
-               ) : (
-                   <img 
-                     src={COMPANY_LOGO_BASE64}
-                     alt="BRG Logo (Fallback)"
-                     className="h-full w-full object-contain"
-                   />
-               )}
+               <img 
+                 src={activeLogo} 
+                 alt="BRG Logo" 
+                 className="h-full w-full object-contain"
+                 onError={() => {
+                   if (!imgError) {
+                     setImgError(true);
+                   }
+                 }}
+               />
            </div>
            <h1 className="text-3xl font-black text-gray-800 tracking-tight uppercase leading-none">BRG Inventory Manager</h1>
            <p className="text-[#3159a6] text-[10px] font-black uppercase tracking-[0.3em] mt-3">Advanced Smart ERP</p>
