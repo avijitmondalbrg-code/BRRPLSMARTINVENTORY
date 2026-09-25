@@ -165,16 +165,17 @@ const App: React.FC = () => {
       
       setLastSyncedTime(new Date().toLocaleTimeString());
     } catch (err: any) {
-      console.error("Data fetch failed for:", collectionsToFetch, err);
+      const errMsg = err?.message || String(err);
+      console.warn("Data fetch failed for:", collectionsToFetch, errMsg);
       if (!isBackground) {
-        if (err.code === 'permission-denied' || (err.message && err.message.toLowerCase().includes('permission'))) {
+        if (err?.code === 'permission-denied' || errMsg.toLowerCase().includes('permission')) {
             setError({ 
                 code: 'PERMISSION_DENIED', 
                 message: "Access Denied: Cloud Firestore Security Rules are blocking the app." 
             });
         } else {
             setError({ 
-                message: err.message || "Failed to sync with database. Please check your internet connection." 
+                message: errMsg || "Failed to sync with database. Please check your internet connection." 
             });
         }
       }
@@ -365,9 +366,15 @@ const App: React.FC = () => {
         }
       }
       
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(backupData, null, 2)
-      )}`;
+      const seen = new WeakSet();
+      const safeBackupJson = JSON.stringify(backupData, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return undefined;
+          seen.add(value);
+        }
+        return value;
+      }, 2);
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(safeBackupJson)}`;
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', jsonString);
       const timestamp = new Date().toISOString().split('T')[0];
@@ -967,8 +974,8 @@ const App: React.FC = () => {
           finalId = nextCandidate;
           updatedInvoiceToSave.id = finalId;
         }
-      } catch (colErr) {
-        console.warn("Collision check fallback:", colErr);
+      } catch (colErr: any) {
+        console.warn("Collision check fallback:", colErr?.message || String(colErr));
       }
 
       setInvoices(prev => [updatedInvoiceToSave, ...prev.filter(i => i.id !== finalId)]);
