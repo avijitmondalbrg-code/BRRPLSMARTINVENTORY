@@ -1,7 +1,8 @@
 
-import React, { useRef, useState } from 'react';
-import { Settings as SettingsIcon, Upload, Trash2, Save, Lock, CreditCard, Download, Database, RefreshCw, FileJson, CheckCircle2 } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Upload, Trash2, Save, Lock, CreditCard, Download, Database, RefreshCw, FileJson, CheckCircle2, RotateCcw } from 'lucide-react';
 import { UserRole } from '../types';
+import { COMPANY_LOGO_BASE64 } from '../constants';
 
 interface SettingsProps {
   currentLogo: string;
@@ -79,27 +80,102 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
+  const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (currentLogo) setLogo(currentLogo);
+  }, [currentLogo]);
+
+  useEffect(() => {
+    if (currentSignature !== undefined) setSignature(currentSignature);
+  }, [currentSignature]);
+
+  const compressImage = (file: File, maxWidth = 800, maxHeight = 400): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const isPng = file.type === 'image/png';
+            resolve(canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.92));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          if (type === 'logo') setLogo(reader.result);
-          else setSignature(reader.result);
+      const compressed = await compressImage(file, type === 'logo' ? 800 : 600, type === 'logo' ? 400 : 300);
+      if (compressed) {
+        if (type === 'logo') {
+          setLogo(compressed);
+          onSave(compressed, signature, rzpKeyId, rzpKeySecret, rzpEnabled);
+          setStatusMessage({
+            text: '✓ নতুন লোগো সফলভাবে আপলোড এবং সেভ হয়েছে! লগইন পেজ ও সব জায়গায় সাথে সাথে কার্যকর হয়েছে।',
+            type: 'success'
+          });
+          setTimeout(() => setStatusMessage(null), 5000);
+        } else {
+          setSignature(compressed);
+          onSave(logo, compressed, rzpKeyId, rzpKeySecret, rzpEnabled);
+          setStatusMessage({
+            text: '✓ স্বাক্ষর সফলভাবে আপলোড এবং সেভ হয়েছে!',
+            type: 'success'
+          });
+          setTimeout(() => setStatusMessage(null), 5000);
         }
-      };
-      reader.readAsDataURL(file);
+      }
     }
+  };
+
+  const handleResetDefaultLogo = () => {
+    setLogo(COMPANY_LOGO_BASE64);
+    onSave(COMPANY_LOGO_BASE64, signature, rzpKeyId, rzpKeySecret, rzpEnabled);
+    setStatusMessage({
+      text: '✓ অফিসিয়াল ডিফল্ট লোগো পুনরুদ্ধার করা হয়েছে!',
+      type: 'success'
+    });
+    setTimeout(() => setStatusMessage(null), 5000);
   };
 
   const handleSave = () => {
     onSave(logo, signature, rzpKeyId, rzpKeySecret, rzpEnabled);
-    alert('Settings saved successfully!');
+    setStatusMessage({
+      text: '✓ সেটিংস সফলভাবে সেভ করা হয়েছে!',
+      type: 'success'
+    });
+    setTimeout(() => setStatusMessage(null), 4000);
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
+      {statusMessage && (
+        <div className={`p-4 rounded-xl border flex items-center gap-3 animate-fade-in ${statusMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+          <CheckCircle2 size={20} className="shrink-0 text-emerald-600" />
+          <span className="font-semibold text-sm">{statusMessage.text}</span>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <SettingsIcon className="text-primary" />
@@ -115,7 +191,7 @@ export const Settings: React.FC<SettingsProps> = ({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b bg-gray-50">
             <h3 className="font-semibold text-gray-700">Clinic Branding & Assets</h3>
-            <p className="text-sm text-gray-500">Manage the images that appear on your invoices and receipts.</p>
+            <p className="text-sm text-gray-500">Manage the images that appear on your invoices, receipts, and login page.</p>
         </div>
         
         <div className="p-6 space-y-8">
@@ -133,7 +209,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
                 <div className="md:col-span-2 flex flex-col justify-center space-y-4">
                     <div>
-                        <p className="text-sm text-gray-600 mb-2">Upload a high-quality PNG or SVG logo for better print results.</p>
+                        <p className="text-sm text-gray-600 mb-2">Upload a high-quality PNG or SVG logo for login screen and invoices.</p>
                         <input 
                             type="file" 
                             ref={logoInputRef} 
@@ -142,14 +218,24 @@ export const Settings: React.FC<SettingsProps> = ({
                             className="hidden" 
                             disabled={userRole !== 'admin'}
                         />
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap items-center">
                             <button 
                                 onClick={() => logoInputRef.current?.click()}
                                 disabled={userRole !== 'admin'}
-                                className={`px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 flex items-center gap-2 ${userRole !== 'admin' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                                className={`px-4 py-2 bg-[#3159a6] text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow hover:bg-[#254687] transition ${userRole !== 'admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <Upload size={16}/> Upload New Logo
+                                <Upload size={16}/> Upload New Logo (লোগো পরিবর্তন)
                             </button>
+                            {logo !== COMPANY_LOGO_BASE64 && (
+                                <button
+                                    type="button"
+                                    onClick={handleResetDefaultLogo}
+                                    disabled={userRole !== 'admin'}
+                                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1.5 border border-gray-300 transition"
+                                >
+                                    <RotateCcw size={14} /> Reset Default
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
