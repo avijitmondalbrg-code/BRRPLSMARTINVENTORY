@@ -31,8 +31,20 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [companyLogo, setCompanyLogo] = useState<string>(COMPANY_LOGO_BASE64);
-  const [companySignature, setCompanySignature] = useState<string | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string>(() => {
+    try {
+      return localStorage.getItem('brg_company_logo') || COMPANY_LOGO_BASE64;
+    } catch {
+      return COMPANY_LOGO_BASE64;
+    }
+  });
+  const [companySignature, setCompanySignature] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('brg_company_signature') || null;
+    } catch {
+      return null;
+    }
+  });
   const [activeView, setActiveView] = useState<ViewState>('front-cover');
   const backHandlerRef = useRef<(() => boolean) | null>(null);
   
@@ -118,8 +130,14 @@ const App: React.FC = () => {
       if (data && data.length > 0) {
         const clinicAssets = data.find((s: any) => s.id === 'clinic_assets');
         if (clinicAssets) {
-          if (clinicAssets.logo) setCompanyLogo(clinicAssets.logo);
-          if (clinicAssets.signature) setCompanySignature(clinicAssets.signature);
+          if (clinicAssets.logo) {
+            setCompanyLogo(clinicAssets.logo);
+            try { localStorage.setItem('brg_company_logo', clinicAssets.logo); } catch(e) {}
+          }
+          if (clinicAssets.signature) {
+            setCompanySignature(clinicAssets.signature);
+            try { localStorage.setItem('brg_company_signature', clinicAssets.signature); } catch(e) {}
+          }
           if (clinicAssets.razorpayKeyId) setRzpKeyId(clinicAssets.razorpayKeyId);
           if (clinicAssets.razorpayKeySecret) setRzpKeySecret(clinicAssets.razorpayKeySecret);
           if (clinicAssets.razorpayEnabled !== undefined) setRzpEnabled(clinicAssets.razorpayEnabled);
@@ -313,6 +331,11 @@ const App: React.FC = () => {
   const handleUpdateSettings = async (logo: string, signature: string | null, keyId?: string, keySecret?: string, enabled?: boolean) => {
     setCompanyLogo(logo);
     setCompanySignature(signature);
+    try {
+      localStorage.setItem('brg_company_logo', logo);
+      if (signature) localStorage.setItem('brg_company_signature', signature);
+      else localStorage.removeItem('brg_company_signature');
+    } catch (e) {}
     if (keyId !== undefined) setRzpKeyId(keyId);
     if (keySecret !== undefined) setRzpKeySecret(keySecret);
     if (enabled !== undefined) setRzpEnabled(enabled);
@@ -1331,7 +1354,7 @@ service cloud.firestore {
             </div>
           ) : (
             <>
-              {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} />}
+              {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} logo={companyLogo} />}
               {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
               {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
               {activeView === 'asset-transfer' && <AssetTransfer assets={companyAssets} transferHistory={assetTransfers} onTransfer={handleAssetTransfer} />}
