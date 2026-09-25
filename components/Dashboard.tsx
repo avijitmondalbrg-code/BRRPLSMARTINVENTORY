@@ -11,9 +11,10 @@ interface DashboardProps {
   stockTransfers: StockTransfer[];
   quotations: Quotation[];
   leads: Lead[];
+  logo?: string;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations, leads }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations, leads, logo }) => {
   const [insights, setInsights] = React.useState<string>('');
   const [loadingInsights, setLoadingInsights] = React.useState(false);
   
@@ -24,7 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
   // Staff Filter State
   const [staffFilter, setStaffFilter] = useState<string>('');
 
-  const LOGO_URL = "https://bengalrehabilitationgroup.com/images/brg_logo.png";
+  const displayLogo = logo || "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
   const availableItems = inventory.filter(i => i.status === 'Available');
   const totalStockValue = availableItems.reduce((acc, item) => acc + item.price, 0);
@@ -94,7 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center gap-8 transition hover:shadow-md">
           <div className="h-20 w-48 flex items-center justify-center bg-white rounded-xl">
-              <img src={LOGO_URL} alt="BRG" className="h-full object-contain" />
+              <img src={displayLogo} alt="BRG" className="h-full object-contain" />
           </div>
           <div className="hidden md:block w-px h-12 bg-gray-100"></div>
           <div className="text-center md:text-left">
