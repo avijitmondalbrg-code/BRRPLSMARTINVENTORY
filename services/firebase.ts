@@ -1,6 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { 
+  getFirestore,
   initializeFirestore, 
   collection, 
   getDocs, 
@@ -24,23 +25,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 /**
- * Optimized Firestore configuration for high-latency or restricted networks.
- * experimentalForceLongPolling: true - Bypasses WebSockets entirely to avoid handshake timeouts.
+ * Standard Firestore configuration with auto-detect fallback.
+ * Allows Firestore to use standard transports while safely negotiating connection.
  */
-export const db = initializeFirestore(app as any, {
-  experimentalForceLongPolling: true,
-});
+let dbInstance;
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  });
+} catch {
+  dbInstance = getFirestore(app);
+}
+
+export const db = dbInstance;
 
 /**
  * Utility to remove undefined values recursively from an object/array.
- * Firestore does not support 'undefined' values.
+ * Circular-reference safe using WeakSet.
  */
-const sanitizeData = (data: any): any => {
+const sanitizeData = (data: any, seen = new WeakSet()): any => {
   if (data === undefined) return null;
   if (data === null || typeof data !== 'object') return data;
+  if (seen.has(data)) return null;
+  seen.add(data);
 
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeData(item));
+    return data.map(item => sanitizeData(item, seen));
   }
 
   const sanitized: { [key: string]: any } = {};
@@ -48,11 +58,23 @@ const sanitizeData = (data: any): any => {
     if (Object.prototype.hasOwnProperty.call(data, key)) {
       const value = data[key];
       if (value !== undefined) {
-        sanitized[key] = sanitizeData(value);
+        sanitized[key] = sanitizeData(value, seen);
       }
     }
   }
   return sanitized;
+};
+
+const extractCleanError = (error: any): Error => {
+  const message = (error && typeof error === 'object' && error.message) 
+    ? String(error.message) 
+    : (typeof error === 'string' ? error : 'Database operation failed');
+  const code = (error && typeof error === 'object' && error.code) ? String(error.code) : '';
+  const cleanErr = new Error(message);
+  if (code) {
+    (cleanErr as any).code = code;
+  }
+  return cleanErr;
 };
 
 export const fetchCollection = async (collectionName: string) => {
@@ -64,9 +86,9 @@ export const fetchCollection = async (collectionName: string) => {
       ...doc.data() 
     }));
   } catch (error: any) {
-    console.error(`Error fetching ${collectionName}:`, error);
-    // CRITICAL: Re-throw the error so App.tsx can detect PERMISSION_DENIED
-    throw error;
+    const cleanErr = extractCleanError(error);
+    console.warn(`[Firestore] Fetch ${collectionName} warning:`, cleanErr.message);
+    throw cleanErr;
   }
 };
 
@@ -75,9 +97,10 @@ export const setDocument = async (collectionName: string, docId: string, data: a
     const sanitized = sanitizeData(data);
     const docRef = doc(db, collectionName, docId);
     return await setDoc(docRef, sanitized, { merge: true });
-  } catch (error) {
-    console.error(`Error setting document ${docId}:`, error);
-    throw error;
+  } catch (error: any) {
+    const cleanErr = extractCleanError(error);
+    console.warn(`[Firestore] Set ${docId} warning:`, cleanErr.message);
+    throw cleanErr;
   }
 };
 
@@ -86,9 +109,10 @@ export const updateDocument = async (collectionName: string, docId: string, data
     const sanitized = sanitizeData(data);
     const docRef = doc(db, collectionName, docId);
     return await updateDoc(docRef, sanitized);
-  } catch (error) {
-    console.error(`Error updating document ${docId}:`, error);
-    throw error;
+  } catch (error: any) {
+    const cleanErr = extractCleanError(error);
+    console.warn(`[Firestore] Update ${docId} warning:`, cleanErr.message);
+    throw cleanErr;
   }
 };
 
@@ -96,9 +120,10 @@ export const deleteDocument = async (collectionName: string, docId: string) => {
   try {
     const docRef = doc(db, collectionName, docId);
     return await deleteDoc(docRef);
-  } catch (error) {
-    console.error(`Error deleting document ${docId}:`, error);
-    throw error;
+  } catch (error: any) {
+    const cleanErr = extractCleanError(error);
+    console.warn(`[Firestore] Delete ${docId} warning:`, cleanErr.message);
+    throw cleanErr;
   }
 };
 
@@ -110,8 +135,9 @@ export const getDocument = async (collectionName: string, docId: string) => {
       return { id: snap.id, ...snap.data() };
     }
     return null;
-  } catch (error) {
-    console.error(`Error getting document ${docId}:`, error);
-    throw error;
+  } catch (error: any) {
+    const cleanErr = extractCleanError(error);
+    console.warn(`[Firestore] Get ${docId} warning:`, cleanErr.message);
+    throw cleanErr;
   }
 };
