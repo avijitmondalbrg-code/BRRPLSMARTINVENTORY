@@ -28,9 +28,45 @@ import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMi
 import { fetchCollection, getDocument, setDocument, updateDocument, deleteDocument } from './services/firebase';
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  // Parse initial deep link parameters from URL search query
+  const initialParams = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        view: params.get('view') as ViewState | null,
+        invoiceId: params.get('invoiceId') || params.get('billId'),
+        demoId: params.get('demoId'),
+        proformaId: params.get('proformaId'),
+        serviceId: params.get('serviceId')
+      };
+    } catch {
+      return { view: null, invoiceId: null, demoId: null, proformaId: null, serviceId: null };
+    }
+  })();
+
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('brg_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [userRole, setUserRole] = useState<UserRole | null>(() => {
+    try {
+      const savedRole = localStorage.getItem('brg_auth_role');
+      return (savedRole as UserRole) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('brg_auth_user');
+    } catch {
+      return false;
+    }
+  });
   const [companyLogo, setCompanyLogo] = useState<string>(() => {
     try {
       return localStorage.getItem('brg_company_logo') || COMPANY_LOGO_BASE64;
@@ -45,7 +81,15 @@ const App: React.FC = () => {
       return null;
     }
   });
-  const [activeView, setActiveView] = useState<ViewState>('front-cover');
+  const [targetInvoiceId, setTargetInvoiceId] = useState<string | null>(initialParams.invoiceId || null);
+  const [activeView, setActiveView] = useState<ViewState>(() => {
+    if (initialParams.invoiceId) return 'billing';
+    if (initialParams.demoId) return 'demo-billing';
+    if (initialParams.proformaId) return 'proforma-billing';
+    if (initialParams.serviceId) return 'service-billing';
+    if (initialParams.view) return initialParams.view;
+    return 'front-cover';
+  });
   const backHandlerRef = useRef<(() => boolean) | null>(null);
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
@@ -263,13 +307,24 @@ const App: React.FC = () => {
       setUserRole(role);
       setCurrentUser(userDetails);
       setIsAuthenticated(true);
+      try {
+        localStorage.setItem('brg_auth_user', JSON.stringify(userDetails));
+        localStorage.setItem('brg_auth_role', role);
+      } catch(e) {}
   };
 
   const handleLogout = () => {
       setIsAuthenticated(false);
       setUserRole(null);
       setCurrentUser(null);
+      try {
+        localStorage.removeItem('brg_auth_user');
+        localStorage.removeItem('brg_auth_role');
+      } catch(e) {}
       setActiveView('front-cover');
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch(e) {}
   };
 
   const handleAddVendor = async (v: Vendor) => {
@@ -1361,8 +1416,28 @@ service cloud.firestore {
               {activeView === 'advance-booking' && <AdvanceBookings bookings={advanceBookings} patients={patients} onAddBooking={handleAddAdvanceBooking} onUpdateBooking={handleUpdateAdvanceBooking} onDeleteBooking={handleDeleteAdvanceBooking} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
               {activeView === 'transfer' && <StockTransfer inventory={inventory} transferHistory={stockTransfers} onTransfer={handleStockTransfer} />}
               {activeView === 'quotation' && <Quotations inventory={inventory} quotations={quotations} patients={patients} onCreateQuotation={handleAddQuotation} onUpdateQuotation={handleUpdateQuotation} onConvertToInvoice={handleCreateInvoice as any} onDelete={handleDeleteQuotation} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-              {activeView === 'billing' && <Billing inventory={inventory} invoices={invoices} patients={patients} hospitals={hospitals} advanceBookings={advanceBookings} onCreateInvoice={handleCreateInvoice} onUpdateInvoice={handleUpdateInvoice} onDelete={handleDeleteInvoice} onCancelInvoice={handleCancelInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} prefilledInvoiceData={prefilledProforma} setPrefilledInvoiceData={setPrefilledProforma} />}
-              {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'billing' && (
+                <Billing 
+                  inventory={inventory} 
+                  invoices={invoices} 
+                  patients={patients} 
+                  hospitals={hospitals} 
+                  advanceBookings={advanceBookings} 
+                  onCreateInvoice={handleCreateInvoice} 
+                  onUpdateInvoice={handleUpdateInvoice} 
+                  onDelete={handleDeleteInvoice} 
+                  onCancelInvoice={handleCancelInvoice} 
+                  logo={companyLogo} 
+                  signature={companySignature} 
+                  userRole={userRole!} 
+                  backHandlerRef={backHandlerRef} 
+                  prefilledInvoiceData={prefilledProforma} 
+                  setPrefilledInvoiceData={setPrefilledProforma}
+                  initialInvoiceId={targetInvoiceId}
+                  onClearTargetInvoiceId={() => setTargetInvoiceId(null)}
+                />
+              )}
+              {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} initialDemoId={initialParams.demoId} />}
               {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
