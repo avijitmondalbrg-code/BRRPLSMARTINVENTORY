@@ -13,6 +13,7 @@ interface ProformaBillingProps {
   signature: string | null;
   userRole: UserRole;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  initialProformaId?: string | null;
 }
 
 const numberToWords = (num: number): string => {
@@ -33,15 +34,36 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [], patients, onCreateInvoice, onDelete, onConvertToTaxInvoice, logo, signature, userRole, backHandlerRef }) => {
+export const ProformaBilling: React.FC<ProformaBillingProps> = ({ 
+  invoices = [], 
+  patients, 
+  onCreateInvoice, 
+  onDelete, 
+  onConvertToTaxInvoice, 
+  logo, 
+  signature, 
+  userRole, 
+  backHandlerRef,
+  initialProformaId 
+}) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [gstMode, setGstMode] = useState<boolean>(true);
+  const autoOpenedRef = useRef<string | null>(null);
+
+  const handleCloseReview = () => {
+    setViewMode('list');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('proformaId');
+      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+    } catch(e) {}
+  };
 
   useEffect(() => {
     if (!backHandlerRef) return;
     const handler = () => {
       if (viewMode !== 'list') {
-        setViewMode('list');
+        handleCloseReview();
         return true;
       }
       return false;
@@ -100,6 +122,33 @@ export const ProformaBilling: React.FC<ProformaBillingProps> = ({ invoices = [],
   };
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
+
+  // Deep linking: Automatically open target proforma invoice when loaded or requested
+  useEffect(() => {
+    const urlProformaId = typeof window !== 'undefined' 
+      ? (new URLSearchParams(window.location.search).get('proformaId') || new URLSearchParams(window.location.search).get('invoiceId')) 
+      : null;
+    const targetId = initialProformaId || urlProformaId;
+    if (!targetId || autoOpenedRef.current === targetId) return;
+
+    if (invoices && invoices.length > 0) {
+      const found = invoices.find(inv => 
+        inv.id === targetId || 
+        inv.id.replace(/\//g, '-') === targetId.replace(/\//g, '-') ||
+        inv.id.toLowerCase() === targetId.toLowerCase()
+      );
+      if (found) {
+        autoOpenedRef.current = targetId;
+        setPatient(found.patientDetails || { id: found.patientId, name: found.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+        setManualItems(found.items);
+        setInvoiceDate(found.date);
+        setInvoiceNotes(found.notes || '');
+        setTotalAdjustment(found.discountValue || 0);
+        setStep('review');
+        setViewMode('edit');
+      }
+    }
+  }, [initialProformaId, invoices]);
 
   const handleSelectPatient = (p: Patient) => { 
     setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata' }); 
