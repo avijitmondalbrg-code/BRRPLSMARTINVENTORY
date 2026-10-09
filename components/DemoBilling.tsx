@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 /* FIX: Moved BRANDS import from ../constants to ../types as it is exported from types.ts */
 import { Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, BRANDS } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear, COMPANY_PAN } from '../constants';
@@ -13,6 +13,7 @@ interface DemoBillingProps {
   signature: string | null;
   userRole: UserRole;
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
+  initialDemoId?: string | null;
 }
 
 const numberToWords = (num: number): string => {
@@ -33,15 +34,36 @@ const numberToWords = (num: number): string => {
     return inWords(Math.floor(num)) + 'Rupees Only';
 };
 
-export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patients, onCreateInvoice, onDelete, logo, signature, userRole, backHandlerRef }) => {
+export const DemoBilling: React.FC<DemoBillingProps> = ({ 
+  invoices = [], 
+  patients, 
+  onCreateInvoice, 
+  onDelete, 
+  logo, 
+  signature, 
+  userRole, 
+  backHandlerRef,
+  initialDemoId 
+}) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [gstMode, setGstMode] = useState<boolean>(true);
+  const autoOpenedRef = useRef<string | null>(null);
+
+  const handleCloseReview = () => {
+    setViewMode('list');
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('demoId');
+      url.searchParams.delete('invoiceId');
+      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+    } catch(e) {}
+  };
 
   useEffect(() => {
     if (!backHandlerRef) return;
     const handler = () => {
       if (viewMode !== 'list') {
-        setViewMode('list');
+        handleCloseReview();
         return true;
       }
       return false;
@@ -540,6 +562,7 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                         </button>
                     </div>
                     <div className="flex-1 flex justify-end gap-3">
+                        <button type="button" onClick={handleCloseReview} className="bg-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-slate-200 hover:bg-slate-50 transition text-slate-700">Back to List</button>
                         <button onClick={() => setStep('product')} className="bg-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 border-gray-100">Modify</button>
                         <button onClick={handleSaveInvoice} className="bg-pink-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-pink-700 transition flex items-center gap-2"><Save size={16}/> Archive & Save</button>
                         <button onClick={() => window.print()} className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition flex items-center gap-2"><Printer size={16}/> Print Bill</button>
