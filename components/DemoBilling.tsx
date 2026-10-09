@@ -103,6 +103,33 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
 
   const handleStartNew = () => { resetForm(); setViewMode('create'); };
 
+  // Deep linking: Automatically open target demo invoice when loaded or requested
+  useEffect(() => {
+    const urlDemoId = typeof window !== 'undefined' 
+      ? (new URLSearchParams(window.location.search).get('demoId') || new URLSearchParams(window.location.search).get('invoiceId')) 
+      : null;
+    const targetId = initialDemoId || urlDemoId;
+    if (!targetId || autoOpenedRef.current === targetId) return;
+
+    if (invoices && invoices.length > 0) {
+      const found = invoices.find(inv => 
+        inv.id === targetId || 
+        inv.id.replace(/\//g, '-') === targetId.replace(/\//g, '-') ||
+        inv.id.toLowerCase() === targetId.toLowerCase()
+      );
+      if (found) {
+        autoOpenedRef.current = targetId;
+        setPatient(found.patientDetails || { id: found.patientId, name: found.patientName, address: '', phone: '', referDoctor: '', audiologist: '' });
+        setManualItems(found.items);
+        setInvoiceDate(found.date);
+        setInvoiceNotes(found.notes || '');
+        setTotalAdjustment(found.discountValue || 0);
+        setStep('review');
+        setViewMode('edit');
+      }
+    }
+  }, [initialDemoId, invoices]);
+
   const handleSelectPatient = (p: Patient) => { 
     setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata' }); 
     setPatientSearchTerm(p.name); 
@@ -259,7 +286,28 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                       ) : filteredInvoices.map(inv => (
                           <tr key={inv.id} className="hover:bg-pink-50/30 transition">
                               <td className="p-5 font-black text-pink-600 uppercase">
-                                  <div>{inv.id}</div>
+                                  <a 
+                                      href={`?view=demo-billing&demoId=${encodeURIComponent(inv.id)}`}
+                                      onClick={(e) => {
+                                          if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                              e.preventDefault();
+                                              setPatient(inv.patientDetails!); 
+                                              setManualItems(inv.items); 
+                                              setInvoiceDate(inv.date); 
+                                              setInvoiceNotes(inv.notes || ''); 
+                                              setTotalAdjustment(inv.discountValue); 
+                                              setStep('review'); 
+                                              setViewMode('edit');
+                                              try {
+                                                window.history.pushState(null, '', `?view=demo-billing&demoId=${encodeURIComponent(inv.id)}`);
+                                              } catch(err) {}
+                                          }
+                                      }}
+                                      className="hover:underline cursor-pointer inline-block"
+                                      title="View Demo Bill (Right click to open in new tab)"
+                                  >
+                                      {inv.id}
+                                  </a>
                                   {inv.entryBy && (
                                       <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider normal-case">
                                           By: {inv.entryBy}
@@ -271,7 +319,28 @@ export const DemoBilling: React.FC<DemoBillingProps> = ({ invoices = [], patient
                               <td className="p-5 text-right font-black text-lg">₹{inv.finalTotal.toLocaleString()}</td>
                               <td className="p-5 text-center">
                                   <div className="flex justify-center gap-2">
-                                      <button onClick={() => { setPatient(inv.patientDetails!); setManualItems(inv.items); setInvoiceDate(inv.date); setInvoiceNotes(inv.notes || ''); setTotalAdjustment(inv.discountValue); setStep('review'); setViewMode('edit'); }} className="p-2 text-pink-600 hover:bg-pink-50 rounded-xl transition"><Printer size={18}/></button>
+                                      <a 
+                                          href={`?view=demo-billing&demoId=${encodeURIComponent(inv.id)}`}
+                                          onClick={(e) => {
+                                              if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                                  e.preventDefault();
+                                                  setPatient(inv.patientDetails!); 
+                                                  setManualItems(inv.items); 
+                                                  setInvoiceDate(inv.date); 
+                                                  setInvoiceNotes(inv.notes || ''); 
+                                                  setTotalAdjustment(inv.discountValue); 
+                                                  setStep('review'); 
+                                                  setViewMode('edit');
+                                                  try {
+                                                    window.history.pushState(null, '', `?view=demo-billing&demoId=${encodeURIComponent(inv.id)}`);
+                                                  } catch(err) {}
+                                              }
+                                          }}
+                                          className="p-2 text-pink-600 hover:bg-pink-50 rounded-xl transition inline-flex items-center justify-center cursor-pointer"
+                                          title="Print / View Details (Right click to open in new tab)"
+                                      >
+                                          <Printer size={18}/>
+                                      </a>
                                       {userRole === 'admin' && onDelete && (
                                           <button 
                                               onClick={() => { 
