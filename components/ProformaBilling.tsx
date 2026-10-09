@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Patient, Invoice, InvoiceItem, PaymentRecord, UserRole, BRANDS } from '../types';
 import { CLINIC_GSTIN, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_BANK_ACCOUNTS, STAFF_NAMES, getFinancialYear, COMPANY_PAN } from '../constants';
 import { FileText, Printer, Save, Eye, Plus, ArrowLeft, Search, Trash2, X, IndianRupee, Edit, Wrench, PackagePlus, CheckCircle2, Settings2, Download, ShieldCheck, RefreshCw } from 'lucide-react';
