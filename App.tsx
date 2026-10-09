@@ -22,6 +22,7 @@ import { Purchases } from './components/Purchases';
 import { Login } from './components/Login';
 import { UsersAdmin } from './components/UsersAdmin';
 import { RazorpayPayments } from './components/RazorpayPayments';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LayoutDashboard, Package, FileText, Repeat, Users, FileQuestion, FileMinus, FilePlus, Briefcase, Settings as SettingsIcon, Receipt, Home, LogOut, Wallet, RefreshCw, HardDrive, AlertTriangle, ShieldAlert, CheckCircle2, Clipboard, ArrowRightLeft, Truck, Landmark, ShoppingBag, ShieldCheck, Activity, CalendarDays, ExternalLink, ArrowLeft, CreditCard, Wifi, WifiOff } from 'lucide-react';
 
 // Firebase Services
@@ -1408,7 +1409,7 @@ service cloud.firestore {
               <p className="text-[#3159a6] font-black uppercase tracking-widest text-[10px] animate-pulse">Synchronizing Live Node Data...</p>
             </div>
           ) : (
-            <>
+            <ErrorBoundary>
               {activeView === 'dashboard' && <Dashboard inventory={inventory} invoices={invoices} stockTransfers={stockTransfers} quotations={quotations} leads={leads} logo={companyLogo} />}
               {activeView === 'inventory' && <Inventory inventory={inventory} onAdd={handleAddInventory} onUpdate={handleUpdateInventoryItem} onDelete={handleDeleteInventoryItem} userRole={userRole!} />}
               {activeView === 'assets' && <CompanyAssets assets={companyAssets} onAdd={handleAddCompanyAsset} onUpdate={handleUpdateCompanyAsset} onDelete={handleDeleteCompanyAsset} userRole={userRole!} />}
@@ -1438,7 +1439,7 @@ service cloud.firestore {
                 />
               )}
               {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} initialDemoId={initialParams.demoId} />}
-              {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} initialProformaId={initialParams.proformaId} />}
               {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
@@ -1449,7 +1450,7 @@ service cloud.firestore {
               {activeView === 'razorpay-payments' && <RazorpayPayments patients={patients} invoices={invoices} razorpayPayments={razorpayPayments} onAddRazorpayPayment={(pay) => setRazorpayPayments(prev => [pay, ...prev])} onUpdateInvoice={handleUpdateInvoice} rzpKeyId={rzpKeyId} rzpKeySecret={rzpKeySecret} rzpEnabled={rzpEnabled} userRole={userRole!} logo={companyLogo} signature={companySignature} />}
               {activeView === 'settings' && <Settings currentLogo={companyLogo} currentSignature={companySignature} onSave={handleUpdateSettings} userRole={userRole!} currentRzpKeyId={rzpKeyId} currentRzpKeySecret={rzpKeySecret} currentRzpEnabled={rzpEnabled} onBackup={handleBackupData} onRestore={handleRestoreData} />}
               {activeView === 'users-admin' && <UsersAdmin userRole={userRole!} currentUserId={currentUser?.id || 'admin'} onNavigateBack={() => setActiveView('front-cover')} backHandlerRef={backHandlerRef} />}
-            </>
+            </ErrorBoundary>
           )}
         </div>
       </main>
