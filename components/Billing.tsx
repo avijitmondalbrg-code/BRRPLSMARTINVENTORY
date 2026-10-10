@@ -19,6 +19,8 @@ interface BillingProps {
   backHandlerRef?: React.MutableRefObject<(() => boolean) | null>;
   prefilledInvoiceData?: Invoice | null;
   setPrefilledInvoiceData?: (invoice: Invoice | null) => void;
+  initialInvoiceId?: string | null;
+  onClearTargetInvoiceId?: () => void;
 }
 
 const numberToWords = (num: number): string => {
@@ -54,18 +56,33 @@ export const Billing: React.FC<BillingProps> = ({
   userRole, 
   backHandlerRef,
   prefilledInvoiceData,
-  setPrefilledInvoiceData
+  setPrefilledInvoiceData,
+  initialInvoiceId,
+  onClearTargetInvoiceId
 }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'edit'>('list');
   const [step, setStep] = useState<'patient' | 'product' | 'payment' | 'review'>('patient');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const autoOpenedRef = useRef<string | null>(null);
+
+  const handleCloseReview = () => {
+    setViewMode('list');
+    setEditingInvoiceId(null);
+    if (onClearTargetInvoiceId) onClearTargetInvoiceId();
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('invoiceId');
+      url.searchParams.delete('billId');
+      window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+    } catch(e) {}
+  };
 
   useEffect(() => {
     if (!backHandlerRef) return;
     const handler = () => {
       if (viewMode !== 'list') {
-        setViewMode('list');
+        handleCloseReview();
         return true;
       }
       return false;
@@ -261,6 +278,39 @@ export const Billing: React.FC<BillingProps> = ({
     setStep(startStep);
     setViewMode('edit');
   };
+
+  // Deep linking: Automatically open target invoice when loaded or requested
+  useEffect(() => {
+    const urlInvoiceId = typeof window !== 'undefined' 
+      ? (new URLSearchParams(window.location.search).get('invoiceId') || new URLSearchParams(window.location.search).get('billId')) 
+      : null;
+    const urlMode = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('mode')
+      : null;
+    const targetId = initialInvoiceId || urlInvoiceId;
+
+    if (urlMode === 'new' && autoOpenedRef.current !== 'new') {
+      autoOpenedRef.current = 'new';
+      handleStartNew();
+      return;
+    }
+
+    if (!targetId || autoOpenedRef.current === targetId) return;
+
+    if (invoices && invoices.length > 0) {
+      const cleanTarget = decodeURIComponent(targetId).trim().toLowerCase();
+      const found = invoices.find(inv => {
+        const id = inv.id.trim().toLowerCase();
+        return id === cleanTarget || 
+               id.replace(/\//g, '-') === cleanTarget.replace(/\//g, '-') ||
+               id.replace(/-/g, '/') === cleanTarget.replace(/-/g, '/');
+      });
+      if (found) {
+        autoOpenedRef.current = targetId;
+        handleEditInvoice(found, urlMode === 'edit' ? 'patient' : 'review');
+      }
+    }
+  }, [initialInvoiceId, invoices]);
 
   const handleSelectPatient = (p: Patient) => { 
     setPatient({ ...p, state: p.state || 'West Bengal', district: p.district || 'Kolkata', referDoctor: p.referDoctor || '' }); 
@@ -772,7 +822,22 @@ export const Billing: React.FC<BillingProps> = ({
                   <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><FileText className="text-[#3159a6]" /> Billing & Sales</h2>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button onClick={exportToCSV} className="bg-green-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-green-700 transition whitespace-nowrap"><Download size={16} /> Sales Report</button>
-                    <button onClick={handleStartNew} className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition whitespace-nowrap"><Plus size={16} /> New Invoice</button>
+                    <a 
+                      href="?view=billing&mode=new"
+                      onClick={(e) => {
+                        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                          e.preventDefault();
+                          handleStartNew();
+                          try {
+                            window.history.pushState(null, '', `?view=billing&mode=new`);
+                          } catch(err) {}
+                        }
+                      }}
+                      className="bg-[#3159a6] text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition whitespace-nowrap cursor-pointer"
+                      title="Create New Invoice (Right click to open in new tab)"
+                    >
+                      <Plus size={16} /> New Invoice
+                    </a>
                   </div>
               </div>
 
@@ -1044,7 +1109,22 @@ export const Billing: React.FC<BillingProps> = ({
                                     return (
                                         <tr key={inv.id} className="hover:bg-blue-50/30 transition">
                                             <td className="p-5 font-black text-[#3159a6]">
-                                                <div>{inv.id}</div>
+                                                <a 
+                                                    href={`?view=billing&invoiceId=${encodeURIComponent(inv.id)}`}
+                                                    onClick={(e) => {
+                                                        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                                            e.preventDefault();
+                                                            handleEditInvoice(inv, 'review');
+                                                            try {
+                                                              window.history.pushState(null, '', `?view=billing&invoiceId=${encodeURIComponent(inv.id)}`);
+                                                            } catch(err) {}
+                                                        }
+                                                    }}
+                                                    className="hover:underline cursor-pointer inline-block"
+                                                    title="View Bill Details (Right click to open in new tab)"
+                                                >
+                                                    {inv.id}
+                                                </a>
                                                 {inv.entryBy && (
                                                     <div className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">
                                                         By: {inv.entryBy}
@@ -1097,8 +1177,42 @@ export const Billing: React.FC<BillingProps> = ({
                                             </td>
                                             <td className="p-5 text-center">
                                                 <div className="flex justify-center items-center gap-1">
-                                                    <button onClick={() => handleEditInvoice(inv, 'review')} className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition" title="View Details"><Eye size={18}/></button>
-                                                    <button onClick={() => handleEditInvoice(inv, 'patient')} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Invoice" disabled={inv.status === 'Cancelled'}><Edit size={18} className={inv.status === 'Cancelled' ? 'opacity-20' : ''}/></button>
+                                                    <a 
+                                                        href={`?view=billing&invoiceId=${encodeURIComponent(inv.id)}`}
+                                                        onClick={(e) => {
+                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                                                e.preventDefault();
+                                                                handleEditInvoice(inv, 'review');
+                                                                try {
+                                                                  window.history.pushState(null, '', `?view=billing&invoiceId=${encodeURIComponent(inv.id)}`);
+                                                                } catch(err) {}
+                                                            }
+                                                        }}
+                                                        className="p-1.5 text-[#3159a6] hover:bg-blue-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer" 
+                                                        title="View Details (Right click to open in new tab)"
+                                                    >
+                                                        <Eye size={18}/>
+                                                    </a>
+                                                    <a 
+                                                        href={`?view=billing&invoiceId=${encodeURIComponent(inv.id)}&mode=edit`}
+                                                        onClick={(e) => {
+                                                            if (inv.status === 'Cancelled') {
+                                                                e.preventDefault();
+                                                                return;
+                                                            }
+                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                                                                e.preventDefault();
+                                                                handleEditInvoice(inv, 'patient');
+                                                                try {
+                                                                  window.history.pushState(null, '', `?view=billing&invoiceId=${encodeURIComponent(inv.id)}&mode=edit`);
+                                                                } catch(err) {}
+                                                            }
+                                                        }}
+                                                        className={`p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition inline-flex items-center justify-center cursor-pointer ${inv.status === 'Cancelled' ? 'opacity-20 pointer-events-none' : ''}`}
+                                                        title="Edit Invoice (Right click to open in new tab)"
+                                                    >
+                                                        <Edit size={18} />
+                                                    </a>
                                                     <button onClick={() => openCollectModal(inv)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Add Payment" disabled={inv.balanceDue <= 0.5 || inv.status === 'Cancelled'}><Wallet size={18} className={(inv.balanceDue <= 0.5 || inv.status === 'Cancelled') ? 'opacity-20' : ''}/></button>
                                                     
                                                     {inv.status !== 'Cancelled' && onCancelInvoice && (
@@ -1544,6 +1658,15 @@ export const Billing: React.FC<BillingProps> = ({
                             <option value="Legal">Legal</option>
                         </select>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={handleCloseReview}
+                        className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition text-xs font-black uppercase tracking-wider shadow-xs"
+                        title="Return to Invoices List"
+                    >
+                        <ArrowLeft size={14} /> Back to Invoices
+                    </button>
                 </div>
 
                 <div 
@@ -1773,8 +1896,16 @@ export const Billing: React.FC<BillingProps> = ({
                     </div>
                 </div>
 
-                <div className="mt-10 flex gap-6 w-full max-w-[900px] print:hidden">
-                    <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Go Back</button>
+                <div className="mt-10 flex flex-wrap gap-4 w-full max-w-[900px] print:hidden">
+                    <button 
+                        type="button"
+                        onClick={handleCloseReview} 
+                        className="py-5 px-8 border-4 border-slate-300 hover:border-slate-800 text-slate-700 hover:text-slate-900 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95 flex items-center justify-center gap-2"
+                        title="Return to Invoices List"
+                    >
+                        <ArrowLeft size={16} /> Close & Invoices
+                    </button>
+                    <button onClick={() => setStep('payment')} className="flex-1 py-5 border-4 border-slate-800 rounded-3xl font-black uppercase tracking-widest hover:bg-white text-xs transition-all active:scale-95">Edit Billing</button>
                     <button onClick={handleSaveInvoice} disabled={isSavingInvoice} className="flex-[2] bg-[#3159a6] text-white py-5 px-12 rounded-3xl font-black uppercase tracking-widest shadow-2xl hover:bg-slate-800 flex items-center justify-center gap-4 text-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"> <Save size={22}/> {isSavingInvoice ? 'SAVING RECORD...' : 'Save Database Record'}</button>
                     <button onClick={() => window.print()} className="p-5 bg-slate-900 text-white rounded-3xl shadow-2xl hover:bg-black transition-all flex items-center justify-center active:scale-90" title="Save as PDF"><Download size={28}/></button>
                 </div>
