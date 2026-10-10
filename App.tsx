@@ -168,6 +168,57 @@ const App: React.FC = () => {
     return 'front-cover';
   });
   const backHandlerRef = useRef<(() => boolean) | null>(null);
+
+  const navigateToView = (view: ViewState, extraParams?: Record<string, string>) => {
+    setActiveView(view);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', view);
+      if (extraParams) {
+        Object.entries(extraParams).forEach(([k, v]) => {
+          url.searchParams.set(k, v);
+        });
+      } else {
+        url.searchParams.delete('invoiceId');
+        url.searchParams.delete('billId');
+        url.searchParams.delete('demoId');
+        url.searchParams.delete('proformaId');
+        url.searchParams.delete('serviceId');
+        url.searchParams.delete('mode');
+      }
+      window.history.pushState(null, '', url.pathname + url.search);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const invId = params.get('invoiceId') || params.get('billId');
+        const demoId = params.get('demoId');
+        const proformaId = params.get('proformaId');
+        const serviceId = params.get('serviceId');
+        const v = params.get('view') as ViewState | null;
+
+        if (invId) {
+          setTargetInvoiceId(invId);
+          setActiveView('billing');
+        } else if (demoId) {
+          setActiveView('demo-billing');
+        } else if (proformaId) {
+          setActiveView('proforma-billing');
+        } else if (serviceId) {
+          setActiveView('service-billing');
+        } else if (v) {
+          setActiveView(v);
+        } else {
+          setActiveView('front-cover');
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   const [inventory, setInventory] = useState<HearingAid[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -1320,7 +1371,7 @@ service cloud.firestore {
   );
 
   if (!isAuthenticated) return <Login logo={companyLogo} onLogin={handleLogin} />;
-  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={setActiveView} userRole={userRole!} />;
+  if (activeView === 'front-cover') return <FrontCover logo={companyLogo} onNavigate={navigateToView} userRole={userRole!} />;
 
   const neededForView = COLLECTIONS_PER_VIEW[activeView] || [];
   const isViewLoading = neededForView.some(coll => !loadedCollections[coll]) && !error;
@@ -1328,10 +1379,20 @@ service cloud.firestore {
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl z-10 print:hidden">
-        <div className="p-6 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('front-cover')}>
+        <a 
+          href="?view=front-cover"
+          onClick={(e) => {
+            if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+              e.preventDefault();
+              navigateToView('front-cover');
+            }
+          }}
+          className="p-6 border-b border-slate-800 cursor-pointer block"
+          title="Home Dashboard (Right click to open in new tab)"
+        >
           <div className="h-16 w-full bg-white rounded flex items-center justify-center p-2 mb-2"><img src={companyLogo} alt="Logo" className="h-full object-contain" /></div>
           <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest">v2.8.2 Cloud Node</p>
-        </div>
+        </a>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {[
             { id: 'front-cover', label: 'Home', icon: Home, roles: ['admin', 'user'] },
@@ -1356,9 +1417,20 @@ service cloud.firestore {
             { id: 'users-admin', label: 'User Management', icon: ShieldCheck, roles: ['admin'] },
             { id: 'settings', label: 'Settings', icon: SettingsIcon, roles: ['admin', 'user'] }
           ].filter(item => item.roles.includes(userRole!)).map(item => (
-            <button key={item.id} onClick={() => setActiveView(item.id as any)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+            <a 
+              key={item.id} 
+              href={`?view=${item.id}`}
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                  e.preventDefault();
+                  navigateToView(item.id as any);
+                }
+              }} 
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded transition cursor-pointer ${activeView === item.id ? 'bg-[#3159a6] text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+              title={`${item.label} (Right click to open in new tab)`}
+            >
               <item.icon size={18} /> <span className="text-sm font-medium">{item.label}</span>
-            </button>
+            </a>
           ))}
           
           <div className="pt-4 mt-4 border-t border-slate-800">
