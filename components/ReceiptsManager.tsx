@@ -191,7 +191,17 @@ export const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ invoices, logo
                       <tr key={receipt.id} className="hover:bg-gray-50 transition">
                           <td className="p-4 font-mono text-xs text-teal-700 font-bold">{receipt.id}</td>
                           <td className="p-4 text-gray-600 whitespace-nowrap">{new Date(receipt.date).toLocaleDateString('en-IN')}</td>
-                          <td className="p-4 text-gray-500 font-medium">{receipt.invoiceId}</td>
+                          <td className="p-4 text-gray-500 font-medium">
+                            <a 
+                              href={`?view=billing&invoiceId=${encodeURIComponent(receipt.invoiceId)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-[#3159a6] hover:underline cursor-pointer"
+                              title="Open in Patient Billing (Right click to open in new tab)"
+                            >
+                              {receipt.invoiceId}
+                            </a>
+                          </td>
                           <td className="p-4 font-bold text-gray-800">{receipt.patientName}</td>
                           <td className="p-4 text-right font-black text-teal-700">₹{receipt.amount.toLocaleString('en-IN')}</td>
                           <td className="p-4">
