@@ -1,4 +1,4 @@
-import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag, ShieldCheck, ExternalLink, Activity, CalendarDays } from 'lucide-react';
+import { ArrowRight, Package, FileText, Users, Briefcase, LayoutDashboard, Wallet, Repeat, FileMinus, FilePlus, Receipt, HardDrive, FileQuestion, ArrowRightLeft, Truck, ShoppingBag, ShieldCheck, ExternalLink, Activity, CalendarDays, CreditCard } from 'lucide-react';
 import { ViewState, UserRole } from '../types';
 import { COMPANY_TAGLINE } from '../constants';
 
@@ -22,7 +22,9 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
     { id: 'billing', label: 'Billing', icon: FileText, color: 'text-sky-200', roles: ['admin', 'user'] },
     { id: 'demo-billing', label: 'Demo Invoice', icon: ShieldCheck, color: 'text-pink-200', roles: ['admin', 'user'] },
     { id: 'credit-note', label: 'Credit Note', icon: FileMinus, color: 'text-red-200', roles: ['admin', 'user'] },
-    { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200', roles: ['admin', 'user'] }
+    { id: 'debit-note', label: 'Debit Note', icon: FilePlus, color: 'text-indigo-200', roles: ['admin', 'user'] },
+    { id: 'razorpay-payments', label: 'Online Pay', icon: CreditCard, color: 'text-teal-200', roles: ['admin', 'user'] },
+    { id: 'users-admin', label: 'User Admin', icon: ShieldCheck, color: 'text-emerald-100', roles: ['admin'] }
   ];
 
   // Define external partner apps
@@ -97,27 +99,41 @@ export const FrontCover: React.FC<FrontCoverProps> = ({ logo, onNavigate, userRo
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5 w-full max-w-7xl px-4">
           {visibleNavItems.map((item, idx) => (
-            <button 
+            <a 
               key={item.id}
-              onClick={() => onNavigate(item.id as any)}
+              href={`?view=${item.id}`}
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                  e.preventDefault();
+                  onNavigate(item.id as any);
+                }
+              }}
               style={{ animationDelay: `${idx * 50 + 200}ms` }}
-              className="group bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up"
+              className="group bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-3xl transition-all flex flex-col items-center text-center hover:-translate-y-2 shadow-xl backdrop-blur-md animate-fade-in-up cursor-pointer"
+              title={`${item.label} (Right click to open in new tab)`}
             >
               <div className={`p-3 rounded-2xl mb-3 bg-white/10 group-hover:bg-white/20 transition-all ${item.color} group-hover:scale-110`}>
                 <item.icon size={24} />
               </div>
               <h3 className="text-[10px] font-black text-white uppercase tracking-[0.15em]">{item.label}</h3>
-            </button>
+            </a>
           ))}
         </div>
 
         <div className="mt-16 animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <button 
-              onClick={() => onNavigate('dashboard')} 
-              className="flex items-center gap-4 bg-white text-[#3159a6] text-xl font-black py-6 px-16 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all hover:scale-105 active:scale-95 hover:bg-blue-50 uppercase tracking-[0.2em]"
+            <a 
+              href="?view=dashboard"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && e.button === 0) {
+                  e.preventDefault();
+                  onNavigate('dashboard');
+                }
+              }} 
+              className="inline-flex items-center gap-4 bg-white text-[#3159a6] text-xl font-black py-6 px-16 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all hover:scale-105 active:scale-95 hover:bg-blue-50 uppercase tracking-[0.2em] cursor-pointer"
+              title="Launch Dashboard (Right click to open in new tab)"
             >
                 Launch Dashboard <ArrowRight strokeWidth={3} />
-            </button>
+            </a>
         </div>
       </div>
 
