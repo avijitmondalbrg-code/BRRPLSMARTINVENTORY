@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Patient, Invoice, UserRole } from '../types';
-import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote, Baby } from 'lucide-react';
+import { Search, Plus, User, Phone, MapPin, Edit, History, Calendar, X, Trash2, StickyNote, Baby, ExternalLink } from 'lucide-react';
 import { INDIAN_STATES, WEST_BENGAL_DISTRICTS } from '../constants';
 
 interface PatientsProps {
@@ -358,7 +358,16 @@ export const Patients: React.FC<PatientsProps> = ({ patients, invoices, onAddPat
                     ) : invoices.filter(i=>i.patientId===viewingHistoryId).map(inv => (
                         <div key={inv.id} className="p-6 border-2 border-gray-50 rounded-[2rem] hover:border-blue-100 transition-all bg-white flex justify-between items-center group shadow-sm">
                             <div>
-                              <p className="font-black text-gray-800 tracking-tight text-xl">{inv.id}</p>
+                              <a 
+                                href={`?view=billing&invoiceId=${encodeURIComponent(inv.id)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-black text-gray-800 tracking-tight text-xl hover:text-[#3159a6] hover:underline flex items-center gap-1.5 cursor-pointer"
+                                title="Open Bill in Patient Billing (Click or Right click to open in new tab)"
+                              >
+                                {inv.id}
+                                <ExternalLink size={14} className="text-[#3159a6] opacity-60" />
+                              </a>
                               <div className="flex items-center gap-3 mt-2">
                                 <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{new Date(inv.date).toLocaleDateString('en-IN')}</span>
                                 <span className={`text-[8px] px-3 py-1 rounded-full font-black uppercase tracking-widest border-2 ${inv.paymentStatus === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-800 border-orange-100'}`}>{inv.paymentStatus}</span>
