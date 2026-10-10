@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Invoice, StockTransfer, Quotation, Lead } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight, UserCheck, Briefcase } from 'lucide-react';
+import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight, UserCheck, Briefcase, ExternalLink } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
 import { STAFF_NAMES } from '../constants';
 
@@ -312,7 +312,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
                                             <span className="text-[10px] font-bold text-green-600">{traceResult.sale.date}</span>
                                         </div>
                                         <p className="text-xs font-bold text-gray-700 uppercase">Purchased by <span className="text-gray-900 font-black">{traceResult.sale.patientName}</span></p>
-                                        <p className="text-xs font-black text-green-700 mt-1">Invoice: {traceResult.sale.id}</p>
+                                        <a 
+                                          href={`?view=billing&invoiceId=${encodeURIComponent(traceResult.sale.id)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs font-black text-green-700 mt-1 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                          title="Open Invoice in Patient Billing (Right click to open in new tab)"
+                                        >
+                                          Invoice: {traceResult.sale.id} <ExternalLink size={12} className="opacity-70" />
+                                        </a>
                                     </div>
                                 </div>
                             )}
