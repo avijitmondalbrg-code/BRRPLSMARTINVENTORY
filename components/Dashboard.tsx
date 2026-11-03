@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { HearingAid, Invoice, StockTransfer, Quotation, Lead } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight, UserCheck, Briefcase, ExternalLink } from 'lucide-react';
+import { TrendingUp, IndianRupee, Package, Sparkles, Clock, Search, History, MapPin, User, FileText, AlertTriangle, CheckCircle, ArrowRight, UserCheck, Briefcase, ExternalLink, Calendar, Download, RotateCcw } from 'lucide-react';
 import { analyzeStockTrends } from '../services/geminiService';
 import { STAFF_NAMES } from '../constants';
 
@@ -14,10 +14,24 @@ interface DashboardProps {
   logo?: string;
 }
 
+type DatePreset = 'ALL' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'LAST_30_DAYS' | 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_FY' | 'CUSTOM';
+
+const formatLocalDate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stockTransfers, quotations, leads, logo }) => {
   const [insights, setInsights] = React.useState<string>('');
   const [loadingInsights, setLoadingInsights] = React.useState(false);
   
+  // Date Range Filter States
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('ALL');
+
   // Traceability Search State
   const [serialSearch, setSerialSearch] = useState('');
   const [traceResult, setTraceResult] = useState<any>(null);
@@ -27,9 +41,75 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
 
   const displayLogo = logo || "https://bengalrehabilitationgroup.com/images/brg_logo.png";
 
-  const availableItems = inventory.filter(i => i.status === 'Available');
+  const applyDatePreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    const todayStr = formatLocalDate(now);
+
+    if (preset === 'ALL') {
+      setStartDate('');
+      setEndDate('');
+    } else if (preset === 'TODAY') {
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === 'YESTERDAY') {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = formatLocalDate(y);
+      setStartDate(yStr);
+      setEndDate(yStr);
+    } else if (preset === 'LAST_7_DAYS') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 6);
+      setStartDate(formatLocalDate(past));
+      setEndDate(todayStr);
+    } else if (preset === 'LAST_30_DAYS') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 29);
+      setStartDate(formatLocalDate(past));
+      setEndDate(todayStr);
+    } else if (preset === 'THIS_MONTH') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      setStartDate(formatLocalDate(start));
+      setEndDate(todayStr);
+    } else if (preset === 'LAST_MONTH') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      setStartDate(formatLocalDate(start));
+      setEndDate(formatLocalDate(end));
+    } else if (preset === 'THIS_FY') {
+      const currentYear = now.getFullYear();
+      const fyStartYear = now.getMonth() >= 3 ? currentYear : currentYear - 1;
+      setStartDate(`${fyStartYear}-04-01`);
+      setEndDate(todayStr);
+    }
+  };
+
+  const filteredInventory = useMemo(() => {
+    return inventory.filter(item => {
+      if (!startDate && !endDate) return true;
+      const itemDate = item.addedDate ? item.addedDate.split('T')[0].trim() : '';
+      if (startDate && itemDate && itemDate < startDate) return false;
+      if (endDate && itemDate && itemDate > endDate) return false;
+      if (!itemDate && (startDate || endDate)) return false;
+      return true;
+    });
+  }, [inventory, startDate, endDate]);
+
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      if (!startDate && !endDate) return true;
+      const invDate = inv.date ? inv.date.split('T')[0].trim() : '';
+      if (startDate && invDate && invDate < startDate) return false;
+      if (endDate && invDate && invDate > endDate) return false;
+      if (!invDate && (startDate || endDate)) return false;
+      return true;
+    });
+  }, [invoices, startDate, endDate]);
+
+  const availableItems = filteredInventory.filter(i => i.status === 'Available');
   const totalStockValue = availableItems.reduce((acc, item) => acc + item.price, 0);
-  const totalRevenue = invoices.reduce((acc, inv) => acc + inv.finalTotal, 0);
+  const totalRevenue = filteredInvoices.reduce((acc, inv) => acc + inv.finalTotal, 0);
   const availableCount = availableItems.length;
 
   const stockByBrand = React.useMemo(() => {
@@ -37,6 +117,79 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
     availableItems.forEach(item => { data[item.brand] = (data[item.brand] || 0) + 1; });
     return Object.keys(data).map(brand => ({ name: brand, count: data[brand] }));
   }, [availableItems]);
+
+  const downloadStockCSV = () => {
+    if (filteredInventory.length === 0) {
+      alert('No stock records to export for the selected date range.');
+      return;
+    }
+
+    const headers = [
+      'Sl No',
+      'Brand',
+      'Model',
+      'Serial Number',
+      'HSN Code',
+      'Base Price (INR)',
+      'Location / Hub',
+      'Status',
+      'Added Date',
+      'Entry By'
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = filteredInventory.map((item, idx) => [
+      idx + 1,
+      escapeCSV(item.brand),
+      escapeCSV(item.model),
+      escapeCSV(item.serialNumber),
+      escapeCSV(item.hsnCode || '90214090'),
+      item.price || 0,
+      escapeCSV(item.location),
+      escapeCSV(item.status),
+      escapeCSV(item.addedDate || 'N/A'),
+      escapeCSV(item.entryBy || 'N/A')
+    ]);
+
+    const totalValue = filteredInventory.reduce((acc, item) => acc + (item.price || 0), 0);
+    const summaryRow = [
+      'TOTAL',
+      '',
+      '',
+      `${filteredInventory.length} Units`,
+      '',
+      totalValue,
+      '',
+      `Available: ${availableCount}`,
+      startDate || endDate ? `${startDate || 'Start'} to ${endDate || 'End'}` : 'All Dates',
+      ''
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const dateTag = startDate || endDate 
+      ? `_${startDate || 'start'}_to_${endDate || 'end'}` 
+      : '_all_time';
+    link.setAttribute('href', url);
+    link.setAttribute('download', `BRG_Stock_Inventory_${dateTag}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleGetInsights = async () => {
     setLoadingInsights(true);
@@ -105,6 +258,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ inventory, invoices, stock
           <div className="md:ml-auto flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#3159a6] rounded-full border border-blue-100 text-xs font-black uppercase">
               <Clock size={14} /> LIVE: {new Date().toLocaleDateString('en-IN')}
           </div>
+      </div>
+
+      {/* Date Range Filter Strip & Stock Download */}
+      <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 shrink-0">
+            <Calendar size={16} className="text-[#3159a6]" />
+            <span>Date Range:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: 'ALL', label: 'All Time' },
+              { id: 'TODAY', label: 'Today' },
+              { id: 'LAST_7_DAYS', label: 'Last 7 Days' },
+              { id: 'THIS_MONTH', label: 'This Month' },
+              { id: 'LAST_MONTH', label: 'Last Month' },
+              { id: 'THIS_FY', label: 'This FY' },
+            ].map(preset => (
+              <button
+                key={preset.id}
+                onClick={() => applyDatePreset(preset.id as DatePreset)}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition cursor-pointer ${
+                  datePreset === preset.id
+                    ? 'bg-[#3159a6] text-white shadow-sm'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-1.5 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+            <input 
+              type="date"
+              value={startDate}
+              onChange={e => { setStartDate(e.target.value); setDatePreset('CUSTOM'); }}
+              className="bg-white border border-gray-200 rounded-xl px-2.5 py-1 text-xs font-black text-gray-800 outline-none focus:border-[#3159a6]"
+            />
+            <span className="text-gray-400 font-bold text-xs">to</span>
+            <input 
+              type="date"
+              value={endDate}
+              onChange={e => { setEndDate(e.target.value); setDatePreset('CUSTOM'); }}
+              className="bg-white border border-gray-200 rounded-xl px-2.5 py-1 text-xs font-black text-gray-800 outline-none focus:border-[#3159a6]"
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(''); setEndDate(''); setDatePreset('ALL'); }}
+                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                title="Reset date filter"
+              >
+                <RotateCcw size={13} />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={downloadStockCSV}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-md shadow-emerald-600/20 transition cursor-pointer active:scale-95"
+            title="Download stock items matching date range"
+          >
+            <Download size={14} /> Download Stock ({filteredInventory.length})
+          </button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
