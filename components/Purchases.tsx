@@ -13,6 +13,7 @@ interface PurchasesProps {
   purchaseOrders: PurchaseOrder[];
   onAddVendor: (v: Vendor) => void;
   onAddPurchase: (p: PurchaseRecord) => void;
+  onUpdatePurchase?: (p: PurchaseRecord, oldSerialNumber?: string) => void;
   onDeletePurchase: (id: string) => void;
   onDeleteVendor: (id: string) => void;
   onSavePurchaseOrder: (po: PurchaseOrder) => void;
@@ -48,6 +49,7 @@ export const Purchases: React.FC<PurchasesProps> = ({
   purchaseOrders = [], 
   onAddVendor, 
   onAddPurchase, 
+  onUpdatePurchase,
   onDeletePurchase, 
   onDeleteVendor, 
   onSavePurchaseOrder,
@@ -90,6 +92,8 @@ export const Purchases: React.FC<PurchasesProps> = ({
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [vendorInput, setVendorInput] = useState('');
   const [showVendorList, setShowVendorList] = useState(false);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
+  const [originalSerialNumber, setOriginalSerialNumber] = useState<string>('');
   
   // Bulk Mode States
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -174,10 +178,74 @@ export const Purchases: React.FC<PurchasesProps> = ({
     setVendorForm({ name: '', address: '', gstin: '' });
   };
 
+  const handleOpenEditPurchase = (p: PurchaseRecord) => {
+    setEditingPurchaseId(p.id);
+    setOriginalSerialNumber(p.serialNumber || '');
+    setIsBulkMode(false);
+    setBulkSerials('');
+
+    const existingVendor = vendors.find(v => v.id === p.vendorId || v.name.toLowerCase() === (p.vendorName || '').toLowerCase());
+    if (existingVendor) {
+      setSelectedVendor(existingVendor);
+      setVendorInput(existingVendor.name);
+    } else {
+      const fallbackVendor: Vendor = {
+        id: p.vendorId || `VEND-${Date.now()}`,
+        name: p.vendorName || 'General Supplier',
+        address: '',
+        gstin: '',
+        addedDate: p.invoiceDate || new Date().toISOString().split('T')[0]
+      };
+      setSelectedVendor(fallbackVendor);
+      setVendorInput(p.vendorName || '');
+    }
+
+    setPurchaseForm({
+      ...p,
+      invoiceDate: p.invoiceDate || new Date().toISOString().split('T')[0],
+      dueDate: p.dueDate || '',
+      brand: p.brand || BRANDS[0],
+      model: p.model || '',
+      serialNumber: p.serialNumber || '',
+      hsnCode: p.hsnCode || '90214090',
+      location: p.location || LOCATIONS[0],
+      mrp: p.mrp || 0,
+      discountAmount: p.discountAmount || 0,
+      purchaseAmount: p.purchaseAmount || 0,
+    });
+
+    setShowPurchaseModal(true);
+  };
+
   const handleSavePurchase = () => {
     if (!selectedVendor || !purchaseForm.invoiceNo || !purchaseForm.model) {
         alert("Please select vendor and fill mandatory product details.");
         return;
+    }
+
+    if (editingPurchaseId) {
+      if (!purchaseForm.serialNumber) {
+        alert("Serial Number is mandatory.");
+        return;
+      }
+      const updatedRecord: PurchaseRecord = {
+        ...purchaseForm,
+        id: editingPurchaseId,
+        vendorId: selectedVendor.id,
+        vendorName: selectedVendor.name,
+        invoiceNo: purchaseForm.invoiceNo.trim(),
+        model: purchaseForm.model.trim(),
+        serialNumber: (purchaseForm.serialNumber || '').trim(),
+      } as PurchaseRecord;
+
+      if (onUpdatePurchase) {
+        onUpdatePurchase(updatedRecord, originalSerialNumber);
+      } else {
+        onAddPurchase(updatedRecord);
+      }
+      setShowPurchaseModal(false);
+      resetPurchaseForm();
+      return;
     }
 
     if (isBulkMode) {
@@ -224,6 +292,8 @@ export const Purchases: React.FC<PurchasesProps> = ({
     setVendorInput('');
     setIsBulkMode(false);
     setBulkSerials('');
+    setEditingPurchaseId(null);
+    setOriginalSerialNumber('');
     setPurchaseForm({
       invoiceNo: '', invoiceDate: new Date().toISOString().split('T')[0], dueDate: '', brand: BRANDS[0], model: '', serialNumber: '', hsnCode: '90214090', mrp: 0, discountAmount: 0, purchaseAmount: 0, location: LOCATIONS[0]
     });
@@ -590,7 +660,22 @@ export const Purchases: React.FC<PurchasesProps> = ({
                         </td>
                         <td className="p-5 text-right font-black text-lg">₹{p.purchaseAmount.toLocaleString()}</td>
                         <td className="p-5 text-center font-bold">
-                           <button onClick={() => { if(window.confirm('Delete purchase entry? Item will NOT be auto-removed from stock.')) onDeletePurchase(p.id); }} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition"><Trash2 size={18}/></button>
+                           <div className="flex items-center justify-center gap-1.5">
+                              <button 
+                                onClick={() => handleOpenEditPurchase(p)} 
+                                className="p-2 text-[#3159a6] hover:bg-blue-50 rounded-xl transition cursor-pointer"
+                                title="Edit Purchase Entry"
+                              >
+                                <Edit3 size={18}/>
+                              </button>
+                              <button 
+                                onClick={() => { if(window.confirm('Delete purchase entry? Item will NOT be auto-removed from stock.')) onDeletePurchase(p.id); }} 
+                                className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                                title="Delete Purchase Entry"
+                              >
+                                <Trash2 size={18}/>
+                              </button>
+                           </div>
                         </td>
                       </tr>
                     ))}
@@ -1137,8 +1222,12 @@ export const Purchases: React.FC<PurchasesProps> = ({
         <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in border-4 border-white my-auto flex flex-col max-h-[95vh]">
             <div className="bg-primary p-6 text-white flex justify-between items-center flex-shrink-0">
-              <h3 className="font-black uppercase tracking-widest text-xs ml-2">Stock Procurement Node</h3>
-              <button onClick={() => setShowPurchaseModal(false)}><X size={24}/></button>
+              <h3 className="font-black uppercase tracking-widest text-xs ml-2">
+                {editingPurchaseId ? 'Update Purchase Record' : 'Stock Procurement Node'}
+              </h3>
+              <button onClick={() => { setShowPurchaseModal(false); resetPurchaseForm(); }} className="cursor-pointer hover:rotate-90 transition-transform">
+                <X size={24}/>
+              </button>
             </div>
             
             <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-grow">
@@ -1175,12 +1264,14 @@ export const Purchases: React.FC<PurchasesProps> = ({
                <div className="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 space-y-5 text-xs">
                   <div className="flex justify-between items-center px-1">
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2"><Tag size={12}/> Item Information (Autoloads to Stock)</p>
-                    <button 
-                      onClick={() => { setIsBulkMode(!isBulkMode); setBulkSerials(''); }} 
-                      className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border-2 transition-all ${isBulkMode ? 'bg-[#3159a6] text-white border-[#3159a6]' : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200'}`}
-                    >
-                      {isBulkMode ? 'Bulk Entry: ON' : 'Switch to Bulk'}
-                    </button>
+                    {!editingPurchaseId && (
+                      <button 
+                        onClick={() => { setIsBulkMode(!isBulkMode); setBulkSerials(''); }} 
+                        className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border-2 transition-all cursor-pointer ${isBulkMode ? 'bg-[#3159a6] text-white border-[#3159a6]' : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200'}`}
+                      >
+                        {isBulkMode ? 'Bulk Entry: ON' : 'Switch to Bulk'}
+                      </button>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1250,8 +1341,16 @@ export const Purchases: React.FC<PurchasesProps> = ({
             </div>
 
             <div className="p-8 pt-0 flex-shrink-0">
-               <button onClick={handleSavePurchase} className="w-full bg-slate-900 text-white py-5 rounded-[2.5rem] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition active:scale-95 text-[10px] flex items-center justify-center gap-3">
-                  <Store size={18}/> Commit {isBulkMode ? 'Bulk ' : ''}Purchase & Push to Stock
+               <button onClick={handleSavePurchase} className="w-full bg-slate-900 text-white py-5 rounded-[2.5rem] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition active:scale-95 text-[10px] flex items-center justify-center gap-3 cursor-pointer">
+                  {editingPurchaseId ? (
+                    <>
+                      <CheckCircle size={18}/> Save Changes & Update Stock
+                    </>
+                  ) : (
+                    <>
+                      <Store size={18}/> Commit {isBulkMode ? 'Bulk ' : ''}Purchase & Push to Stock
+                    </>
+                  )}
                </button>
             </div>
           </div>
