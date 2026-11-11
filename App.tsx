@@ -492,6 +492,39 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdatePurchase = async (updatedPurchase: PurchaseRecord, oldSerialNumber?: string) => {
+    setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
+    try { 
+      await setDocument('purchases', updatedPurchase.id, updatedPurchase); 
+    } catch(e) {
+      console.error("Firebase Sync Error in Purchase update:", e);
+    }
+
+    // Sync matching item in inventory if present
+    const targetSerial = (oldSerialNumber || updatedPurchase.serialNumber || '').trim();
+    if (targetSerial) {
+      const existingStock = inventory.find(i => i.serialNumber.trim().toUpperCase() === targetSerial.toUpperCase());
+      if (existingStock) {
+        const updatedStock: HearingAid = {
+          ...existingStock,
+          brand: updatedPurchase.brand,
+          model: updatedPurchase.model,
+          serialNumber: updatedPurchase.serialNumber,
+          price: updatedPurchase.mrp,
+          hsnCode: updatedPurchase.hsnCode,
+          location: updatedPurchase.location,
+          addedDate: updatedPurchase.invoiceDate || existingStock.addedDate
+        };
+        setInventory(prev => prev.map(i => i.id === existingStock.id ? updatedStock : i));
+        try { 
+          await setDocument('inventory', existingStock.id, updatedStock); 
+        } catch(e) {
+          console.error("Firebase Sync Error in updating stock from purchase:", e);
+        }
+      }
+    }
+  };
+
   const handleDeletePurchase = async (id: string) => {
     setPurchases(purchases.filter(p => p.id !== id));
     try { await deleteDocument('purchases', id); } catch(e) {}
@@ -1589,7 +1622,7 @@ service cloud.firestore {
               {activeView === 'demo-billing' && <DemoBilling invoices={demoInvoices} patients={patients} onCreateInvoice={handleCreateDemoInvoice} onDelete={handleDeleteDemoInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} initialDemoId={initialParams.demoId} />}
               {activeView === 'proforma-billing' && <ProformaBilling invoices={proformaInvoices} patients={patients} onCreateInvoice={handleCreateProformaInvoice} onDelete={handleDeleteProformaInvoice} onConvertToTaxInvoice={handleConvertProformaToTax} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} initialProformaId={initialParams.proformaId} />}
               {activeView === 'service-billing' && <ServiceBilling hospitals={hospitals} invoices={serviceInvoices} onAddHospital={handleAddHospital} onUpdateHospital={handleUpdateHospital} onSaveInvoice={handleSaveServiceInvoice} onDeleteInvoice={handleDeleteServiceInvoice} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
-              {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
+              {activeView === 'purchases' && <Purchases vendors={vendors} purchases={purchases} purchaseOrders={purchaseOrders} onAddVendor={handleAddVendor} onAddPurchase={handleAddPurchase} onUpdatePurchase={handleUpdatePurchase} onDeletePurchase={handleDeletePurchase} onDeleteVendor={handleDeleteVendor} onSavePurchaseOrder={handleSavePurchaseOrder} onDeletePurchaseOrder={handleDeletePurchaseOrder} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'crm' && <CRM leads={leads} onAddLead={handleAddLead} onUpdateLead={handleUpdateLead} onConvertToPatient={handleConvertLeadToPatient} onDelete={handleDeleteLead} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'patients' && <Patients patients={patients} invoices={invoices} onAddPatient={handleAddPatient} onUpdatePatient={handleUpdatePatient} onDelete={handleDeletePatient} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
               {activeView === 'credit-note' && <FinancialNotes type="CREDIT" notes={financialNotes} patients={patients} vendors={vendors} invoices={invoices} serviceInvoices={serviceInvoices} hospitals={hospitals} inventory={inventory} onSave={handleAddFinancialNote} onDelete={handleDeleteFinancialNote} logo={companyLogo} signature={companySignature} userRole={userRole!} backHandlerRef={backHandlerRef} />}
